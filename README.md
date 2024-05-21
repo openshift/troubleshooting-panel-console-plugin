@@ -13,6 +13,9 @@ push it to an image registry.
    docker build -t quay.io/my-repository/troubleshooting-panel-console-plugin:latest .
    ```
 
+   > [!NOTE]
+   > On some systems with a low `ulimit nofile` limit you may need to increase the number of open files per thread to allow for the `npm ci` to run correctly by adding `--ulimit nofile=10000:10000 -t` to the command.
+
 2. Run the image:
 
    ```sh
@@ -25,9 +28,8 @@ push it to an image registry.
    docker push quay.io/my-repository/troubleshooting-panel-console-plugin:latest
    ```
 
-NOTE: If you have a Mac with Apple silicon, you will need to add the flag
-`--platform=linux/amd64` when building the image to target the correct platform
-to run in-cluster.
+   > [!NOTE]
+   > If you have a Mac with Apple silicon, you will need to add the flag`--platform=linux/amd64` when building the image to target the correct platform to run in-cluster.
 
 ## Deployment on cluster
 
@@ -54,7 +56,7 @@ helm upgrade -i troubleshooting-panel-console-plugin charts/openshift-console-pl
 1. [npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
 2. [oc](https://mirror.openshift.com/pub/openshift-v4/clients/oc/4.4/)
 3. [podman 3.2.0+](https://podman.io) or [Docker](https://www.docker.com)
-4. An OpenShift cluster
+4. An OpenShift 4.16 cluster
 5. [Korrel8r](https://korrel8r.github.io/korrel8r) instance running in the cluster.
 
 #### TP (Troubleshooting Panel) Development Server
