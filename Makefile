@@ -11,7 +11,7 @@ install-frontend-ci-clean: install-frontend-ci
 	cd web && npm cache clean --force
 
 .PHONY: build-frontend
-build-frontend: install-frontend-ci-clean
+build-frontend:
 	cd web && npm run build
 
 .PHONY: start-frontend

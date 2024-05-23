@@ -4,7 +4,10 @@ WORKDIR /opt/app-root
 
 USER 0
 
+COPY web/package*.json web/
 COPY Makefile Makefile
+RUN make install-frontend
+
 COPY web/ web/
 RUN make build-frontend
 
