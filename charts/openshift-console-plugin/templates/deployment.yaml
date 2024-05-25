@@ -36,17 +36,20 @@ spec:
           resources:
             {{- toYaml .Values.plugin.resources | nindent 12 }}
           volumeMounts:
-            - name: {{ template "openshift-console-plugin.certificateSecret" . }}
+            - name: plugin-cert
               readOnly: true
               mountPath: /var/serving-cert
+            - name: plugin-conf
+              readOnly: true
+              mountPath: /etc/plugin
       volumes:
-        - name: {{ template "openshift-console-plugin.certificateSecret" . }}
+        - name: plugin-cert
           secret:
             secretName: {{ template "openshift-console-plugin.certificateSecret" . }}
             defaultMode: 420
         - name: plugin-conf
           configMap:
-            name: {{ template "openshift-console-plugin.pluginConfigName" . }}
+            name: {{ template "openshift-console-plugin.name" . }}
             defaultMode: 420
       restartPolicy: Always
       dnsPolicy: ClusterFirst
