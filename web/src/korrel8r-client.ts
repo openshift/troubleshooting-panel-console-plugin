@@ -17,7 +17,6 @@ export const getNeighborsGraph = ({ query }: { query?: string } = {}) => {
     method: 'POST',
     body: JSON.stringify({
       start: {
-        class: 'alert:alert',
         queries: query ? [query] : [],
       },
       depth: 5,
