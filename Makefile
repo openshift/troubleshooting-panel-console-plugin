@@ -41,3 +41,12 @@ build-image:
 .PHONY: start-forward
 start-forward:
 	./scripts/start-forward.sh
+
+export REGISTRY_ORG?=openshift-observability-ui
+export TAG?=latest
+IMAGE=quay.io/${REGISTRY_ORG}/troubleshooting-panel-console-plugin:${TAG}
+
+.PHONY: deploy
+deploy:				## Build and push image, deploy to cluster using help.
+	PUSH=1 scripts/build-image.sh
+	helm upgrade -i troubleshooting-panel-console-plugin charts/openshift-console-plugin -n troubleshooting-panel-console-plugin --create-namespace --set plugin.image=$(IMAGE)

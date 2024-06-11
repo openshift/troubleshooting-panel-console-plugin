@@ -29,81 +29,89 @@ interface Korrel8rPanelProps {
 }
 
 export default function Korrel8rPanel({ initialQueryString }: Korrel8rPanelProps) {
-  const [queryString, setQueryString] = React.useState(initialQueryString);
+  const [queryInputField, setQueryInputField] = React.useState(initialQueryString);
   const [errorMessage, setErrorMessage] = React.useState('');
   const [errorMessageTitle, setErrorMessageTitle] = React.useState('');
-  const [isLoading, , setLoadingTrue, setLoadingFalse] = useBoolean(false);
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
-  const netobserveAvailable = usePluginAvailable('netobserv-plugin');
-  const loggingAvailable = usePluginAvailable('logging-view-plugin');
+
+  // Start off loading on the first render since the usePluginAvailable hook is async and will start
+  // loading immediately
+  const [isLoading, , setLoadingTrue, setLoadingFalse] = useBoolean(true);
+  const [netobserveAvailable, netobserveAvailableLoading] = usePluginAvailable('netobserv-plugin');
+  const [loggingAvailable, loggingAvailableLoading] = usePluginAvailable('logging-view-plugin');
 
   const dispatch = useDispatch();
-  const query: string = useSelector((state: State) => state.plugins?.tp?.get('query'));
+  const savedQuery: string = useSelector((state: State) => state.plugins?.tp?.get('query'));
   const queryResponse: Korrel8rGraphNeighboursResponse = useSelector((state: State) =>
     state.plugins?.tp?.get('queryResponse'),
   );
 
-  if (!query && queryString) {
-    dispatch(setQuery(queryString));
+  if (!savedQuery && queryInputField) {
+    dispatch(setQuery(queryInputField));
   }
 
+  const handleError = React.useCallback(
+    (error) => {
+      // eslint-disable-next-line no-console
+      console.error(error);
+      setLoadingFalse();
+      let displayError: string;
+      try {
+        displayError = JSON.parse(error.message).error;
+        setErrorMessageTitle(t('Korrel8r Error'));
+      } catch (e) {
+        displayError = error.message;
+        setErrorMessageTitle(t('Error Loading Data'));
+      }
+      setErrorMessage(displayError);
+    },
+    [setLoadingFalse, setErrorMessageTitle, setErrorMessage, t],
+  );
+
   React.useEffect(() => {
-    if (!query) {
+    if (!savedQuery || netobserveAvailableLoading || loggingAvailableLoading) {
       return;
     }
     setLoadingTrue();
-    const { request, abort } = getNeighborsGraph({ query });
+    const { request, abort } = getNeighborsGraph({ query: savedQuery });
     request()
       .then((response) => {
-        let existingNodes = response.nodes.filter((node) => {
-          return (
-            node.count > 0 &&
-            (netobserveAvailable || !node.class.startsWith('netflow')) &&
-            (loggingAvailable || !node.class.startsWith('log'))
-          );
-        });
-        existingNodes = existingNodes.map((node) => {
-          return {
-            class: node.class,
-            count: node.count,
-            queries: node.queries.filter((query) => query.count > 0),
-          };
-        });
-        const existingNodeNames = existingNodes.map((node) => node.class);
-        const existingEdges = response.edges
-          ? response.edges.filter(
-              (edge) =>
-                existingNodeNames.includes(edge.start) && existingNodeNames.includes(edge.goal),
-            )
-          : [];
+        const { existingEdges, existingNodes } = parseResults(
+          response,
+          netobserveAvailable,
+          loggingAvailable,
+        );
+
         dispatch(
           setQueryResponse({
             nodes: existingNodes,
             edges: existingEdges,
           }),
         );
-        setLoadingFalse();
+
         setErrorMessage('');
         setErrorMessageTitle('');
+        setLoadingFalse();
       })
       .catch((error) => {
-        // eslint-disable-next-line no-console
-        console.error(error);
-        setLoadingFalse();
-        let displayError: string;
-        try {
-          displayError = JSON.parse(error.message).error;
-          setErrorMessageTitle(t('Korrel8r Error'));
-        } catch (e) {
-          displayError = error.message;
-          setErrorMessageTitle(t('Error Loading Data'));
-        }
-        setErrorMessage(displayError);
+        handleError(error);
       });
     return () => {
       abort();
     };
-  }, [query, dispatch, setLoadingFalse, setLoadingTrue, loggingAvailable, netobserveAvailable, t]);
+  }, [
+    savedQuery,
+    dispatch,
+    setLoadingFalse,
+    setLoadingTrue,
+    handleError,
+    netobserveAvailable,
+    loggingAvailable,
+    setErrorMessage,
+    setErrorMessageTitle,
+    loggingAvailableLoading,
+    netobserveAvailableLoading,
+  ]);
 
   return (
     <>
@@ -114,16 +122,18 @@ export default function Korrel8rPanel({ initialQueryString }: Korrel8rPanelProps
             type="text"
             id="queryString"
             name="queryString"
-            value={queryString}
+            value={queryInputField}
             autoResize
-            onChange={(_event, value) => setQueryString(value)}
+            onChange={(_event, value) => setQueryInputField(value)}
           />
         </TextInputGroup>
         <Button
-          isAriaDisabled={!queryString}
+          isAriaDisabled={!queryInputField}
           onClick={() => {
-            dispatch(setQueryResponse({ nodes: [], edges: [] }));
-            dispatch(setQuery(queryString));
+            if (queryInputField !== savedQuery) {
+              dispatch(setQueryResponse({ nodes: [], edges: [] }));
+              dispatch(setQuery(queryInputField));
+            }
           }}
         >
           Query
@@ -192,4 +202,32 @@ const TopologyInfoState: React.FunctionComponent<TopologyInfoStateProps> = ({
       <EmptyStateBody>{text}</EmptyStateBody>
     </EmptyState>
   );
+};
+
+const parseResults = (
+  response: Korrel8rGraphNeighboursResponse,
+  netobserveAvailable: boolean,
+  loggingAvailable: boolean,
+) => {
+  let existingNodes = response.nodes.filter((node) => {
+    return (
+      node.count > 0 &&
+      (netobserveAvailable || !node.class.startsWith('netflow')) &&
+      (loggingAvailable || !node.class.startsWith('log'))
+    );
+  });
+  existingNodes = existingNodes.map((node) => {
+    return {
+      class: node.class,
+      count: node.count,
+      queries: node.queries.filter((query) => query.count > 0),
+    };
+  });
+  const existingNodeNames = existingNodes.map((node) => node.class);
+  const existingEdges = response.edges
+    ? response.edges.filter(
+        (edge) => existingNodeNames.includes(edge.start) && existingNodeNames.includes(edge.goal),
+      )
+    : [];
+  return { existingEdges, existingNodes };
 };
