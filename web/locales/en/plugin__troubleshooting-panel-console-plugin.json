@@ -1,9 +1,9 @@
 {
-  "Correlation Signals": "Correlation Signals",
+  "Correlated Signals": "Correlated Signals",
   "Error Loading Data": "Error Loading Data",
   "Korrel8r Error": "Korrel8r Error",
-  "No Correlation Signals Found": "No Correlation Signals Found",
-  "No correlation signals were found for the given query. Please try a different query.": "No correlation signals were found for the given query. Please try a different query.",
+  "No Correlated Signals Found": "No Correlated Signals Found",
+  "No correlated signals were found for the given query. Please try a different query.": "No correlated signals were found for the given query. Please try a different query.",
   "Open the Troubleshooting Panel": "Open the Troubleshooting Panel",
   "Troubleshooting": "Troubleshooting",
   "Troubleshooting Panel": "Troubleshooting Panel"
