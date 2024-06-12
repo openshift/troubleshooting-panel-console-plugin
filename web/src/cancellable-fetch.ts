@@ -3,6 +3,20 @@ export type CancellableFetch<T> = {
   abort: () => void;
 };
 
+const getCSRFToken = () => {
+  const cookiePrefix = 'csrf-token=';
+  return (
+    document &&
+    document.cookie &&
+    document.cookie
+      .split(';')
+      .map((c) => c.trim())
+      .filter((c) => c.startsWith(cookiePrefix))
+      .map((c) => c.slice(cookiePrefix.length))
+      .pop()
+  );
+};
+
 export type RequestInitWithTimeout = RequestInit & { timeout?: number };
 
 class TimeoutError extends Error {
@@ -36,7 +50,11 @@ export const cancellableFetch = <T>(
 
   const fetchPromise = fetch(url, {
     ...init,
-    headers: { ...init?.headers, Accept: 'application/json' },
+    headers: {
+      ...init?.headers,
+      Accept: 'application/json',
+      ...(init.method === 'POST' ? { 'X-CSRFToken': getCSRFToken() } : {}),
+    },
     signal: abortController.signal,
   }).then(async (response) => {
     if (!response.ok) {
