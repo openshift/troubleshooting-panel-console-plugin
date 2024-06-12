@@ -47,6 +47,7 @@ export TAG?=latest
 IMAGE=quay.io/${REGISTRY_ORG}/troubleshooting-panel-console-plugin:${TAG}
 
 .PHONY: deploy
-deploy:				## Build and push image, deploy to cluster using help.
+deploy:				## Build and push image, reinstall on cluster using helm.
+	helm uninstall troubleshooting-panel-console-plugin -n troubleshooting-panel-console-plugin || true
 	PUSH=1 scripts/build-image.sh
-	helm upgrade -i troubleshooting-panel-console-plugin charts/openshift-console-plugin -n troubleshooting-panel-console-plugin --create-namespace --set plugin.image=$(IMAGE)
+	helm install troubleshooting-panel-console-plugin charts/openshift-console-plugin -n troubleshooting-panel-console-plugin --create-namespace --set plugin.image=$(IMAGE)
