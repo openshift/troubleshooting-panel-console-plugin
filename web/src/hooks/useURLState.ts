@@ -9,22 +9,17 @@ export const useURLState = () => {
   const queryParams = useQueryParams();
   const location = useLocation();
 
-  const [allQueryParameters, setAllQueryParameters] = React.useState<QueryParams>(
-    getAllQueryParams(queryParams),
-  );
-  const [korrel8rQueryFromURL, setKorrel8rQueryFromURL] = React.useState<string | undefined>(
-    Korrel8rNodeFactory.fromURL((location.pathname + location.search).slice(1))?.toQuery(),
-  );
+  const allQueryParameters = React.useMemo(() => getAllQueryParams(queryParams), [queryParams]);
 
-  React.useEffect(() => {
-    const allQueryParametersValue = getAllQueryParams(queryParams);
-    const korrel8rQueryFromURLValue = Korrel8rNodeFactory.fromURL(
-      (location.pathname + location.search).slice(1),
-    )?.toQuery();
-
-    setAllQueryParameters(allQueryParametersValue);
-    setKorrel8rQueryFromURL(korrel8rQueryFromURLValue);
-  }, [queryParams, location.pathname, location.search]);
+  const korrel8rQueryFromURL = React.useMemo(() => {
+    try {
+      return Korrel8rNodeFactory.fromURL((location.pathname + location.search).slice(1)).toQuery();
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error(e);
+      return null;
+    }
+  }, [location.pathname, location.search]);
 
   return {
     allQueryParameters,

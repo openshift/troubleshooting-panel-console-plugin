@@ -1,5 +1,10 @@
 import * as React from 'react';
-import { Action, ExtensionHook, useModal } from '@openshift-console/dynamic-plugin-sdk';
+import {
+  Action,
+  ExtensionHook,
+  useActivePerspective,
+  useModal,
+} from '@openshift-console/dynamic-plugin-sdk';
 import { InfrastructureIcon } from '@patternfly/react-icons';
 import Popover from '../components/Popover';
 import { useBoolean } from './useBoolean';
@@ -13,6 +18,7 @@ const useTroubleshootingPanel: ExtensionHook<Array<Action>> = () => {
   const { isKorrel8rReachable } = useKorrel8r();
   const { korrel8rQueryFromURL } = useURLState();
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
+  const [perspective] = useActivePerspective();
   const launchModal = useModal();
   const dispatch = useDispatch();
   const [isLaunched, , setLaunched] = useBoolean(false);
@@ -22,7 +28,7 @@ const useTroubleshootingPanel: ExtensionHook<Array<Action>> = () => {
 
   const getActions = React.useCallback(
     (queryString = '') => {
-      if (!isKorrel8rReachable) {
+      if (!isKorrel8rReachable || perspective === 'dev') {
         return [];
       }
       const actions = [
@@ -47,7 +53,7 @@ const useTroubleshootingPanel: ExtensionHook<Array<Action>> = () => {
       ];
       return actions;
     },
-    [isLaunched, launchModal, open, setLaunched, t, isKorrel8rReachable],
+    [isLaunched, launchModal, open, setLaunched, t, isKorrel8rReachable, perspective],
   );
 
   const [actions, setActions] = React.useState<Array<Action>>(getActions());
