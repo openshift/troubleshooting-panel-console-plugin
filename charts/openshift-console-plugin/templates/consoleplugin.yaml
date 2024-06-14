@@ -16,6 +16,7 @@ spec:
       basePath: {{ .Values.plugin.basePath }}
   proxy:
   - alias: korrel8r
+    authorization: UserToken
     endpoint:
       type: Service
       service:
