@@ -49,6 +49,14 @@ type GraphNode = {
   };
 };
 
+type GraphEdge = {
+  id: string;
+  type: string;
+  source: string;
+  target: string;
+  edgeStyle: EdgeStyle;
+};
+
 const Korrel8rTopologyNode: React.FC<Korrel8rTopologyNodeProps> = ({
   element,
   selected,
@@ -85,16 +93,17 @@ const NODE_SHAPE = NodeShape.ellipse;
 const NODE_DIAMETER = 75;
 
 const getNodesFromQueryResponse = (queryResponse: Array<QueryNode>): Array<GraphNode> => {
-  const nodes = queryResponse.map((node) => {
+  const nodes: Array<GraphNode> = [];
+  queryResponse.forEach((node) => {
     let korrel8rNode: Korrel8rNode | null = null;
     try {
       korrel8rNode = Korrel8rNodeFactory.fromQuery(node.queries.at(0)?.query);
     } catch (e) {
       // eslint-disable-next-line no-console
       console.error(e);
-      return null;
+      return;
     }
-    return {
+    nodes.push({
       id: node.class + Date.now(),
       type: 'node',
       label: nodeToLabel(node),
@@ -104,20 +113,30 @@ const getNodesFromQueryResponse = (queryResponse: Array<QueryNode>): Array<Graph
       data: {
         korrel8rNode,
       },
-    };
+    });
   });
   return nodes;
 };
 
-const getEdgesFromQueryResponse = (queryResponse: Array<QueryEdge>, nodes: Array<GraphNode>) => {
-  const edges = queryResponse.map((edge) => {
-    return {
+const getEdgesFromQueryResponse = (
+  queryResponse: Array<QueryEdge>,
+  nodes: Array<GraphNode>,
+): Array<GraphEdge> => {
+  const edges: Array<GraphEdge> = [];
+
+  queryResponse.forEach((edge) => {
+    const sourceNode = nodes.find((node) => node.id.startsWith(edge.start));
+    const targetNode = nodes.find((node) => node.id.startsWith(edge.goal));
+    if (!sourceNode || !targetNode) {
+      return;
+    }
+    edges.push({
       id: `edge-${edge.start}-${edge.goal}`,
       type: 'edge',
-      source: nodes.find((node) => node.id.startsWith(edge.start))?.id,
-      target: nodes.find((node) => node.id.startsWith(edge.goal))?.id,
+      source: sourceNode?.id,
+      target: targetNode?.id,
       edgeStyle: EdgeStyle.default,
-    };
+    });
   });
   return edges;
 };

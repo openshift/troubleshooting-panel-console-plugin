@@ -125,8 +125,9 @@ export class K8sNode extends Korrel8rNode {
         (model) => model.kind === groupVersionKind.kind && model.verbs.includes('watch'),
       );
     }
-    if (!models || models.length !== 1) {
-      throw new NodeError('Unable to isolate a single model');
+
+    if (!models) {
+      throw new NodeError('Unable to find a matching model');
     }
     const model = models[0];
     if (!groupVersionKind.version) {
