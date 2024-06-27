@@ -23,6 +23,7 @@ import { useTranslation } from 'react-i18next';
 import { useBoolean } from '../hooks/useBoolean';
 import { CubesIcon, ExclamationCircleIcon } from '@patternfly/react-icons';
 import { usePluginAvailable } from '../hooks/usePluginAvailable';
+import { useURLState } from '../hooks/useURLState';
 
 interface Korrel8rPanelProps {
   initialQueryString: string;
@@ -32,6 +33,7 @@ export default function Korrel8rPanel({ initialQueryString }: Korrel8rPanelProps
   const [queryInputField, setQueryInputField] = React.useState(initialQueryString);
   const [errorMessage, setErrorMessage] = React.useState('');
   const [errorMessageTitle, setErrorMessageTitle] = React.useState('');
+  const { korrel8rQueryFromURL } = useURLState();
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
 
   // Start off loading on the first render since the usePluginAvailable hook is async and will start
@@ -46,8 +48,16 @@ export default function Korrel8rPanel({ initialQueryString }: Korrel8rPanelProps
     state.plugins?.tp?.get('queryResponse'),
   );
 
+  const dispatchQuery = (query:string) => {
+    if (query && query !== savedQuery) {
+      setQueryInputField(query);
+      dispatch(setQueryResponse({ nodes: [], edges: [] }));
+      dispatch(setQuery(query));
+    }
+  }
+
   if (!savedQuery && queryInputField) {
-    dispatch(setQuery(queryInputField));
+    dispatchQuery(queryInputField);
   }
 
   const handleError = React.useCallback(
@@ -116,7 +126,14 @@ export default function Korrel8rPanel({ initialQueryString }: Korrel8rPanelProps
   return (
     <>
       <FlexItem className="tp-plugin__panel-query-container">
-        <Title headingLevel="h2">{t('Correlation Signals')}</Title>
+        <Title headingLevel="h2">{t('Correlated Signals')}</Title>
+        <Button
+          title="Find correlated signals from the resources on the current console page."
+          isAriaDisabled={!korrel8rQueryFromURL || korrel8rQueryFromURL == savedQuery}
+          onClick={() => { dispatchQuery(korrel8rQueryFromURL) }}
+        >
+          Sync
+        </Button>
         <TextInputGroup className="tp-plugin__panel-query-input">
           <TextArea
             type="text"
@@ -128,13 +145,8 @@ export default function Korrel8rPanel({ initialQueryString }: Korrel8rPanelProps
           />
         </TextInputGroup>
         <Button
-          isAriaDisabled={!queryInputField}
-          onClick={() => {
-            if (queryInputField !== savedQuery) {
-              dispatch(setQueryResponse({ nodes: [], edges: [] }));
-              dispatch(setQuery(queryInputField));
-            }
-          }}
+          isAriaDisabled={!queryInputField || queryInputField == savedQuery}
+           onClick={() => { dispatchQuery(queryInputField); }}
         >
           Query
         </Button>
@@ -152,9 +164,9 @@ export default function Korrel8rPanel({ initialQueryString }: Korrel8rPanelProps
                   <TopologyInfoState titleText={errorMessageTitle} text={errorMessage} isError />
                 ) : (
                   <TopologyInfoState
-                    titleText={t('No Correlation Signals Found')}
+                    titleText={t('No Correlated Signals Found')}
                     text={t(
-                      'No correlation signals were found for the given query. Please try a different query.',
+                      'No correlated signals were found for the given query. Please try a different query.',
                     )}
                   />
                 )}
