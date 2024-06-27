@@ -156,9 +156,17 @@ export const Korrel8rTopology: React.FC<{
 
   const selectedIds = React.useMemo(() => {
     return nodes
-      .filter(
-        (node) => '/' + node.data.korrel8rNode?.toURL() === location.pathname + location.search,
-      )
+      .filter((node) => {
+        try {
+          // This is less efficient, but there are certain plugins which add query params
+          // to the URL that we don't want to match on
+          const currentURL = location.pathname + location.search;
+          const currentQuery = Korrel8rNodeFactory.fromURL(currentURL.slice(1))?.toQuery();
+          return node.data.korrel8rNode.toQuery() === currentQuery;
+        } catch (e) {
+          return false;
+        }
+      })
       .map((node) => node.id);
   }, [nodes, location.pathname, location.search]);
 
