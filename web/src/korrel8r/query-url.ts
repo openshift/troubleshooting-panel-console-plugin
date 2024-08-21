@@ -20,7 +20,7 @@ export const parseURL = (
 // Return the short class name and data section of the query. Throw if it doesn't match the domain.
 export const parseQuery = (domain: string, query: string): [clazz: string, data: string] => {
   const [, domain2, clazz, data] = query.match(/^([^:]+):([^:]+):(.+)$/) ?? [];
-  if (domain2 != domain) throw new NodeError(`Invalid ${domain} query: ${query}`);
+  if (domain2 != domain) throw new NodeError(`Expected ${domain} query: ${query}`);
   return [clazz, data];
 };
 

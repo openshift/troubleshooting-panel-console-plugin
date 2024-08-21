@@ -1,10 +1,10 @@
 import { Korrel8rDomain, Korrel8rNode, NodeError } from './korrel8r.types';
+import { parseQuery, parseURL } from './query-url';
 
 // https://docs.openshift.com/container-platform/4.15/observability/network_observability/json-flows-format-reference.html
-// All items which both have a Filter ID, so they can be put into the URL, and have a Loki label,
-// since Korrel8r only accepts a logql query, and any query containing a item without a Loki label
-// returns an empty correlation array from Korrel8r.
-const logQLToLabelMap = {
+// Netflow URL parameter names are equivalent to the LogQL query labels, but spelled differently.
+// Conversion of the most useful query names to URL parmameter name:
+const queryToURLName = {
   DstK8S_Namespace: 'dst_namespace',
   DstK8S_OwnerName: 'dst_owner_name',
   DstK8S_Type: 'dst_kind',
@@ -17,6 +17,12 @@ const logQLToLabelMap = {
   SrcK8S_Zone: 'src_zone',
   _RecordType: 'type',
 };
+
+// Inverse conversion of URL parmameter names to LogQL query names.
+const urlToQueryName = Object.entries(queryToURLName).reduce((result, [key, value]) => {
+  result[value] = key;
+  return result;
+}, {});
 
 export class NetflowNode extends Korrel8rNode {
   domain: Korrel8rDomain = Korrel8rDomain.Alert;
@@ -31,70 +37,39 @@ export class NetflowNode extends Korrel8rNode {
 
   // TODO: Add support for pulling parameters from filter query parameters
   static fromURL(url: string): Korrel8rNode {
-    if (!url.startsWith('netflow-traffic'))
-      throw new NodeError('Expected url to start with netflow-traffic');
-    const urlObject = new URL('http://domain' + url);
-    const urlQuerySegment = urlObject.search;
-    if (!urlQuerySegment) throw new NodeError('Expected URL to contain query parameters');
+    const [, params] = parseURL('netflow', 'netflow-traffic', url);
 
-    const urlSearchParams = new URLSearchParams(urlQuerySegment);
-    if (urlSearchParams.size === 0)
-      throw new NodeError('Expected more than 0 relevant query parameters');
-
-    let urlQueryString = urlSearchParams.get('q');
-    if (!urlQueryString) throw new NodeError('Expected more than 0 relevant query parameters');
-
-    const netflowClass = urlSearchParams.get('tenant');
-    if (!netflowClass) throw new NodeError('Expected query to contain netflow class');
-    if (netflowClass !== 'network') throw new NodeError('Expected netflow class to be network');
-
-    if (urlQueryString.endsWith('|json')) {
-      urlQueryString = urlQueryString.slice(0, -5);
-    }
-
-    const korrel8rQuery = `netflow:network:${urlQueryString}`;
-    return new NetflowNode(url, korrel8rQuery);
+    const selectors = params
+      .get('filters')
+      ?.split(';')
+      .map((filter) => {
+        const [, key, operator, value] = filter.match(/^\s*([^!=\s]+)\s*(!?=~?)\s*(.+)\s*$/) || [];
+        return urlToQueryName[key] ? `${urlToQueryName[key]}${operator}"${value}"` : '';
+      })
+      .filter((s) => s)
+      .join(',');
+    return new NetflowNode(url, `netflow:network:{${selectors || ''}}`);
   }
 
   static fromQuery(query: string): Korrel8rNode {
-    if (!query.startsWith('netflow:')) throw new NodeError('Expected query to start with netflow:');
-    const queryAfterDomain = query.substring('netflow:'.length);
-    if (!queryAfterDomain) throw new NodeError('Expected query to contain class');
-    const netflowClass = queryAfterDomain.split(':').at(0);
-    if (netflowClass !== 'network') throw new NodeError('Expected netflow class to be network');
-
-    const queryAfterClass = queryAfterDomain.substring(netflowClass.length + 1);
-    if (!queryAfterClass || queryAfterClass === '{}')
-      throw new NodeError('Expected more than 0 relevant query parameters');
-
-    const queryWithJSON = queryAfterClass + '|json';
-
-    const filters = queryAfterClass
-      .slice(1, -1)
-      .split(',')
-      .map((filter) => {
-        const trimmedFilter = filter.trim();
-        const keyValues = trimmedFilter.split('=');
-        if (keyValues.length !== 2) {
-          throw new NodeError('Expected filter to be in the format key=value');
-        }
-        let key = keyValues[0].trim();
-        const value = keyValues[1].trim();
-        let negation = false;
-        if (key.endsWith('!')) {
-          key = key.slice(0, -1);
-          negation = true;
-        }
-        const mappedKey = logQLToLabelMap[key];
-        if (!mappedKey) {
-          throw new NodeError(`Unknown filter key: ${key}`);
-        }
-        return `${mappedKey}${negation ? '!=' : '='}${value}`;
+    const [clazz, data] = parseQuery('netflow', query);
+    if (clazz !== 'network')
+      throw new NodeError(`Expected class netflow:network in query: ${query}`);
+    const filters = data
+      .match(/\s*\{\s*(.*)\s*\}\s*/)?.[1]
+      ?.split(',')
+      ?.map((filter) => {
+        const [, key, operator, value] =
+          filter.match(/^\s*([^!=\s]+)\s*(!?=~?)\s*"(.+)"\s*$/) || [];
+        if (!key) throw new NodeError(`Expected filter to be key="value": ${filter}`);
+        return queryToURLName[key] ? `${queryToURLName[key]}${operator}${value}` : '';
       })
+      .filter((s) => s)
       .join(';');
-
-    const url = `netflow-traffic?q=${queryWithJSON}&tenant=${netflowClass}&filters=${filters}`;
-    return new NetflowNode(url, query);
+    return new NetflowNode(
+      `netflow-traffic?tenant=${clazz}${filters ? `&filters=${encodeURIComponent(filters)}` : ''}`,
+      query,
+    );
   }
 
   toURL(): string {
