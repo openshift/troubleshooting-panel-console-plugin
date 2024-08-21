@@ -151,8 +151,8 @@ describe('K8sNode.fromQuery', () => {
   });
 
   it.each([
-    { query: `foo:bar:baz`, err: 'Invalid k8s query' },
-    { query: `k8s:Pod`, err: 'Invalid k8s query' },
+    { query: `foo:bar:baz`, err: 'Expected k8s query' },
+    { query: `k8s:Pod`, err: 'Expected k8s query' },
     { query: `k8s:nosuch:{}`, err: 'Unknown k8s kind:' },
     { query: `k8s:Role.v1.bad.group:{}`, err: `Unknown k8s kind:` },
   ])('raises error on $query', ({ query, err }) =>
