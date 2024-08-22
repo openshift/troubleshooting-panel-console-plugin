@@ -64,8 +64,8 @@ describe('AlertNode.fromQuery', () => {
   });
 
   it.each([
-    { query: 'alert:aler', expected: 'Invalid alert query: alert:aler' },
-    { query: 'alert:alert:', expected: 'Invalid alert query' },
+    { query: 'alert:aler', expected: 'Expected alert query: alert:aler' },
+    { query: 'alert:alert:', expected: 'Expected alert query' },
   ])('$query throws', ({ query, expected }) => {
     expect(() => AlertNode.fromQuery(query)).toThrow(expected);
   });

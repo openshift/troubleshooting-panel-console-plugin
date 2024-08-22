@@ -1,119 +1,87 @@
 import { NetflowNode } from '../korrel8r/netflow';
 
-/**
- * Use example query from korrel8r docs
- *
- * https://github.com/korrel8r/korrel8r/blob/main/pkg/domains/netflow/netflow.go
- */
-describe('Test NetflowNode Parsing', () => {
-  it('URL => Query => URL => Query', () => {
-    const url =
-      'netflow-traffic?q={SrcK8S_Type="Pod", SrcK8S_Namespace="myNamespace"}|json&tenant=network&timeRange=300&limit=5&filters=src_kind="Pod";src_namespace="myNamespace"';
-    const expectedQuery = 'netflow:network:{SrcK8S_Type="Pod", SrcK8S_Namespace="myNamespace"}';
-    const actualQuery = NetflowNode.fromURL(url)?.toQuery();
+// Korrel8r queries contain less information than console URLs.
+// Round-trip conversion is not always equal.
+// The following pairs _can_ round trip, and are testsed in both directions.
+// The tests for fromURL and fromQuery test asymmetric cases.
+const roundTrip = [
+  {
+    query: 'netflow:network:{SrcK8S_Type="Pod",SrcK8S_Namespace="myNamespace"}',
+    url: `netflow-traffic?tenant=network&filters=${encodeURIComponent(
+      'src_kind=Pod;src_namespace=myNamespace',
+    )}`,
+  },
+  {
+    url: 'netflow-traffic?tenant=network&filters=src_namespace%3Dnetobserv',
+    query: 'netflow:network:{SrcK8S_Namespace="netobserv"}',
+  },
+  {
+    query: 'netflow:network:{SrcK8S_Type!="Pod",SrcK8S_Namespace!="myNamespace"}',
+    url: `netflow-traffic?tenant=network&filters=${encodeURIComponent(
+      'src_kind!=Pod;src_namespace!=myNamespace',
+    )}`,
+  },
+];
 
-    // The original URL contains extra parameters that we don't want to match on, so do an extra
-    // loop to check that the query is the same
-    const intermediaryURL = NetflowNode.fromQuery(expectedQuery)?.toURL();
-    const secondaryQuery = NetflowNode.fromURL(intermediaryURL)?.toQuery();
-    expect(actualQuery).toEqual(expectedQuery);
-    expect(actualQuery).toEqual(secondaryQuery);
-  });
-  it('URL => Query => URL => Query', () => {
-    const url =
-      'netflow-traffic?q={SrcK8S_Namespace="netobserv"}|json&tenant=network&filters=src_namespace="netobserv"';
-    const expectedQuery = 'netflow:network:{SrcK8S_Namespace="netobserv"}';
-    const actualQuery = NetflowNode.fromURL(url)?.toQuery();
+describe('NetflowNode.fromQuery', () => {
+  it.each([
+    ...roundTrip,
+    {
+      // Ignores unknown keys
+      query: 'netflow:network:{InvalidKey="Pod",SrcK8S_Namespace="foo"}',
+      url: `netflow-traffic?tenant=network&filters=${encodeURIComponent('src_namespace=foo')}`,
+    },
+  ])(`from $query`, ({ query, url }) => expect(NetflowNode.fromQuery(query).toURL()).toEqual(url));
+});
 
-    // The original URL contains extra parameters that we don't want to match on, so do an extra
-    // loop to check that the query is the same
-    const intermediaryURL = NetflowNode.fromQuery(expectedQuery)?.toURL();
-    const secondaryQuery = NetflowNode.fromURL(intermediaryURL)?.toQuery();
-    expect(actualQuery).toEqual(expectedQuery);
-    expect(actualQuery).toEqual(secondaryQuery);
-  });
+describe('NetflowNode.fromURL', () => {
+  it.each([
+    ...roundTrip,
+    {
+      url: `netflow-traffic?tenant=network&filters=${encodeURIComponent(
+        'src_namespace=netobserv',
+      )}&limit=5&match=all`,
+      query: 'netflow:network:{SrcK8S_Namespace="netobserv"}',
+    },
+    {
+      url: 'netflow-traffic?timeRange=300&limit=5&match=all&packetLoss=all&recordType=flowLog&filters=flow_layer%3Dapp%3Bdst_kind%3DPod%3Bsrc_kind%3DPod&bnf=false',
+      query: 'netflow:network:{DstK8S_Type="Pod",SrcK8S_Type="Pod"}',
+    },
+  ])(`from $url`, ({ query, url }) => expect(NetflowNode.fromURL(url).toQuery()).toEqual(query));
+});
 
-  it('Query => URL => Query', () => {
-    const query = 'netflow:network:{SrcK8S_Type="Pod", SrcK8S_Namespace="myNamespace"}';
-    const expectedURL =
-      'netflow-traffic?q={SrcK8S_Type="Pod", SrcK8S_Namespace="myNamespace"}|json&tenant=network&filters=src_kind="Pod";src_namespace="myNamespace"';
-    const actualURL = NetflowNode.fromQuery(query)?.toURL();
-    expect(actualURL).toEqual(expectedURL);
-    expect(NetflowNode.fromURL(actualURL)?.toQuery()).toEqual(query);
-  });
-
-  it('Test Query negation parsing', () => {
-    const query = 'netflow:network:{SrcK8S_Type!="Pod", SrcK8S_Namespace!="myNamespace"}';
-    const expectedURL =
-      'netflow-traffic?q={SrcK8S_Type!="Pod", SrcK8S_Namespace!="myNamespace"}|json&tenant=network&filters=src_kind!="Pod";src_namespace!="myNamespace"';
-    const actualURL = NetflowNode.fromQuery(query)?.toURL();
-    expect(actualURL).toEqual(expectedURL);
-    expect(NetflowNode.fromURL(actualURL)?.toQuery()).toEqual(query);
-  });
-
-  it('Test url to query parsing with expected errors', () => {
-    [
-      {
-        url: 'netflow-traffi',
-        expected: 'Expected url to start with netflow-traffic',
-      },
-      {
-        url: 'netflow-traffic',
-        expected: 'Expected URL to contain query parameters',
-      },
-      {
-        url: 'netflow-traffic?',
-        expected: 'Expected URL to contain query parameters',
-      },
-      {
-        url: 'netflow-traffic?q={SrcK8S_Type="Pod", SrcK8S_Namespace="myNamespace"}|json',
-        expected: 'Expected query to contain netflow class',
-      },
-      {
-        url: 'netflow-traffic?tenant=network',
-        expected: 'Expected more than 0 relevant query parameters',
-      },
-    ].forEach(({ url, expected }) => {
-      expect(() => NetflowNode.fromURL(url)).toThrow(expected);
-    });
+describe('', () => {
+  it.each([
+    {
+      url: 'netflow-traffi',
+      expected: 'Expected netflow URL: netflow-traffi',
+    },
+  ])('expect error fromURL($url)', ({ url, expected }) => {
+    expect(() => NetflowNode.fromURL(url)).toThrow(expected);
   });
 
-  it('Test query to url parsing with expected errors', () => {
-    [
-      {
-        query: 'netflo',
-        expected: 'Expected query to start with netflow:',
-      },
-      {
-        query: 'netflow:',
-        expected: 'Expected query to contain class',
-      },
-      {
-        query: 'netflow:incorrect',
-        expected: 'Expected netflow class to be network',
-      },
-      {
-        query: 'netflow:network:',
-        expected: 'Expected more than 0 relevant query parameters',
-      },
-      {
-        query: 'netflow:network:{}',
-        expected: 'Expected more than 0 relevant query parameters',
-      },
-      {
-        query: 'netflow:network:{SrcK8S_Type="Pod"=wrong}',
-        expected: 'Expected filter to be in the format key=value',
-      },
-      {
-        query: 'netflow:network:{SrcK8S_Type}',
-        expected: 'Expected filter to be in the format key=value',
-      },
-      {
-        query: 'netflow:network:{InvalidKey="Pod"}',
-        expected: 'Unknown filter key: InvalidKey',
-      },
-    ].forEach(({ query, expected }) => {
-      expect(() => NetflowNode.fromQuery(query)).toThrow(expected);
-    });
+  it.each([
+    {
+      query: 'netflo',
+      expected: 'Expected netflow query: netflo',
+    },
+    {
+      query: 'netflow:',
+      expected: 'Expected netflow query: netflow:',
+    },
+    {
+      query: 'netflow:incorrect:{}',
+      expected: 'Expected class netflow:network in query: netflow:incorrect:{}',
+    },
+    {
+      query: 'netflow:network:{SrcK8S_Type="Pod"=wrong}',
+      expected: 'Expected filter to be key="value": SrcK8S_Type="Pod"=wrong',
+    },
+    {
+      query: 'netflow:network:{SrcK8S_Type}',
+      expected: 'Expected filter to be key="value": SrcK8S_Type',
+    },
+  ])('expect error fromQuery($query)', ({ query, expected }) => {
+    expect(() => NetflowNode.fromQuery(query)).toThrow(expected);
   });
 });

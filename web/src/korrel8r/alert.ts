@@ -38,11 +38,9 @@ export class AlertNode extends Korrel8rNode {
   static fromQuery(query: string): Korrel8rNode {
     try {
       const [, data] = parseQuery(domain, query);
-      const search = new URLSearchParams();
       const selectors = keyValueList(JSON.parse(data));
-      if (selectors) search.set('alerts', selectors);
       return new AlertNode(
-        `monitoring/alerts${search.size > 0 ? '?' + search.toString() : ''}`,
+        `monitoring/alerts${selectors ? `?alerts=${encodeURIComponent(selectors)}` : ''}`,
         query,
       );
     } catch (e) {
