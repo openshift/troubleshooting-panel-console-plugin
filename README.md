@@ -1,5 +1,6 @@
 # OpenShift Console Troubleshooting Panel Plugin
 
+HI
 This plugin is used to add the Troubleshooting Panel to view Korrel8r data. It is currently under construction and shows a new tab under observe.
 
 ## Docker image
