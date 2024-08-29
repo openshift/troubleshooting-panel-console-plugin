@@ -65,7 +65,7 @@ export class K8sNode extends Korrel8rNode {
       const data = {
         namespace: namespace,
         name: name,
-        labels: K8sNode.parseSelector(params.get('q')) || undefined,
+        labels: K8sNode.parseSelector(params.get('labels')) || undefined,
       };
       return new K8sNode(url, `${K8sNode.classFor(groupVersionKind)}:${JSON.stringify(data)}`);
     }
@@ -105,19 +105,21 @@ export class K8sNode extends Korrel8rNode {
     const [gvk2, resource] = this.findKind(gvk); // Fill out partial GVK
     gvk = gvk2;
     const nsPath = namespace ? `ns/${namespace}` : 'all-namespaces';
-    const qParam = data.labels ? `?q=${encodeURIComponent(keyValueList(data.labels))}` : '';
+    const labelsParam = data.labels
+      ? `?labels=${encodeURIComponent(keyValueList(data.labels))}`
+      : '';
 
     let url: string;
-    if (!name && !namespace && qParam) {
+    if (!name && !namespace && labelsParam) {
       // Search URL
       url =
-        `search/${nsPath}${qParam}&kind=` +
+        `search/${nsPath}${labelsParam}&kind=` +
         `${gvk.group || 'core'}~` +
         `${gvk.version || undefined}~` +
         `${gvk.kind}`;
     } else {
       // Resource URL
-      url = `k8s/${nsPath}/${resource}${name && `/${name}`}${qParam}${events}`;
+      url = `k8s/${nsPath}/${resource}${name && `/${name}`}${events}${labelsParam}`;
     }
     return new K8sNode(url, query);
   }
