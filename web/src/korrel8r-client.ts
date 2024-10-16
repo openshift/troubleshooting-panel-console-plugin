@@ -1,5 +1,6 @@
 import { cancellableFetch } from './cancellable-fetch';
 import { Korrel8rGraphResponse, Korrel8rResponse } from './korrel8r/query.types';
+import { Query } from './redux-actions';
 
 const KORREL8R_ENDPOINT = '/api/proxy/plugin/troubleshooting-panel-console-plugin/korrel8r';
 
@@ -12,14 +13,14 @@ export const listDomains = () => {
   );
 };
 
-export const getNeighborsGraph = ({ query }: { query?: string }, depth: number) => {
+export const getNeighborsGraph = (query: Query) => {
   const requestData = {
     method: 'POST',
     body: JSON.stringify({
       start: {
-        queries: query ? [query.trim()] : [],
+        queries: query.query ? [query.query.trim()] : [],
       },
-      depth: depth,
+      depth: query.depth,
     }),
   };
 
@@ -29,14 +30,14 @@ export const getNeighborsGraph = ({ query }: { query?: string }, depth: number) 
   );
 };
 
-export const getGoalsGraph = ({ query }: { query?: string }, goal: string) => {
+export const getGoalsGraph = (query: Query) => {
   const requestData = {
     method: 'POST',
     body: JSON.stringify({
       start: {
-        queries: query ? [query.trim()] : [],
+        queries: query.query ? [query.query.trim()] : [],
       },
-      goals: [goal],
+      goals: [query.goal],
     }),
   };
 

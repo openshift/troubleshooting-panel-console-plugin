@@ -33,6 +33,7 @@ import { Korrel8rNode } from '../../korrel8r/korrel8r.types';
 import { InvalidNode } from '../../korrel8r/invalid';
 import { TFunction, useTranslation } from 'react-i18next';
 import './korrel8rtopology.css';
+import { Query, QueryType } from '../../redux-actions';
 
 interface Korrel8rTopologyNodeProps {
   element: Node;
@@ -201,7 +202,7 @@ export const Korrel8rTopology: React.FC<{
   queryEdges: Array<QueryEdge>;
   loggingAvailable: boolean;
   netobserveAvailable: boolean;
-  setQuery: (query: string) => void;
+  setQuery: (query: Query) => void;
 }> = ({ queryNodes, queryEdges, loggingAvailable, netobserveAvailable, setQuery }) => {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
   const location = useLocation();
@@ -248,7 +249,12 @@ export const Korrel8rTopology: React.FC<{
       if (!korrel8rNode) {
         return;
       }
-      setQuery(korrel8rNode.toQuery());
+      setQuery({
+        query: korrel8rNode.toQuery(),
+        queryType: QueryType.Neighbour,
+        depth: 3,
+        goal: null,
+      });
       history.push('/' + korrel8rNode.toURL());
     },
     [history, nodes, selectedIds, setQuery],

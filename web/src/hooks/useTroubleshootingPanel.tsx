@@ -3,7 +3,7 @@ import { InfrastructureIcon } from '@patternfly/react-icons';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
-import { openTP } from '../redux-actions';
+import { openTP, QueryType, setPersistedQuery } from '../redux-actions';
 import { useKorrel8r } from './useKorrel8r';
 import { useURLState } from './useURLState';
 
@@ -14,6 +14,14 @@ const useTroubleshootingPanel: ExtensionHook<Array<Action>> = () => {
   const [perspective] = useActivePerspective();
   const dispatch = useDispatch();
   const open = React.useCallback(() => {
+    dispatch(
+      setPersistedQuery({
+        query: '',
+        queryType: QueryType.Neighbour,
+        depth: 3,
+        goal: null,
+      }),
+    );
     dispatch(openTP());
   }, [dispatch]);
 

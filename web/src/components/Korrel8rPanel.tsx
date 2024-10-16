@@ -27,28 +27,38 @@ import { TFunction, useTranslation } from 'react-i18next';
 import { CubesIcon, ExclamationCircleIcon } from '@patternfly/react-icons';
 import { useURLState } from '../hooks/useURLState';
 import { usePluginAvailable } from '../hooks/usePluginAvailable';
+import { useDispatch, useSelector } from 'react-redux';
+import { State } from '../redux-reducers';
+import { Query, QueryType, setPersistedQuery } from '../redux-actions';
 
 type Result = {
   graph?: Korrel8rGraphResponse;
   message?: string;
   title?: string;
 };
-enum QueryType {
-  Neighbour,
-  Goal,
-}
 
 export default function Korrel8rPanel() {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
+  const persistedQuery = useSelector((state: State) => {
+    return state.plugins?.tp?.get('persistedQuery');
+  }) as Query;
+  const dispatch = useDispatch();
 
   // State
   const { korrel8rQueryFromURL } = useURLState();
-  const [query, setQuery] = React.useState(korrel8rQueryFromURL); // Initial value from URL
+  // Initial value from persisted query if available (when opened from anywhere but
+  // the alerts page or if never opened before), otherwise URL
+  const initialQuery = persistedQuery.query
+    ? persistedQuery
+    : {
+        query: korrel8rQueryFromURL,
+        queryType: QueryType.Neighbour,
+        depth: 3,
+        goal: null,
+      };
+  const [query, setQuery] = React.useState<Query>(initialQuery);
   const [result, setResult] = React.useState<Result | null>(null);
   const [showQuery, setShowQuery] = React.useState(false);
-  const [queryType, setQueryType] = React.useState(QueryType.Neighbour);
-  const [depth, setDepth] = React.useState(3);
-  const [goal, setGoal] = React.useState('');
 
   React.useEffect(() => {
     // Set result = null to trigger a reload, don't run the query till then.
@@ -56,10 +66,10 @@ export default function Korrel8rPanel() {
       return;
     }
     let fetch: CancellableFetch<Korrel8rGraphResponse>;
-    if (queryType === QueryType.Neighbour) {
-      fetch = getNeighborsGraph({ query }, depth);
-    } else if (queryType === QueryType.Goal) {
-      fetch = getGoalsGraph({ query }, goal);
+    if (query.queryType === QueryType.Neighbour) {
+      fetch = getNeighborsGraph(query);
+    } else if (query.queryType === QueryType.Goal) {
+      fetch = getGoalsGraph(query);
     } else {
       return;
     }
@@ -67,6 +77,10 @@ export default function Korrel8rPanel() {
     request()
       .then((response: Korrel8rGraphResponse) => {
         setResult({ graph: { nodes: response.nodes, edges: response.edges } });
+        // Only set the persisted query upon a successful query. It would be a
+        // poor feeling to create a query that fails, and then be forced to rerun it
+        // when opening the panel later
+        dispatch(setPersistedQuery(query));
       })
       .catch((e: Error) => {
         try {
@@ -76,7 +90,7 @@ export default function Korrel8rPanel() {
         }
       });
     return abort;
-  }, [result, query, depth, goal, queryType, t]);
+  }, [result, t, dispatch, query]);
 
   const queryToggleID = 'query-toggle';
   const queryContentID = 'query-content';
@@ -91,12 +105,17 @@ export default function Korrel8rPanel() {
     : cannotFocus;
   const minDepth = 1;
   const maxDepth = 10;
-  const runQuery = () => {
-    if (!goal) setQueryType(QueryType.Neighbour); // If no goal do neighbours.
-    if (!depth || depth < minDepth) setDepth(minDepth); // Min valid value is 1
-    if (depth && depth > maxDepth) setDepth(maxDepth); // Max value
-    setResult(null);
-  };
+  const depthBounds = applyBounds(1, 10);
+  const runQuery = React.useCallback(
+    (newQuery: Query) => {
+      newQuery.depth = depthBounds(newQuery.depth);
+      newQuery.queryType = !newQuery.goal ? QueryType.Neighbour : newQuery.queryType;
+
+      setQuery(newQuery);
+      setResult(null);
+    },
+    [setResult, depthBounds],
+  );
 
   return (
     <>
@@ -105,8 +124,12 @@ export default function Korrel8rPanel() {
           <Button
             isAriaDisabled={!korrel8rQueryFromURL}
             onClick={() => {
-              setQuery(korrel8rQueryFromURL);
-              runQuery();
+              runQuery({
+                query: korrel8rQueryFromURL,
+                queryType: QueryType.Neighbour,
+                depth: 3,
+                goal: null,
+              });
             }}
           >
             {t('Focus')}
@@ -136,8 +159,13 @@ export default function Korrel8rPanel() {
               className="tp-plugin__panel-query-input"
               placeholder="domain:class:querydata"
               id={queryInputID}
-              value={query}
-              onChange={(_event, value) => setQuery(value)}
+              value={query.query}
+              onChange={(_event, value) =>
+                setQuery({
+                  ...query,
+                  query: value,
+                })
+              }
               resizeOrientation="vertical"
             />
           </Tooltip>
@@ -147,22 +175,40 @@ export default function Korrel8rPanel() {
                 label={t('Neighbourhood depth: ')}
                 name={queryTypeOptions}
                 id="neighbourhood-option"
-                isChecked={queryType === QueryType.Neighbour}
+                isChecked={query.queryType === QueryType.Neighbour}
                 onChange={(_: React.FormEvent, on: boolean) => {
-                  on && setQueryType(QueryType.Neighbour);
+                  on &&
+                    setQuery({
+                      ...query,
+                      queryType: QueryType.Neighbour,
+                    });
                 }}
               />
             </Tooltip>
             <NumberInput
-              value={depth}
+              value={query.depth}
               min={minDepth}
               max={maxDepth}
-              isDisabled={queryType !== QueryType.Neighbour}
-              onPlus={() => setDepth((depth || 0) + 1)}
-              onMinus={() => (depth || 0) > minDepth && setDepth(depth - 1)}
+              isDisabled={query.queryType !== QueryType.Neighbour}
+              onPlus={() =>
+                setQuery({
+                  ...query,
+                  depth: (query.depth || 0) + 1,
+                })
+              }
+              onMinus={() =>
+                (query.depth || 0) > minDepth &&
+                setQuery({
+                  ...query,
+                  depth: query.depth - 1,
+                })
+              }
               onChange={(event: React.FormEvent<HTMLInputElement>) => {
                 const n = Number((event.target as HTMLInputElement).value);
-                setDepth(isNaN(n) ? 1 : n);
+                setQuery({
+                  ...query,
+                  depth: isNaN(n) ? 1 : n,
+                });
               }}
             />
           </Flex>
@@ -172,24 +218,33 @@ export default function Korrel8rPanel() {
                 label={t('Goal class: ')}
                 name={queryTypeOptions}
                 id="goal-option"
-                isChecked={queryType === QueryType.Goal}
-                onChange={(_: React.FormEvent, on: boolean) => on && setQueryType(QueryType.Goal)}
+                isChecked={query.queryType === QueryType.Goal}
+                onChange={(_: React.FormEvent, on: boolean) =>
+                  on &&
+                  setQuery({
+                    ...query,
+                    queryType: QueryType.Goal,
+                  })
+                }
               />
             </Tooltip>
             <FlexItem>
               <TextInput
-                value={goal}
-                isDisabled={queryType !== QueryType.Goal}
+                value={query.goal}
+                isDisabled={query.queryType !== QueryType.Goal}
                 placeholder="domain:class"
                 onChange={(event: React.FormEvent<HTMLInputElement>) => {
-                  setGoal((event.target as HTMLInputElement).value);
+                  setQuery({
+                    ...query,
+                    goal: (event.target as HTMLInputElement).value,
+                  });
                 }}
                 aria-label="Korrel8r Query"
               />
             </FlexItem>
           </Flex>
         </Flex>
-        <Button isAriaDisabled={!query} onClick={() => runQuery()} variant="secondary">
+        <Button isAriaDisabled={!query} onClick={() => runQuery(query)} variant="secondary">
           {t('Query')}
         </Button>
       </ExpandableSection>
@@ -204,7 +259,7 @@ export default function Korrel8rPanel() {
 interface TopologyProps {
   result?: Result;
   t: TFunction;
-  setQuery: (query: string) => void;
+  setQuery: (query: Query) => void;
 }
 
 const Topology: React.FC<TopologyProps> = ({ result, t, setQuery }) => {
@@ -287,4 +342,16 @@ const TopologyInfoState: React.FC<TopologyInfoStateProps> = ({ titleText, text, 
       </EmptyState>
     </div>
   );
+};
+
+const applyBounds = (minValue: number, maxValue: number) => {
+  return (val: number) => {
+    if (!val || val < minValue) {
+      return minValue;
+    } else if (val > maxValue) {
+      return maxValue;
+    } else {
+      return val;
+    }
+  };
 };
