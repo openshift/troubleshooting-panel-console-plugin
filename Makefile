@@ -1,3 +1,7 @@
+.PHONY: test-frontend
+test-frontend: lint-frontend
+	cd web && npm run test:unit
+
 .PHONY: install-frontend
 install-frontend:
 	cd web && npm install
@@ -39,7 +43,7 @@ start-backend:
 	go run ./cmd/plugin-backend.go -port='9002' -config-path='./web/dist' -static-path='./web/dist' -plugin-config-path='ct.yaml'
 
 .PHONY: build-image
-build-image:
+build-image: test-frontend
 	./scripts/build-image.sh
 
 .PHONY: start-forward
@@ -51,7 +55,7 @@ export TAG?=latest
 IMAGE=quay.io/${REGISTRY_ORG}/troubleshooting-panel-console-plugin:${TAG}
 
 .PHONY: deploy
-deploy:	lint-frontend		## Build and push image, reinstall on cluster using helm.
+deploy:	test-frontend		## Build and push image, reinstall on cluster using helm.
 	helm uninstall troubleshooting-panel-console-plugin -n troubleshooting-panel-console-plugin || true
 	PUSH=1 scripts/build-image.sh
 	helm install troubleshooting-panel-console-plugin charts/openshift-console-plugin -n troubleshooting-panel-console-plugin --create-namespace --set plugin.image=$(IMAGE)

@@ -1,7 +1,3 @@
-/**
- * @jest-environment jsdom
- */
-
 import { K8sNode } from '../korrel8r/k8s';
 
 beforeAll(() => {
