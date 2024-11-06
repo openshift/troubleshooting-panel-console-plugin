@@ -7,39 +7,40 @@ import { MetricNode } from './metric';
 import { NetflowNode } from './netflow';
 import { TraceNode } from './trace';
 
+const urlLookup = [
+  AlertNode.fromURL,
+  K8sNode.fromURL,
+  LogNode.fromURL,
+  MetricNode.fromURL,
+  NetflowNode.fromURL,
+  TraceNode.fromURL,
+];
+
+const queryLookup = {
+  alert: AlertNode.fromQuery,
+  k8s: K8sNode.fromQuery,
+  log: LogNode.fromQuery,
+  metric: MetricNode.fromQuery,
+  netflow: NetflowNode.fromQuery,
+  trace: TraceNode.fromQuery,
+};
+
 export class Korrel8rNodeFactory {
   static fromURL(url: string): Korrel8rNode {
-    [
-      AlertNode.fromURL,
-      K8sNode.fromURL,
-      LogNode.fromURL,
-      MetricNode.fromURL,
-      NetflowNode.fromURL,
-      TraceNode.fromURL,
-    ].forEach((fromURL): Korrel8rNode => {
+    for (const lookup of urlLookup) {
       try {
-        // eslint-disable-next-line no-console
-        console.error(`FIXME ${fromURL} ${url}`);
-        return fromURL(url);
+        return lookup(url);
       } catch (e) {
         if (!(e instanceof WrongDomainError)) {
           throw e;
         }
       }
-    });
+    }
     return InvalidNode.fromURL(url);
   }
 
   static fromQuery(query: string): Korrel8rNode {
-    const lookup = {
-      alert: AlertNode.fromQuery,
-      k8s: K8sNode.fromQuery,
-      log: LogNode.fromQuery,
-      metric: MetricNode.fromQuery,
-      netflow: NetflowNode.fromQuery,
-      trace: TraceNode.fromQuery,
-    };
-    const fromQuery = lookup[query.split(':').at(0)];
+    const fromQuery = queryLookup[query.split(':').at(0)];
     if (fromQuery) return fromQuery(query);
     return InvalidNode.fromQuery(query);
   }
