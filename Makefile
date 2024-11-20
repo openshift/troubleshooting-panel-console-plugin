@@ -12,7 +12,7 @@ install-frontend-ci-clean: install-frontend-ci
 
 .PHONY: build-frontend
 build-frontend:
-	cd web && npm run build
+	cd web && npm run i18n && npm run build
 
 .PHONY: start-frontend
 start-frontend:

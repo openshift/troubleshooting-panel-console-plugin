@@ -1,10 +1,10 @@
-import { QueryNode } from './korrel8r/query.types';
 import { Korrel8rDomain } from './korrel8r/korrel8r.types';
+import { QueryNode } from './korrel8r/query.types';
 
-const getDomain = (node: QueryNode) => node.class.split(':')[0] ?? '';
+export const getDomain = (classOrQuery: string) => classOrQuery.split(':')[0] ?? '';
 
 export const nodeToLabel = (node: QueryNode): string => {
-  const domain = getDomain(node);
+  const domain = getDomain(node.class);
   switch (domain) {
     case Korrel8rDomain.Alert:
       return `Alert (${node.count})`;
