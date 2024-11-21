@@ -1,4 +1,4 @@
-import * as React from 'react';
+import { ClusterIcon } from '@patternfly/react-icons';
 import {
   action,
   BreadthFirstLayout,
@@ -24,16 +24,16 @@ import {
   withPanZoom,
   withSelection,
 } from '@patternfly/react-topology';
-import { ClusterIcon } from '@patternfly/react-icons';
-import { QueryEdge, QueryNode } from '../../korrel8r/query.types';
-import { nodeToLabel } from '../../korrel8r-utils';
-import { Korrel8rNodeFactory } from '../../korrel8r/node-factory';
-import { useHistory, useLocation } from 'react-router';
-import { Korrel8rNode } from '../../korrel8r/korrel8r.types';
-import { InvalidNode } from '../../korrel8r/invalid';
+import * as React from 'react';
 import { TFunction, useTranslation } from 'react-i18next';
-import './korrel8rtopology.css';
+import { useHistory, useLocation } from 'react-router';
+import { nodeToLabel } from '../../korrel8r-utils';
+import { InvalidNode } from '../../korrel8r/invalid';
+import { Korrel8rNode } from '../../korrel8r/korrel8r.types';
+import { Korrel8rNodeFactory } from '../../korrel8r/node-factory';
+import { QueryEdge, QueryNode } from '../../korrel8r/query.types';
 import { Query, QueryType } from '../../redux-actions';
+import './korrel8rtopology.css';
 
 interface Korrel8rTopologyNodeProps {
   element: Node;
@@ -284,7 +284,7 @@ export const Korrel8rTopology: React.FC<{
     setTimeout(() => {
       // Center the graph on the next render tick once the graph elements have been sized and placed
       controller.getGraph().fit(30);
-    }, 1);
+    }, 100); // FIXME this timeout is racy, need to reliably centre graph after layout is done.
     return controller;
   }, [controller, selectionAction]);
 

@@ -11,11 +11,11 @@ export class InvalidNode extends Korrel8rNode {
   }
 
   static fromURL(url: string): Korrel8rNode {
-    return new InvalidNode(url, 'invalid');
+    return new InvalidNode(url, '');
   }
 
   static fromQuery(query: string): Korrel8rNode {
-    return new InvalidNode('invalid', query);
+    return new InvalidNode('', query);
   }
 
   toURL(): string {
