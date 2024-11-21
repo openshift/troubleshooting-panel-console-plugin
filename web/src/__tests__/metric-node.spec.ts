@@ -1,3 +1,4 @@
+import { WrongDomainError } from '../korrel8r/korrel8r.types';
 import { MetricNode } from '../korrel8r/metric';
 
 /**
@@ -26,26 +27,26 @@ describe('Test MetricNode Parsing', () => {
     expect(MetricNode.fromQuery(expectedQuery)?.toURL()).toEqual(url);
   });
 
-  it('Test url to query parsing with expected errors', () => {
+  describe('Test url to query parsing with expected errors', () => {
     [
       {
-        url: 'monitoring/query-browse',
-        expected: 'Expected metric URL: monitoring/query-browse',
+        url: 'foobar',
+        expected: new WrongDomainError('Expected metric URL: foobar'),
       },
       {
         url: 'monitoring/query-browser',
-        expected: 'Expected query parameters in metric URL:',
+        expected: 'Invalid metric URL',
       },
       {
         url: 'monitoring/query-browser?',
-        expected: 'Expected query parameters in metric URL:',
+        expected: 'Invalid metric URL',
       },
       {
         url: 'monitoring/query-browser?query1=wrong_query',
-        expected: 'Expected to find query0',
+        expected: 'Invalid metric URL',
       },
     ].forEach(({ url, expected }) => {
-      expect(() => MetricNode.fromURL(url)).toThrow(expected);
+      it(`converts from ${url}`, () => expect(() => MetricNode.fromURL(url)).toThrow(expected));
     });
   });
 
