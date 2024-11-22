@@ -1,3 +1,6 @@
+.PHONY: test
+test: test-frontend
+
 .PHONY: test-frontend
 test-frontend: lint-frontend
 	cd web && npm run test:unit

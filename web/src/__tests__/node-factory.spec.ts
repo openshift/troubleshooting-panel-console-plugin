@@ -35,9 +35,9 @@ const testdata = [
   },
   {
     url:
-      `observe/traces?name=platform&namespace=openshift-tracing&tenant=platform&` +
-      `q=${encodeURIComponent('{resource.service.name = "article-service"}')}`,
-    query: `trace:trace:{resource.service.name = "article-service"}`,
+      `observe/traces/1599dfd76bc896101a9811857ae3c3c9?` +
+      `namespace=openshift-tracing&name=platform&tenant=platform`,
+    query: `trace:span:{trace:id="1599dfd76bc896101a9811857ae3c3c9"}`,
   },
   {
     url: `monitoring/logs?q=${encodeURIComponent(
