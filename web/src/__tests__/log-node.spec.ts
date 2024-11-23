@@ -7,8 +7,7 @@ describe('LogNode.fromURL', () => {
         '{kubernetes_namespace_name="default",kubernetes_pod_name="foo"}',
       )}&tenant=infrastructure`,
       query:
-        `log:infrastructure:{kubernetes_namespace_name="default"` +
-        `,kubernetes_pod_name="foo"}|json`,
+        `log:infrastructure:{kubernetes_namespace_name="default"` + `,kubernetes_pod_name="foo"}`,
     },
     {
       url: `monitoring/logs?q=${encodeURIComponent(
@@ -17,31 +16,30 @@ describe('LogNode.fromURL', () => {
       )}`,
       query:
         `log:infrastructure:{kubernetes_namespace_name="default",` +
-        `kubernetes_pod_name="foo",log_type="infrastructure"}|json`,
+        `kubernetes_pod_name="foo",log_type="infrastructure"}`,
     },
     {
       url: `monitoring/logs?q=${encodeURIComponent(
-        '{kubernetes_namespace_name="default",kubernetes_pod_name="foo"}|json',
+        '{kubernetes_namespace_name="default",kubernetes_pod_name="foo"}',
       )}&tenant=infrastructure`,
       query:
-        `log:infrastructure:{kubernetes_namespace_name="default",` +
-        `kubernetes_pod_name="foo"}|json`,
+        `log:infrastructure:{kubernetes_namespace_name="default",` + `kubernetes_pod_name="foo"}`,
     },
     {
       url: `monitoring/logs?q=${encodeURIComponent(
-        '{kubernetes_namespace_name="default",kubernetes_pod_name="foo",log_type="infrastructure"}|json',
+        '{kubernetes_namespace_name="default",kubernetes_pod_name="foo",log_type="infrastructure"}',
       )}&tenant=infrastructure`,
       query:
         `log:infrastructure:{kubernetes_namespace_name="default",` +
-        `kubernetes_pod_name="foo",log_type="infrastructure"}|json`,
+        `kubernetes_pod_name="foo",log_type="infrastructure"}`,
     },
     {
       url: `/k8s/ns/foo/pods/bar/aggregated-logs`,
-      query: `log:application:{kubernetes_namespace_name="foo",kubernetes_pod_name="bar"}|json`,
+      query: `log:application:{kubernetes_namespace_name="foo",kubernetes_pod_name="bar"}`,
     },
     {
       url: `/k8s/ns/kube/pods/bar/aggregated-logs`,
-      query: `log:infrastructure:{kubernetes_namespace_name="kube",kubernetes_pod_name="bar"}|json`,
+      query: `log:infrastructure:{kubernetes_namespace_name="kube",kubernetes_pod_name="bar"}`,
     },
   ])('$url', ({ url, query }) => expect(LogNode.fromURL(url)?.toQuery()).toEqual(query));
 });
@@ -50,16 +48,15 @@ describe('LogNode.fromQuery', () => {
   it.each([
     {
       query:
-        `log:infrastructure:{kubernetes_namespace_name="default",` +
-        `kubernetes_pod_name="foo"}|json`,
+        `log:infrastructure:{kubernetes_namespace_name="default",` + `kubernetes_pod_name="foo"}`,
       url: `monitoring/logs?q=${encodeURIComponent(
-        '{kubernetes_namespace_name="default",kubernetes_pod_name="foo"}|json',
+        '{kubernetes_namespace_name="default",kubernetes_pod_name="foo"}',
       )}&tenant=infrastructure`,
     },
     {
       query: 'log:infrastructure:{kubernetes_namespace_name="default",log_type="infrastructure"}',
       url: `monitoring/logs?q=${encodeURIComponent(
-        '{kubernetes_namespace_name="default",log_type="infrastructure"}|json',
+        '{kubernetes_namespace_name="default",log_type="infrastructure"}',
       )}&tenant=infrastructure`,
     },
   ])('$query', ({ url, query }) => expect(LogNode.fromQuery(query)?.toURL()).toEqual(url));
@@ -72,7 +69,7 @@ describe('expected errors', () => {
       expected: 'Expected log URL: monitoring/log',
     },
     {
-      url: 'monitoring/logs?q={kubernetes_namespace_name="default",kubernetes_pod_name="foo"}|json',
+      url: 'monitoring/logs?q={kubernetes_namespace_name="default",kubernetes_pod_name="foo"}',
       expected: 'No log class found in URL',
     },
   ])('error from url: $url', ({ url, expected }) => {

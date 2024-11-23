@@ -7,10 +7,6 @@ enum LogClass {
   audit = 'audit',
 }
 
-const addJSON = (logQL: string): string => {
-  return logQL.match(/\|json/) ? logQL : logQL + '|json';
-};
-
 export class LogNode extends Korrel8rNode {
   logClass: LogClass;
   query: string;
@@ -34,7 +30,7 @@ export class LogNode extends Korrel8rNode {
       return new LogNode(
         url,
         `log:${logClass}:{kubernetes_namespace_name="${namespace}",` +
-          `kubernetes_pod_name="${name}"}|json`,
+          `kubernetes_pod_name="${name}"}`,
         logClass,
       );
     }
@@ -45,7 +41,7 @@ export class LogNode extends Korrel8rNode {
       params.get('tenant') || logQL?.match(/{[^}]*log_type(?:=~?)"([^"]+)"/)?.at(1);
     const logClass = LogClass[logClassStr as keyof typeof LogClass];
     if (!logClass) throw new NodeError(`No log class found in URL: ${url}`);
-    return new LogNode(url, `log:${logClass}:${addJSON(logQL)}`, logClass);
+    return new LogNode(url, `log:${logClass}:${logQL}`, logClass);
   }
 
   static fromQuery(query: string): Korrel8rNode {
@@ -53,7 +49,7 @@ export class LogNode extends Korrel8rNode {
     const logClass = LogClass[clazz as keyof typeof LogClass];
     if (!logClass) throw new NodeError(`Expected log class in query: ${query}`);
     return new LogNode(
-      `monitoring/logs?q=${encodeURIComponent(`${addJSON(logQL)}`)}&tenant=${logClass}`,
+      `monitoring/logs?q=${encodeURIComponent(`${logQL}`)}&tenant=${logClass}`,
       query,
       logClass,
     );
