@@ -41,10 +41,9 @@ const testdata = [
   },
   {
     url: `monitoring/logs?q=${encodeURIComponent(
-      '{kubernetes_namespace_name="default",log_type="infrastructure"}|json',
+      '{kubernetes_namespace_name="default",log_type="infrastructure"}',
     )}&tenant=infrastructure`,
-    query:
-      'log:infrastructure:{kubernetes_namespace_name="default",log_type="infrastructure"}|json',
+    query: 'log:infrastructure:{kubernetes_namespace_name="default",log_type="infrastructure"}',
   },
 ];
 
