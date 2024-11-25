@@ -49,7 +49,11 @@ export class NetflowNode extends Korrel8rNode {
       })
       .filter((s) => s)
       .join(',');
-    return new NetflowNode(url, `netflow:network:{${selectors || 'SrcK8S_Namespace=~".+"'}}`);
+
+    // Set default selector if no valid selectors are present
+    const finalSelectors = selectors || 'DstK8S_Type="Pod",SrcK8S_Type="Pod"';
+
+    return new NetflowNode(url, `netflow:network:{${finalSelectors}}`);
   }
 
   static fromQuery(query: string): Korrel8rNode {
@@ -67,14 +71,8 @@ export class NetflowNode extends Korrel8rNode {
       })
       .filter((s) => s)
       .join(';');
-    // Special case: omit filters if the query is exactly netflow:network:{SrcK8S_Namespace=~".+"}
-    const isDefaultQuery = query === 'netflow:network:{SrcK8S_Namespace=~".+"}';
-
-    // Build the URL
     return new NetflowNode(
-      `netflow-traffic?tenant=${clazz}${
-        !isDefaultQuery && filters ? `&filters=${encodeURIComponent(filters)}` : ''
-      }`,
+      `netflow-traffic?tenant=${clazz}${filters ? `&filters=${encodeURIComponent(filters)}` : ''}`,
       query,
     );
   }
