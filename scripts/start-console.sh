@@ -1,15 +1,12 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
-
-CONSOLE_IMAGE=${CONSOLE_IMAGE:="quay.io/openshift/origin-console:latest"}
-CONSOLE_PORT=${CONSOLE_PORT:=9000}
-npm_package_consolePlugin_name=${npm_package_consolePlugin_name:="troubleshooting-panel-console-plugin"}
+CONSOLE_IMAGE=${CONSOLE_IMAGE:-"quay.io/openshift/origin-console:latest"}
+CONSOLE_PORT=${CONSOLE_PORT:-9000}
+PANEL_PLUGIN=${PANEL_PLUGIN:-"troubleshooting-panel-console-plugin"}
 CONSOLE_IMAGE_PLATFORM=${CONSOLE_IMAGE_PLATFORM:="linux/amd64"}
 
 echo "Starting local OpenShift console..."
-
-npm_package_consolePlugin_name="troubleshooting-panel-console-plugin"
 
 BRIDGE_USER_AUTH="disabled"
 BRIDGE_K8S_MODE="off-cluster"
@@ -23,7 +20,7 @@ BRIDGE_K8S_MODE_OFF_CLUSTER_ALERTMANAGER=$(oc -n openshift-config-managed get co
 set -e
 BRIDGE_K8S_AUTH_BEARER_TOKEN=$(oc whoami --show-token 2>/dev/null)
 BRIDGE_USER_SETTINGS_LOCATION="localstorage"
-BRIDGE_I18N_NAMESPACES="plugin__${npm_package_consolePlugin_name}"
+BRIDGE_I18N_NAMESPACES="plugin__${PANEL_PLUGIN}"
 
 echo "API Server: $BRIDGE_K8S_MODE_OFF_CLUSTER_ENDPOINT"
 echo "Console Image: $CONSOLE_IMAGE"
@@ -34,20 +31,20 @@ echo "Console Platform: $CONSOLE_IMAGE_PLATFORM"
 if [ -x "$(command -v podman)" ]; then
     if [ "$(uname -s)" = "Linux" ]; then
         # Use host networking on Linux since host.containers.internal is unreachable in some environments.
-        BRIDGE_PLUGINS="troubleshooting-panel-console-plugin=http://localhost:9002,monitoring-plugin=http://localhost:9001"
-        BRIDGE_PLUGIN_PROXY="{\"services\": [{\"consoleAPIPath\": \"/api/proxy/plugin/${npm_package_consolePlugin_name}/korrel8r/\", \"endpoint\":\"https://localhost:9005\",\"authorize\":true}]}"
-        podman run --pull always --platform $CONSOLE_IMAGE_PLATFORM --rm --network=host --env-file <(set | grep BRIDGE) $CONSOLE_IMAGE
+        BRIDGE_PLUGINS="${PANEL_PLUGIN}=http://localhost:9002,monitoring-plugin=http://localhost:9001"
+        podman run --pull always --platform $CONSOLE_IMAGE_PLATFORM --rm --network=host --env-file <(set | grep BRIDGE) \
+            --env BRIDGE_PLUGIN_PROXY="{\"services\": [{\"consoleAPIPath\": \"${PANEL_PLUGIN}/korrel8r/\", \"endpoint\":\"https://localhost:9005\",\"authorize\":true}]}" \
+            $CONSOLE_IMAGE
     else
-        BRIDGE_PLUGINS="troubleshooting-panel-console-plugin=http://host.containers.internal:9002,monitoring-plugin=http://host.containers.internal:9001"
-        BRIDGE_PLUGIN_PROXY="{\"services\": [{\"consoleAPIPath\": \"/api/proxy/plugin/${npm_package_consolePlugin_name}/korrel8r/\", \"endpoint\":\"https://host.containers.internal:9005\",\"authorize\":true}]}"
+        BRIDGE_PLUGINS="${PANEL_PLUGIN}=http://host.containers.internal:9002,monitoring-plugin=http://host.containers.internal:9001"
         podman run --pull always --platform $CONSOLE_IMAGE_PLATFORM \
             --rm -p "$CONSOLE_PORT":9000 \
             --env-file <(set | grep BRIDGE) \
-            --env BRIDGE_PLUGIN_PROXY='{"services": [{"consoleAPIPath": "/api/proxy/plugin/troubleshooting-panel-console-plugin/korrel8r/", "endpoint":"https://host.containers.internal:9005","authorize":true}]}' \
+            --env BRIDGE_PLUGIN_PROXY="{\"services\": [{\"consoleAPIPath\": \"/api/proxy/plugin/${PANEL_PLUGIN}/korrel8r/\", \"endpoint\":\"https://host.containers.internal:9005\",\"authorize\":true}]}" \
             $CONSOLE_IMAGE
     fi
 else
     BRIDGE_PLUGINS="troubleshooting-panel-console-plugin=http://host.docker.internal:9002,monitoring-plugin=http://host.docker.internal:9001"
-    BRIDGE_PLUGIN_PROXY="{\"services\": [{\"consoleAPIPath\": \"/api/proxy/plugin/${npm_package_consolePlugin_name}/korrel8r/\", \"endpoint\":\"https://host.docker.internal:9005\",\"authorize\":true}]}"
+    BRIDGE_PLUGIN_PROXY="{\"services\": [{\"consoleAPIPath\": \"/api/proxy/plugin/${PANEL_PLUGIN}/korrel8r/\", \"endpoint\":\"https://host.docker.internal:9005\",\"authorize\":true}]}"
     docker run --pull always --platform $CONSOLE_IMAGE_PLATFORM --rm -p "$CONSOLE_PORT":9000 --env-file <(set | grep BRIDGE) $CONSOLE_IMAGE
 fi
