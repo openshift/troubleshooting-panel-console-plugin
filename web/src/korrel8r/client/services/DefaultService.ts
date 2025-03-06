@@ -8,19 +8,19 @@ import type { Graph } from '../models/Graph';
 import type { Neighbours } from '../models/Neighbours';
 import type { Node } from '../models/Node';
 import type { CancelablePromise } from '../core/CancelablePromise';
-import { OpenAPI } from '../core/OpenAPI';
-import { request as __request } from '../core/request';
+import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class DefaultService {
+    constructor(public readonly httpRequest: BaseHttpRequest) {}
     /**
      * Change key configuration settings at runtime.
      * @param verbose verbose setting for logging
      * @returns any OK
      * @throws ApiError
      */
-    public static putConfig(
+    public putConfig(
         verbose?: number,
     ): CancelablePromise<any> {
-        return __request(OpenAPI, {
+        return this.httpRequest.request({
             method: 'PUT',
             url: '/config',
             query: {
@@ -34,8 +34,8 @@ export class DefaultService {
      * @returns any
      * @throws ApiError
      */
-    public static getDomains(): CancelablePromise<Array<Domain> | any> {
-        return __request(OpenAPI, {
+    public getDomains(): CancelablePromise<Array<Domain> | any> {
+        return this.httpRequest.request({
             method: 'GET',
             url: '/domains',
         });
@@ -48,11 +48,11 @@ export class DefaultService {
      * @returns any
      * @throws ApiError
      */
-    public static postGraphsGoals(
+    public postGraphsGoals(
         request: Goals,
         rules?: boolean,
     ): CancelablePromise<Graph | any> {
-        return __request(OpenAPI, {
+        return this.httpRequest.request({
             method: 'POST',
             url: '/graphs/goals',
             query: {
@@ -69,11 +69,11 @@ export class DefaultService {
      * @returns any
      * @throws ApiError
      */
-    public static postGraphsNeighbours(
+    public postGraphsNeighbours(
         request: Neighbours,
         rules?: boolean,
     ): CancelablePromise<Graph | any> {
-        return __request(OpenAPI, {
+        return this.httpRequest.request({
             method: 'POST',
             url: '/graphs/neighbours',
             query: {
@@ -89,10 +89,10 @@ export class DefaultService {
      * @returns any
      * @throws ApiError
      */
-    public static postListsGoals(
+    public postListsGoals(
         request: Goals,
     ): CancelablePromise<Array<Node> | any> {
-        return __request(OpenAPI, {
+        return this.httpRequest.request({
             method: 'POST',
             url: '/lists/goals',
             body: request,
@@ -104,10 +104,10 @@ export class DefaultService {
      * @returns any OK
      * @throws ApiError
      */
-    public static getObjects(
+    public getObjects(
         query: string,
     ): CancelablePromise<Array<any>> {
-        return __request(OpenAPI, {
+        return this.httpRequest.request({
             method: 'GET',
             url: '/objects',
             query: {

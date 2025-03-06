@@ -75,9 +75,10 @@ export default function Korrel8rPanel() {
       return;
     }
     // Make the query request
-    const { request, abort } =
+    const cancellableFetch =
       query.queryType === QueryType.Goal ? getGoalsGraph(query) : getNeighborsGraph(query);
-    request()
+
+    cancellableFetch
       .then((response: Korrel8rGraphResponse) => {
         setResult({ graph: { nodes: response.nodes, edges: response.edges } });
         // Only set the persisted query upon a successful query. It would be a
@@ -96,7 +97,7 @@ export default function Korrel8rPanel() {
           setResult({ isError: true, message: e.message, title: t('Request Failed') });
         }
       });
-    return abort;
+    return cancellableFetch.cancel;
   }, [result, t, dispatch, query, cannotFocus, korrel8rQueryFromURL]);
 
   const queryToggleID = 'query-toggle';
