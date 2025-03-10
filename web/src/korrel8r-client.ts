@@ -2,7 +2,8 @@ import { getCSRFToken } from '@openshift-console/dynamic-plugin-sdk/lib/utils/fe
 import { Korrel8rClient } from './korrel8r/client';
 import { Query } from './redux-actions';
 
-const KORREL8R_ENDPOINT = '/api/proxy/plugin/troubleshooting-panel-console-plugin/korrel8r';
+const KORREL8R_ENDPOINT =
+  '/api/proxy/plugin/troubleshooting-panel-console-plugin/korrel8r/api/v1alpha1';
 
 export const listDomains = () => {
   const korrel8rClient = new Korrel8rClient({
