@@ -6,8 +6,7 @@ export const useKorrel8r = () => {
   const [isKorrel8rReachable, setIsKorrel8rReachable] = React.useState<boolean>(false);
 
   useEffect(() => {
-    const { request } = listDomains();
-    request()
+    listDomains()
       .then(() => {
         setIsKorrel8rReachable(true);
       })
