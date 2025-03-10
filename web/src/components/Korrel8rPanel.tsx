@@ -77,7 +77,19 @@ export default function Korrel8rPanel() {
     }
     // Make the query request
     const cancellableFetch =
-      query.queryType === QueryType.Goal ? getGoalsGraph(query) : getNeighborsGraph(query);
+      query.queryType === QueryType.Goal
+        ? getGoalsGraph({
+            start: {
+              queries: query.query ? [query.query.trim()] : [],
+            },
+            goals: [query.goal],
+          })
+        : getNeighborsGraph({
+            start: {
+              queries: query.query ? [query.query.trim()] : [],
+            },
+            depth: query.depth,
+          });
 
     cancellableFetch
       .then((response: Korrel8rGraphResponse) => {

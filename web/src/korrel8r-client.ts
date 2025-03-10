@@ -1,6 +1,5 @@
 import { getCSRFToken } from '@openshift-console/dynamic-plugin-sdk/lib/utils/fetch/console-fetch-utils';
-import { Korrel8rClient } from './korrel8r/client';
-import { Query } from './redux-actions';
+import { Goals, Korrel8rClient, Neighbours } from './korrel8r/client';
 
 const KORREL8R_ENDPOINT =
   '/api/proxy/plugin/troubleshooting-panel-console-plugin/korrel8r/api/v1alpha1';
@@ -13,7 +12,7 @@ export const listDomains = () => {
   return korrel8rClient.default.getDomains();
 };
 
-export const getNeighborsGraph = (query: Query) => {
+export const getNeighborsGraph = (neighbours: Neighbours) => {
   const korrel8rClient = new Korrel8rClient({
     HEADERS: {
       Accept: 'application/json',
@@ -22,15 +21,10 @@ export const getNeighborsGraph = (query: Query) => {
     BASE: KORREL8R_ENDPOINT,
   });
 
-  return korrel8rClient.default.postGraphsNeighbours({
-    start: {
-      queries: query.query ? [query.query.trim()] : [],
-    },
-    depth: query.depth,
-  });
+  return korrel8rClient.default.postGraphsNeighbours(neighbours);
 };
 
-export const getGoalsGraph = (query: Query) => {
+export const getGoalsGraph = (goals: Goals) => {
   const korrel8rClient = new Korrel8rClient({
     HEADERS: {
       Accept: 'application/json',
@@ -39,10 +33,5 @@ export const getGoalsGraph = (query: Query) => {
     BASE: KORREL8R_ENDPOINT,
   });
 
-  return korrel8rClient.default.postGraphsGoals({
-    start: {
-      queries: query.query ? [query.query.trim()] : [],
-    },
-    goals: [query.goal],
-  });
+  return korrel8rClient.default.postGraphsGoals(goals);
 };
