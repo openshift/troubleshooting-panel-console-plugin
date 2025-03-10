@@ -29,6 +29,7 @@ import { State } from '../redux-reducers';
 import './korrel8rpanel.css';
 import { Korrel8rTopology } from './topology/Korrel8rTopology';
 import { LoadingTopology } from './topology/LoadingTopology';
+import { ApiError } from '../korrel8r/client';
 
 type Result = {
   graph?: Korrel8rGraphResponse;
@@ -86,18 +87,18 @@ export default function Korrel8rPanel() {
         // when opening the panel later
         dispatch(setPersistedQuery(query));
       })
-      .catch((e: Error) => {
+      .catch((e: ApiError) => {
         try {
           setResult({
             isError: true,
-            message: JSON.parse(e.message).error,
+            message: JSON.parse(e.body).error,
             title: t('Korrel8r Error'),
           });
         } catch {
-          setResult({ isError: true, message: e.message, title: t('Request Failed') });
+          setResult({ isError: true, message: e.body, title: t('Request Failed') });
         }
       });
-    return cancellableFetch.cancel;
+    return () => cancellableFetch.cancel();
   }, [result, t, dispatch, query, cannotFocus, korrel8rQueryFromURL]);
 
   const queryToggleID = 'query-toggle';
