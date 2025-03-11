@@ -23,7 +23,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { usePluginAvailable } from '../hooks/usePluginAvailable';
 import { useURLState } from '../hooks/useURLState';
 import { getGoalsGraph, getNeighborsGraph } from '../korrel8r-client';
-import { Korrel8rGraphResponse } from '../korrel8r/query.types';
+import { Graph } from '../korrel8r/client/models/Graph';
 import { Query, QueryType, setPersistedQuery } from '../redux-actions';
 import { State } from '../redux-reducers';
 import './korrel8rpanel.css';
@@ -32,7 +32,7 @@ import { LoadingTopology } from './topology/LoadingTopology';
 import { ApiError } from '../korrel8r/client';
 
 type Result = {
-  graph?: Korrel8rGraphResponse;
+  graph?: Graph;
   message?: string;
   title?: string;
   isError?: boolean;
@@ -92,7 +92,7 @@ export default function Korrel8rPanel() {
           });
 
     cancellableFetch
-      .then((response: Korrel8rGraphResponse) => {
+      .then((response: Graph) => {
         setResult({ graph: { nodes: response.nodes, edges: response.edges } });
         // Only set the persisted query upon a successful query. It would be a
         // poor feeling to create a query that fails, and then be forced to rerun it

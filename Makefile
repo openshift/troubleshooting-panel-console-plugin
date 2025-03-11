@@ -66,6 +66,7 @@ deploy:	test-frontend		## Build and push image, reinstall on cluster using helm.
 ## Code generation
 gen-client: web/src/korrel8r/client
 
-web/src/korrel8r/client: web/src/korrel8r/swagger.json
-	cd web && npm run gen-client
+# NOTE: copied from https://github.com/korrel8r/korrel8r/blob/main/pkg/rest/docs/swagger.json
+web/src/korrel8r/client: korrel8r/swagger.json
+	cd web && npx openapi-typescript-codegen --input ../$< --output ../$@ --name Korrel8rClient
 	@touch $@
