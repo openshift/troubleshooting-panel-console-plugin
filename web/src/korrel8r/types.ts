@@ -47,7 +47,7 @@ export class Query {
 // Parse a date, return undefined if not valid rather than NaN or an invalid Date.
 const parseDate = (s: string): Date | undefined => {
   const d = new Date(s);
-  return d.valueOf() ? d : undefined;
+  return d?.valueOf() ? d : undefined;
 };
 
 // Parse a number, return undefined if invalid, rather than NaN.
@@ -65,7 +65,6 @@ export class Constraint {
   }
 
   static fromAPI(ac: api.Constraint): Constraint {
-    // FIXME review error handling - ignoring invalid values.
     return new Constraint({
       start: parseDate(ac?.start),
       end: parseDate(ac?.end),
@@ -189,67 +188,6 @@ export const parseKeyValueList = (list: string): { [key: string]: string } => {
   return obj;
 };
 
-/** Parse QueryCount and convert query to URIRef */
-export class QueryRef {
-  queryStr: string; // Unparsed query, set even if error is set.
-  count: number;
-  query: Query;
-  link: string;
-  error: string;
-
-  /**
-   * Sets #error if the query cannot be converted to a link. Does not throw.
-   */
-  constructor(qc: api.QueryCount, domains: Domains, constraint?: Constraint) {
-    try {
-      this.queryStr = qc.query;
-      this.count = qc.count;
-      this.query = Query.parse(qc.query);
-      this.link = domains.queryToLink(this.query, constraint);
-    } catch (e) {
-      this.error = `query ${qc.query}: ${e.message}`;
-    }
-  }
-}
-
-/** Parse Node and convert queries to URIRefs */
-export class Node {
-  classStr: string; // Unparsed class string, set even if error is set.
-  count: number;
-  class: Class;
-  queries: Array<QueryRef>;
-  error: string;
-
-  /**
-   * Construct from an API node. Sets #error if there are no valid links.
-   * Does not throw.
-   */
-  constructor(node: api.Node, domains: Domains, constraint?: Constraint) {
-    try {
-      this.classStr = node.class;
-      this.count = node.count;
-      this.class = Class.parse(node.class);
-      this.queries = node.queries.map((qc: api.QueryCount) => {
-        const qr = new QueryRef(qc, domains, constraint);
-        if (!qr.error && qr.query.class.toString() !== this.class.toString()) {
-          qr.error = `query ${qr.query}: wrong class, expected ${this.class}`;
-        }
-        return qr;
-      });
-      this.queries = this.queries.sort((a: QueryRef, b: QueryRef) => {
-        if (a.error && !b.error) return 1; // Put non-error first.
-        if (a.count > b.count) return 1; // Bigger count earlier
-        return 0;
-      });
-      const first = this.queries?.[0];
-      if (!first || first.error) this.error = 'No valid links';
-    } catch (e) {
-      this.error = `node ${this.classStr}: ${e.message}`;
-      return;
-    }
-  }
-}
-
 // Domains is a set domains used to convert between Query and Link.
 // Conversion succeeds if it succees on any domain in the set.
 export class Domains {
@@ -303,3 +241,84 @@ export const unixMilliseconds = (d: Date | undefined): number | undefined => {
 export const unixSeconds = (d: Date | undefined): number | undefined => {
   return Math.floor(unixMilliseconds(d) / 1000) || undefined;
 };
+
+export class Node {
+  api: api.Node;
+  class: Class;
+  queries: Array<QueryCount>;
+  error: Error;
+
+  /** Construct a type-safe node from an API node.
+   *  Does not throw, sets the `error` field on error.
+   */
+  constructor(node: api.Node) {
+    this.api = node;
+    try {
+      this.class = Class.parse(node.class);
+    } catch (e) {
+      this.error = e;
+    }
+    this.queries = (node.queries ?? [])
+      .map((qc: api.QueryCount): QueryCount => new QueryCount(qc))
+      .sort(QueryCount.compare);
+  }
+
+  /** Unique string identifier for this node. */
+  get id() {
+    return this.api.class;
+  }
+}
+
+export class Edge {
+  constructor(public api: api.Edge, public start: Node, public goal: Node) {}
+}
+
+export class QueryCount {
+  queryCount: api.QueryCount;
+  query: Query;
+  error: Error;
+
+  /**
+   * Sets #error if the query cannot be converted to a link. Does not throw.
+   */
+  constructor(qc: api.QueryCount) {
+    try {
+      this.queryCount = qc;
+      this.query = Query.parse(qc.query);
+    } catch (e) {
+      this.error = e;
+    }
+  }
+
+  static compare(a: QueryCount, b: QueryCount): number {
+    // Errors last, sort by count if no error.
+    let d = (a.error ? 0 : 1) - (b.error ? 0 : 1);
+    if (d === 0) d = a.queryCount.count - b.queryCount.count;
+    return d;
+  }
+}
+
+export class Graph {
+  api: api.Graph;
+  nodes: Array<Node>;
+  edges: Array<Edge>;
+
+  private nodeByClass: Map<string, Node>;
+
+  constructor(graph: api.Graph) {
+    this.api = graph;
+    this.nodeByClass = new Map();
+    this.nodes = (graph?.nodes ?? []).map((n) => {
+      const node = new Node(n);
+      this.nodeByClass[n.class] = node;
+      return node;
+    });
+    this.edges = (graph?.edges ?? [])
+      .map((e) => new Edge(e, this.node(e.start), this.node(e.goal)))
+      .filter((e) => e.start && e.goal);
+  }
+
+  node(id: string) {
+    return this.nodeByClass[id];
+  }
+}

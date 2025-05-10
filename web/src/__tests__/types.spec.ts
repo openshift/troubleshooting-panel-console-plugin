@@ -1,15 +1,6 @@
-import {
-  Class,
-  Constraint,
-  Domain,
-  Domains,
-  Node,
-  Query,
-  QueryRef,
-  URIRef,
-} from '../korrel8r/types';
-
 import * as api from '../korrel8r/client';
+
+import { Class, Constraint, Domain, Domains, Graph, Node, Query, URIRef } from '../korrel8r/types';
 
 describe('Query', () => {
   it('converts to/from string', () => {
@@ -120,96 +111,75 @@ describe('URIRef', () => {
 });
 
 describe('Node', () => {
-  const domains = new Domains(...['a', 'x'].map((name: string): Domain => new FakeDomain(name)));
-
   it('constructor', () => {
     expect(
-      new Node(
-        {
-          class: 'a:b',
-          count: 10,
-          queries: [
-            { query: 'a:b:c', count: 5 },
-            { query: 'a:b:d', count: 5 },
-          ],
-        },
-        domains,
-      ),
+      new Node({
+        class: 'a:b',
+        count: 10,
+        queries: [
+          { query: 'a:b:c', count: 5 },
+          { query: 'a:b:d', count: 5 },
+        ],
+      }),
     ).toEqual({
-      classStr: 'a:b',
+      api: {
+        class: 'a:b',
+        count: 10,
+        queries: [
+          { query: 'a:b:c', count: 5 },
+          { query: 'a:b:d', count: 5 },
+        ],
+      },
+
       class: { domain: 'a', name: 'b' },
-      count: 10,
       queries: [
         {
-          count: 5,
-          queryStr: 'a:b:c',
+          queryCount: { query: 'a:b:c', count: 5 },
           query: { class: { domain: 'a', name: 'b' }, selector: 'c' },
-          link: 'a/b?c',
         },
         {
-          count: 5,
-          queryStr: 'a:b:d',
+          queryCount: { query: 'a:b:d', count: 5 },
           query: { class: { domain: 'a', name: 'b' }, selector: 'd' },
-          link: 'a/b?d',
         },
       ],
     });
-  });
-
-  it('constructor constraint', () => {
-    expect(
-      new Node(
-        {
-          class: 'a:b',
-          count: 10,
-          queries: [{ query: 'a:b:c', count: 5 }],
-        },
-        domains,
-        new Constraint({ start, end }),
-      ),
-    ).toEqual({
-      class: { domain: 'a', name: 'b' } as Class,
-      classStr: 'a:b',
-      count: 10,
-      queries: [
-        {
-          count: 5,
-          queryStr: 'a:b:c',
-          query: { class: { domain: 'a', name: 'b' }, selector: 'c' } as Query,
-          link: `a/b?c&constraint={"start":"${start.toISOString()}","end":"${end.toISOString()}"}`,
-        } as QueryRef,
-      ],
-    } as Node);
-  });
-
-  it('constructor class mismatch', () => {
-    expect(
-      new Node({ class: 'a:b', queries: [{ query: 'a:x:c', count: 5 }], count: 1 }, domains),
-    ).toEqual({
-      class: { domain: 'a', name: 'b' },
-      count: 1,
-      classStr: 'a:b',
-      queries: [
-        {
-          count: 5,
-          error: 'query a:x:c: wrong class, expected a:b',
-          query: {
-            class: { domain: 'a', name: 'x' },
-            selector: 'c',
-          },
-          queryStr: 'a:x:c',
-          link: 'a/x?c',
-        },
-      ],
-      error: 'No valid links',
-    } as Node);
   });
 
   it('constructor bad class', () => {
-    expect(new Node({ class: 'foobar', count: 1 }, domains)).toEqual({
-      classStr: 'foobar',
-      count: 1,
-      error: 'node foobar: invalid class: foobar',
+    expect(new Node({ class: 'foobar', count: 1 })).toEqual({
+      api: { class: 'foobar', count: 1 },
+      error: new TypeError('invalid class: foobar'),
+      queries: [],
     });
   });
+});
+
+describe('Graph', () => {
+  const a: api.Graph = {
+    nodes: [
+      { class: 'a:x', count: 1, queries: [{ query: 'a:x:one', count: 1 }] },
+      { class: 'b:y', count: 2, queries: [{ query: 'b:y:two', count: 2 }] },
+      {
+        class: 'c:z',
+        count: 4,
+        queries: [
+          { query: 'c:z:one', count: 1 },
+          { query: 'c:z:three', count: 3 },
+        ],
+      },
+    ],
+    edges: [
+      { start: 'a:x', goal: 'b:y' },
+      { start: 'a:x', goal: 'c:z' },
+      { start: 'b:y', goal: 'c:z' },
+    ],
+  };
+  const g = new Graph(a);
+  g.nodes.forEach((n) => expect(g.node(n.id)).toEqual(n)); // Lookup nodes
+  expect(g.nodes).toEqual(a.nodes.map((n) => new Node(n)));
+  expect(g.edges).toEqual(
+    a.edges.map((e: api.Edge) => {
+      return { api: e, start: g.node(e.start), goal: g.node(e.goal) };
+    }),
+  );
 });

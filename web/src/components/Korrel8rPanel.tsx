@@ -23,8 +23,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useLocationQuery } from '../hooks/useLocationQuery';
 import { usePluginAvailable } from '../hooks/usePluginAvailable';
 import { getGoalsGraph, getNeighborsGraph } from '../korrel8r-client';
-import { ApiError, Graph, Start } from '../korrel8r/client';
-import { Constraint } from '../korrel8r/types';
+import * as api from '../korrel8r/client';
+import * as korrel8r from '../korrel8r/types';
 import { defaultSearch, Search, SearchType, setPersistedSearch } from '../redux-actions';
 import { State } from '../redux-reducers';
 import DateTimeRangePicker from './DateTimeRangePicker';
@@ -33,7 +33,7 @@ import { Korrel8rTopology } from './topology/Korrel8rTopology';
 import { LoadingTopology } from './topology/LoadingTopology';
 
 type Result = {
-  graph?: Graph;
+  graph?: korrel8r.Graph;
   message?: string;
   title?: string;
   isError?: boolean;
@@ -73,21 +73,21 @@ export default function Korrel8rPanel() {
     }
     // Make the search request
     const queryStr = search?.queryStr?.trim();
-    const start: Start = { queries: queryStr ? [queryStr] : [] };
+    const start: api.Start = { queries: queryStr ? [queryStr] : [] };
     const cancellableFetch =
       search.type === SearchType.Goal
         ? getGoalsGraph({ start, goals: [search.goal] })
         : getNeighborsGraph({ start, depth: search.depth });
 
     cancellableFetch
-      .then((response: Graph) => {
-        setResult({ graph: response });
+      .then((response: api.Graph) => {
+        setResult({ graph: new korrel8r.Graph(response) });
         // Only set the persisted search upon a successful query. It would be a
         // poor feeling to create a query that fails, and then be forced to rerun it
         // when opening the panel later
         dispatch(setPersistedSearch(search));
       })
-      .catch((e: ApiError) => {
+      .catch((e: api.ApiError) => {
         setResult({
           message: e.body?.error || e.message || 'Unknown Error',
           title: e?.body?.error ? t('Korrel8r Error') : t('Request Failed'),
@@ -118,7 +118,7 @@ export default function Korrel8rPanel() {
     // Update the constraint based on 'start' or 'end' type
     const updatedSearch = {
       ...search,
-      constraint: new Constraint({
+      constraint: new korrel8r.Constraint({
         ...search.constraint,
         [type]: updatedDate.toISOString(), // Update the corresponding date in search
       }),
