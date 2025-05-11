@@ -133,6 +133,7 @@ export default function Korrel8rPanel() {
   const minDepth = 1;
   const maxDepth = 10;
   const depthBounds = applyBounds(1, 10);
+
   const runSearch = React.useCallback(
     (newSearch: Search) => {
       newSearch.depth = depthBounds(newSearch.depth);
