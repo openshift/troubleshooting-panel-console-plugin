@@ -1,6 +1,6 @@
-import { useLocation } from 'react-router';
-import { Query, URIRef } from '../korrel8r/types';
+import { useLocation } from 'react-router-dom-v5-compat';
 import { allDomains } from '../korrel8r/all-domains';
+import { Query, URIRef } from '../korrel8r/types';
 
 /** Returns the Korrel8r query for the current browser location or undefined */
 export const useLocationQuery = (): Query | undefined => {

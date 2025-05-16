@@ -243,7 +243,8 @@ export const unixSeconds = (d: Date | undefined): number | undefined => {
 };
 
 export class Node {
-  api: api.Node;
+  id: string;
+  count: number;
   class: Class;
   queries: Array<QueryCount>;
   error: Error;
@@ -252,30 +253,24 @@ export class Node {
    *  Does not throw, sets the `error` field on error.
    */
   constructor(node: api.Node) {
-    this.api = node;
+    this.id = node.class;
+    this.count = node.count;
     try {
       this.class = Class.parse(node.class);
     } catch (e) {
       this.error = e;
     }
-    this.queries = (node.queries ?? [])
-      .map((qc: api.QueryCount): QueryCount => new QueryCount(qc))
-      .sort(QueryCount.compare);
-  }
-
-  /** Unique string identifier for this node. */
-  get id() {
-    return this.api.class;
+    this.queries = QueryCount.array(node.queries ?? []);
   }
 }
 
 export class Edge {
-  constructor(public api: api.Edge, public start: Node, public goal: Node) {}
+  constructor(public start: Node, public goal: Node, public rules: Rule[] = []) {}
 }
 
 export class QueryCount {
-  queryCount: api.QueryCount;
   query: Query;
+  count: number;
   error: Error;
 
   /**
@@ -283,30 +278,48 @@ export class QueryCount {
    */
   constructor(qc: api.QueryCount) {
     try {
-      this.queryCount = qc;
+      this.count = qc.count;
       this.query = Query.parse(qc.query);
     } catch (e) {
       this.error = e;
     }
   }
 
+  /** Highest count first, errors last */
   static compare(a: QueryCount, b: QueryCount): number {
-    // Errors last, sort by count if no error.
-    let d = (a.error ? 0 : 1) - (b.error ? 0 : 1);
-    if (d === 0) d = a.queryCount.count - b.queryCount.count;
+    let d = (b.error ? 1 : 0) - (a.error ? 1 : 0);
+    if (d === 0) d = b.count - a.count;
     return d;
+  }
+
+  static array(a: api.QueryCount[]): QueryCount[] {
+    return (
+      a?.map((qc: api.QueryCount): QueryCount => new QueryCount(qc))?.sort(QueryCount.compare) ?? []
+    );
+  }
+}
+
+export class Rule {
+  name: string;
+  queries: QueryCount[];
+
+  constructor(r: api.Rule) {
+    this.name = r.name;
+    this.queries = QueryCount.array(r.queries);
+  }
+
+  static array(a: api.Rule[]) {
+    return a?.map((r) => new Rule(r)) ?? [];
   }
 }
 
 export class Graph {
-  api: api.Graph;
   nodes: Array<Node>;
   edges: Array<Edge>;
 
   private nodeByClass: Map<string, Node>;
 
   constructor(graph: api.Graph) {
-    this.api = graph;
     this.nodeByClass = new Map();
     this.nodes = (graph?.nodes ?? []).map((n) => {
       const node = new Node(n);
@@ -314,7 +327,7 @@ export class Graph {
       return node;
     });
     this.edges = (graph?.edges ?? [])
-      .map((e) => new Edge(e, this.node(e.start), this.node(e.goal)))
+      .map((e) => new Edge(this.node(e.start), this.node(e.goal), Rule.array(e.rules)))
       .filter((e) => e.start && e.goal);
   }
 

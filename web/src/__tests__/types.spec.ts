@@ -1,6 +1,16 @@
 import * as api from '../korrel8r/client';
 
-import { Class, Constraint, Domain, Domains, Graph, Node, Query, URIRef } from '../korrel8r/types';
+import {
+  Class,
+  Constraint,
+  Domain,
+  Domains,
+  Edge,
+  Graph,
+  Node,
+  Query,
+  URIRef,
+} from '../korrel8r/types';
 
 describe('Query', () => {
   it('converts to/from string', () => {
@@ -122,24 +132,17 @@ describe('Node', () => {
         ],
       }),
     ).toEqual({
-      api: {
-        class: 'a:b',
-        count: 10,
-        queries: [
-          { query: 'a:b:c', count: 5 },
-          { query: 'a:b:d', count: 5 },
-        ],
-      },
-
+      id: 'a:b',
+      count: 10,
       class: { domain: 'a', name: 'b' },
       queries: [
         {
-          queryCount: { query: 'a:b:c', count: 5 },
           query: { class: { domain: 'a', name: 'b' }, selector: 'c' },
+          count: 5,
         },
         {
-          queryCount: { query: 'a:b:d', count: 5 },
           query: { class: { domain: 'a', name: 'b' }, selector: 'd' },
+          count: 5,
         },
       ],
     });
@@ -147,7 +150,8 @@ describe('Node', () => {
 
   it('constructor bad class', () => {
     expect(new Node({ class: 'foobar', count: 1 })).toEqual({
-      api: { class: 'foobar', count: 1 },
+      id: 'foobar',
+      count: 1,
       error: new TypeError('invalid class: foobar'),
       queries: [],
     });
@@ -177,9 +181,5 @@ describe('Graph', () => {
   const g = new Graph(a);
   g.nodes.forEach((n) => expect(g.node(n.id)).toEqual(n)); // Lookup nodes
   expect(g.nodes).toEqual(a.nodes.map((n) => new Node(n)));
-  expect(g.edges).toEqual(
-    a.edges.map((e: api.Edge) => {
-      return { api: e, start: g.node(e.start), goal: g.node(e.goal) };
-    }),
-  );
+  expect(g.edges).toEqual(a.edges.map((e) => new Edge(g.node(e.start), g.node(e.goal))));
 });
