@@ -8,8 +8,8 @@ export enum ActionType {
 }
 
 export enum SearchType {
-  Neighbour,
-  Goal,
+  Neighbour = 'neighbour',
+  Goal = 'goal',
 }
 
 // Search parameters from panel widgets for korrel8r request.

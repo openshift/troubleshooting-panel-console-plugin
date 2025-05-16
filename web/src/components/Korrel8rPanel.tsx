@@ -10,13 +10,13 @@ import {
   ExpandableSectionToggle,
   Flex,
   FlexItem,
+  Icon,
   NumberInput,
-  Radio,
   TextArea,
   TextInput,
   Tooltip,
 } from '@patternfly/react-core';
-import { CubesIcon, ExclamationCircleIcon, SyncIcon } from '@patternfly/react-icons';
+import { CogIcon, CubesIcon, ExclamationCircleIcon, SyncIcon } from '@patternfly/react-icons';
 import * as React from 'react';
 import { TFunction, useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -29,6 +29,7 @@ import { defaultSearch, Search, SearchType, setPersistedSearch } from '../redux-
 import { State } from '../redux-reducers';
 import DateTimeRangePicker from './DateTimeRangePicker';
 import './korrel8rpanel.css';
+import { SimpleToggleGroup } from './SimpleToggleGroup';
 import { Korrel8rTopology } from './topology/Korrel8rTopology';
 import { LoadingTopology } from './topology/LoadingTopology';
 
@@ -52,10 +53,10 @@ export default function Korrel8rPanel() {
     persistedSearch?.queryStr
       ? persistedSearch
       : ({
-        ...defaultSearch,
-        queryStr: locationQuery?.toString(),
-        constraint: persistedSearch?.constraint,
-      } as Search),
+          ...defaultSearch,
+          queryStr: locationQuery?.toString(),
+          constraint: persistedSearch?.constraint,
+        } as Search),
   );
   const [result, setResult] = React.useState<Result | null>(null);
   const [showQuery, setShowQuery] = React.useState(false);
@@ -125,7 +126,6 @@ export default function Korrel8rPanel() {
   const queryToggleID = 'query-toggle';
   const queryContentID = 'query-content';
   const queryInputID = 'query-input';
-  const searchTypeOptions = 'search-type-options';
 
   const minDepth = 1;
   const maxDepth = 10;
@@ -161,6 +161,7 @@ export default function Korrel8rPanel() {
             {t('←Focus')}
           </Button>
         </Tooltip>
+
         <Flex align={{ default: 'alignRight' }}>
           <ExpandableSectionToggle
             contentId={queryContentID}
@@ -168,6 +169,11 @@ export default function Korrel8rPanel() {
             isExpanded={showQuery}
             onToggle={(on: boolean) => setShowQuery(on)}
           >
+            {
+              <Icon>
+                <CogIcon />
+              </Icon>
+            }
             {t('Settings')}
           </ExpandableSectionToggle>
           <Tooltip content={t('Refresh the graph using the current search settings')}>
@@ -189,43 +195,28 @@ export default function Korrel8rPanel() {
         isIndented
       >
         <Flex className="tp-plugin__panel-query-container" direction={{ default: 'column' }}>
-          <h3>Time Range</h3>
           <DateTimeRangePicker
+            // FIXME default to 1 day?
             // Pass the start date/time
             from={search.constraint?.start ? new Date(search.constraint.start) : null}
             // Pass the end date/time
             to={search.constraint?.end ? new Date(search.constraint.end) : null}
             onDateChange={handleDateChange} // Unified handler for both date and time changes
           />
-
-          <h3>Query</h3>
-          <Tooltip content={t('Query to select the starting resources for correlation.')}>
-            <TextArea
-              className="tp-plugin__panel-query-input"
-              placeholder="domain:class:selector"
-              id={queryInputID}
-              value={search.queryStr}
-              onChange={(_event, value) => setSearch({ ...search, queryStr: value })}
+          <Flex direction={{ default: 'row' }}>
+            <h3>Search type</h3>
+            <SimpleToggleGroup
+              items={[
+                { text: t('Neighbourhood search'), value: SearchType.Neighbour },
+                { text: t('Goal search'), value: SearchType.Goal },
+              ]}
+              initValue={SearchType.Neighbour}
+              onChange={(value: string) => setSearch({ ...search, type: value as SearchType })}
             />
-          </Tooltip>
-
-          <h3>Search type</h3>
-          <Flex>
-            <FlexItem>
-              <Tooltip content={t('Search for  correlated resources up to the specified depth.')}>
-                <Radio
-                  label={t('Neighbourhood search')}
-                  name={searchTypeOptions}
-                  id="neighbourhood-option"
-                  isChecked={search.type === SearchType.Neighbour}
-                  onChange={(_: React.FormEvent, on: boolean) => {
-                    on && setSearch({ ...search, type: SearchType.Neighbour });
-                  }}
-                />
-              </Tooltip>
-            </FlexItem>
-            <FlexItem hidden={search.type !== SearchType.Neighbour}>{t('Depth')}</FlexItem>
-            <FlexItem hidden={search.type !== SearchType.Neighbour}>
+          </Flex>
+          <FlexItem hidden={search.type !== SearchType.Neighbour}>
+            <Flex direction={{ default: 'row' }}>
+              <p>{t('Neighbourhood depth')}</p>
               <NumberInput
                 value={search.depth}
                 min={minDepth}
@@ -239,34 +230,33 @@ export default function Korrel8rPanel() {
                   setSearch({ ...search, depth: isNaN(n) ? 1 : n });
                 }}
               />
-            </FlexItem>
-          </Flex>
-          <Flex>
-            <FlexItem>
-              <Tooltip content={t('Search for paths to resources of the specified class.')}>
-                <Radio
-                  label={t('Goal directed search')}
-                  name={searchTypeOptions}
-                  id="goal-option"
-                  isChecked={search.type === SearchType.Goal}
-                  onChange={(_: React.FormEvent, on: boolean) =>
-                    on && setSearch({ ...search, type: SearchType.Goal })
-                  }
+            </Flex>
+          </FlexItem>
+          <FlexItem hidden={search.type !== SearchType.Goal}>
+            <Flex direction={{ default: 'row' }}>
+              <p>{t('Goal class')}</p>
+              <FlexItem shrink={{ default: 'shrink' }}>
+                <TextInput
+                  label={'Class'}
+                  value={search.goal}
+                  placeholder="domain:class"
+                  onChange={(event: React.FormEvent<HTMLInputElement>) => {
+                    setSearch({ ...search, goal: (event.target as HTMLInputElement).value });
+                  }}
                 />
-              </Tooltip>
-            </FlexItem>
-            <FlexItem hidden={search.type !== SearchType.Goal}>Class</FlexItem>
-            <FlexItem hidden={search.type !== SearchType.Goal}>
-              <TextInput
-                label={'Class'}
-                value={search.goal}
-                placeholder="domain:class"
-                onChange={(event: React.FormEvent<HTMLInputElement>) => {
-                  setSearch({ ...search, goal: (event.target as HTMLInputElement).value });
-                }}
-              />
-            </FlexItem>
-          </Flex>
+              </FlexItem>
+            </Flex>
+          </FlexItem>
+          <h3>Query</h3>
+          <Tooltip content={t('Query to select the starting resources for correlation.')}>
+            <TextArea
+              className="tp-plugin__panel-query-input"
+              placeholder="domain:class:selector"
+              id={queryInputID}
+              value={search.queryStr}
+              onChange={(_event, value) => setSearch({ ...search, queryStr: value })}
+            />
+          </Tooltip>
         </Flex>
       </ExpandableSection>
       <Divider />
