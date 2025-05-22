@@ -1,45 +1,26 @@
-import { Korrel8rNode, NodeError } from './korrel8r.types';
-import { parseURL } from './query-url';
+import { Class, Domain, Query, URIRef } from './types';
 
-export class MetricNode extends Korrel8rNode {
-  query: string;
-  url: string;
-
-  constructor(url: string, query: string) {
-    super();
-    this.query = query;
-    this.url = url;
+export class MetricDomain extends Domain {
+  constructor() {
+    super('metric');
   }
 
-  static fromURL(url: string): Korrel8rNode {
-    const [, params] = parseURL('metric', 'monitoring/query-browser', url);
-    const promqlQuery = params.get('query0');
-    if (!promqlQuery) throw new NodeError(`Invalid metric URL: ${url}`);
-    const query = `metric:metric:${promqlQuery}`;
-
-    return new MetricNode(url, query);
+  class(name: string): Class {
+    if (name !== this.name) throw this.badClass(name);
+    return new Class(this.name, name);
   }
 
-  static fromQuery(query: string): Korrel8rNode {
-    if (!query.startsWith('metric:metric:'))
-      throw new NodeError('Expected query to start with metric:metric:');
+  linkToQuery(link: URIRef): Query {
+    const promqlQuery = link.searchParams.get('query0');
+    if (!promqlQuery) throw this.badLink(link);
+    return new Query(this.class('metric'), promqlQuery);
+  }
 
-    const queryAfterClass = query.substring('metric:metric:'.length);
-    if (!queryAfterClass)
-      throw new NodeError('Expected korrel8r query to contain a prometheus query');
-    if (queryAfterClass === '{}') {
-      throw new NodeError('Expected query to contain relevant query parameters');
+  queryToLink(query: Query): string {
+    query = this.checkQuery(query);
+    if (!query.selector || query.selector.match(/{ *}/)) {
+      throw this.badQuery(query, 'empty selector');
     }
-
-    const url = `monitoring/query-browser?query0=${queryAfterClass}`;
-    return new MetricNode(url, query);
-  }
-
-  toURL(): string {
-    return this.url;
-  }
-
-  toQuery(): string {
-    return this.query;
+    return `monitoring/query-browser?query0=${query.selector}`;
   }
 }

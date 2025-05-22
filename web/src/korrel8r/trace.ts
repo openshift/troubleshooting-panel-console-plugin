@@ -1,5 +1,4 @@
-import { Korrel8rNode } from './korrel8r.types';
-import { parseQuery, parseURL } from './query-url';
+import { Class, Constraint, Domain, Query, unixMilliseconds, URIRef } from './types';
 
 // URL formats:
 // Get all spans in a single trace:
@@ -11,40 +10,34 @@ import { parseQuery, parseURL } from './query-url';
 // Get from the console page environment (change from using URL as context?)
 const [tempoNamespace, tempoName, tempoTenant] = ['openshift-tracing', 'platform', 'platform'];
 
-export class TraceNode extends Korrel8rNode {
-  query: string;
-  url: string;
-
-  constructor(url: string, query: string) {
-    super();
-    this.query = query;
-    this.url = url;
+export class TraceDomain extends Domain {
+  constructor() {
+    super('trace');
   }
 
-  static fromURL(url: string): Korrel8rNode {
-    const [urlPath, params] = parseURL('trace', 'observe/traces', url);
-    const traceID = urlPath.match(/observe\/traces\/([0-9a-fA-F]{32})(\/.*)?$/)?.[1];
-    const traceQL = traceID ? `{trace:id="${traceID}"}` : params.get('q') || '{}';
-    return new TraceNode(url, `trace:span:${traceQL}`);
+  class(name: string): Class {
+    if (name !== 'span') throw this.badClass(name);
+    return new Class(this.name, name);
   }
 
-  static fromQuery(query: string): Korrel8rNode {
-    const traceQL = parseQuery('trace', query)?.[1] || '';
+  linkToQuery(link: URIRef): Query {
+    const m = link.pathname.match(/observe\/traces(?:\/([0-9a-fA-F]{32})\/?)?$/);
+    if (!m) throw this.badLink(link);
+    const traceQL = m[1] ? `{trace:id="${m[1]}"}` : link.searchParams.get('q') || '{}';
+    return this.class('span').query(traceQL);
+  }
+
+  queryToLink(query: Query, constraint?: Constraint): string {
+    this.checkQuery(query);
+    const traceQL = query.selector;
     const traceID = traceQL.match(/\{ *trace:id *= *"([0-9a-fA-F]{32})" *\}/)?.[1] || '';
-    const q = traceID || traceQL.match(/\{ *\}/) ? '' : `&q=${encodeURIComponent(traceQL)}`;
-    return new TraceNode(
-      `observe/traces${
-        traceID && `/${traceID}`
-      }?namespace=${tempoNamespace}&name=${tempoName}&tenant=${tempoTenant}${q}`,
-      query,
-    );
-  }
-
-  toURL(): string {
-    return this.url;
-  }
-
-  toQuery(): string {
-    return this.query;
+    return new URIRef(`observe/traces${traceID ? `/${traceID}` : ''}`, {
+      namespace: tempoNamespace,
+      name: tempoName,
+      tenant: tempoTenant,
+      q: !traceID && !traceQL.match(/{[:space:]*}/) && traceQL,
+      start: unixMilliseconds(constraint?.start),
+      end: unixMilliseconds(constraint?.end),
+    }).toString();
   }
 }

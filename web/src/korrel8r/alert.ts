@@ -1,57 +1,35 @@
-import { Korrel8rNode, NodeError } from './korrel8r.types';
-import { keyValueList, parseKeyValueList, parseQuery, parseURL } from './query-url';
+import { Domain, Class, Query, URIRef, keyValueList, parseKeyValueList } from './types';
 
-const domain = 'alert';
-
-export class AlertNode extends Korrel8rNode {
-  query: string;
-  url: string;
-
-  constructor(url: string, query: string) {
-    super();
-    this.query = query;
-    this.url = url;
+export class AlertDomain extends Domain {
+  constructor() {
+    super('alert');
   }
 
-  // fromURL creates a node from a URL.
-  //
-  // NOTE: There are two types of console alert URL:
-  // - individual URL: numeric ID in path, query parameters are label selectors.
-  // - search URL: nothing in path, 'alert' query parameter contains encoded list of label selectors
-  //
-  static fromURL(url: string): Korrel8rNode {
-    const prefix = 'monitoring/alerts';
-    const [path, params] = parseURL(domain, prefix, url);
+  class(name: string): Class {
+    if (name !== this.name) throw this.badClass(name);
+    return new Class(this.name, name);
+  }
+
+  // Convert a Query to a relative URI reference.
+  linkToQuery(link: URIRef): Query {
+    const m = link.pathname.match(/monitoring\/alerts(.*)$/);
+    if (!m) throw this.badLink(link);
+    const path = m[1];
     let selectors = {};
-    if (path === '/' + prefix) {
+    if (path === '') {
       // No ID in path, this is a search URL
-      selectors = parseKeyValueList(params.get('alerts'));
+      selectors = parseKeyValueList(link.searchParams.get('alerts'));
     } else {
+      const params = link.searchParams;
       params.delete('prometheus'); // Not part of the label selectors.
       params.delete('managed_cluster'); // Not part of the label selectors.
       for (const [key, value] of params) selectors[key] = value;
     }
-    return new AlertNode(url, `alert:alert:${JSON.stringify(selectors)}`);
+    return new Query(this.class('alert'), JSON.stringify(selectors));
   }
 
-  // fromQuery only creates search-style URLs, never instance URLs.
-  static fromQuery(query: string): Korrel8rNode {
-    try {
-      const [, data] = parseQuery(domain, query);
-      const selectors = keyValueList(JSON.parse(data));
-      return new AlertNode(
-        `monitoring/alerts${selectors ? `?alerts=${encodeURIComponent(selectors)}` : ''}`,
-        query,
-      );
-    } catch (e) {
-      throw new NodeError(`Invalid query data ${query}: ${e.message} `);
-    }
-  }
-
-  toURL(): string {
-    return this.url;
-  }
-  toQuery(): string {
-    return this.query;
+  queryToLink(query: Query): string {
+    const selectors = keyValueList(JSON.parse(query.selector));
+    return `monitoring/alerts${selectors ? `?alerts=${encodeURIComponent(selectors)}` : ''}`;
   }
 }

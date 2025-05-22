@@ -3,26 +3,16 @@ import { InfrastructureIcon } from '@patternfly/react-icons';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
-import { openTP, QueryType, setPersistedQuery } from '../redux-actions';
+import { defaultSearch, openTP, setPersistedSearch } from '../redux-actions';
 import { useKorrel8r } from './useKorrel8r';
-import { useURLState } from './useURLState';
 
 const useTroubleshootingPanel: ExtensionHook<Array<Action>> = () => {
   const { isKorrel8rReachable } = useKorrel8r();
-  const { korrel8rQueryFromURL } = useURLState();
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
   const [perspective] = useActivePerspective();
   const dispatch = useDispatch();
   const open = React.useCallback(() => {
-    dispatch(
-      setPersistedQuery({
-        query: '',
-        queryType: QueryType.Neighbour,
-        depth: 3,
-        goal: null,
-        constraint: null,
-      }),
-    );
+    dispatch(setPersistedSearch(defaultSearch));
     dispatch(openTP());
   }, [dispatch]);
 
@@ -51,7 +41,7 @@ const useTroubleshootingPanel: ExtensionHook<Array<Action>> = () => {
 
   React.useEffect(() => {
     setActions(getActions());
-  }, [korrel8rQueryFromURL, open, getActions]);
+  }, [open, getActions]);
 
   return [actions, true, null];
 };

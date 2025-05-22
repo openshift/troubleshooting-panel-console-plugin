@@ -1,4 +1,5 @@
-import { TraceNode } from '../korrel8r/trace';
+import { URIRef, Query } from '../korrel8r/types';
+import { TraceDomain } from '../korrel8r/trace';
 
 const tempo = 'namespace=openshift-tracing&name=platform&tenant=platform';
 
@@ -17,17 +18,19 @@ const roundtrip = [
   },
 ];
 
-describe('TraceNode.fromURL', () => {
+describe('TraceDomain.fromURL', () => {
   it.each([
     ...roundtrip,
     {
       url: `observe/traces`,
       query: `trace:span:{}`,
     },
-  ])('$url', ({ url, query }) => expect(TraceNode.fromURL(url)?.toQuery()).toEqual(query));
+  ])('$url', ({ url, query }) =>
+    expect(new TraceDomain().linkToQuery(new URIRef(url))).toEqual(Query.parse(query)),
+  );
 });
 
-describe('TraceNode.fromQuery', () => {
+describe('TraceDomain.fromQuery', () => {
   it.each([
     ...roundtrip,
     {
@@ -35,6 +38,6 @@ describe('TraceNode.fromQuery', () => {
       url: `observe/traces?${tempo}&q=%7Bresource.service.name%3D%22shop-backend%22%7D`,
     },
   ])('$query', ({ query, url }) => {
-    expect(TraceNode.fromQuery(query).toURL()).toEqual(url);
+    expect(new TraceDomain().queryToLink(Query.parse(query))).toEqual(url);
   });
 });

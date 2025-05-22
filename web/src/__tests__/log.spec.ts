@@ -1,7 +1,7 @@
-import { LogNode } from '../korrel8r/log';
-import { Constraint } from '../redux-actions';
+import { LogDomain } from '../korrel8r/log';
+import { Constraint, Query, URIRef } from '../korrel8r/types';
 
-describe('LogNode.fromURL', () => {
+describe('LogDomain.fromURL', () => {
   it.each([
     {
       url: `monitoring/logs?q=${encodeURIComponent(
@@ -42,34 +42,40 @@ describe('LogNode.fromURL', () => {
       url: `/k8s/ns/kube/pods/bar/aggregated-logs`,
       query: `log:infrastructure:{kubernetes_namespace_name="kube",kubernetes_pod_name="bar"}`,
     },
-  ])('$url', ({ url, query }) => expect(LogNode.fromURL(url)?.toQuery()).toEqual(query));
+    {
+      url: '/monitoring/logs?q=%7Bkubernetes_namespace_name%3D%22openshift-image-registry%22%7D%7Cjson%7Ckubernetes_labels_docker_registry%3D%22default%22&tenant=infrastructure',
+      query:
+        'log:infrastructure:{kubernetes_namespace_name="openshift-image-registry"}|json|kubernetes_labels_docker_registry="default"',
+    },
+  ])('$url', ({ url, query }) =>
+    expect(new LogDomain().linkToQuery(new URIRef(url))).toEqual(Query.parse(query)),
+  );
 });
 
-describe('LogNode.fromQuery', () => {
+describe('LogDomain.fromQuery', () => {
   it.each([
     {
-      query:
-        `log:infrastructure:{kubernetes_namespace_name="default",` + `kubernetes_pod_name="foo"}`,
       url: `monitoring/logs?q=${encodeURIComponent(
         '{kubernetes_namespace_name="default",kubernetes_pod_name="foo"}',
       )}&tenant=infrastructure&start=1742896800000&end=1742940000000`,
-      constraint: {
+      query: `log:infrastructure:{kubernetes_namespace_name="default",kubernetes_pod_name="foo"}`,
+      constraint: Constraint.fromAPI({
         start: '2025-03-25T10:00:00.000Z',
         end: '2025-03-25T22:00:00.000Z',
-      } as Constraint,
+      }),
     },
     {
-      query: 'log:infrastructure:{kubernetes_namespace_name="default",log_type="infrastructure"}',
       url: `monitoring/logs?q=${encodeURIComponent(
         '{kubernetes_namespace_name="default",log_type="infrastructure"}',
       )}&tenant=infrastructure&start=1742896800000&end=1742940000000`,
-      constraint: {
+      query: 'log:infrastructure:{kubernetes_namespace_name="default",log_type="infrastructure"}',
+      constraint: Constraint.fromAPI({
         start: '2025-03-25T10:00:00.000Z',
         end: '2025-03-25T22:00:00.000Z',
-      } as Constraint,
+      }),
     },
   ])('$query', ({ url, query, constraint }) =>
-    expect(LogNode.fromQuery(query, constraint)?.toURL()).toEqual(url),
+    expect(new LogDomain().queryToLink(Query.parse(query), constraint)).toEqual(url),
   );
 });
 
@@ -77,26 +83,27 @@ describe('expected errors', () => {
   it.each([
     {
       url: 'monitoring/log',
-      expected: 'Expected log URL: monitoring/log',
+      expected: 'domain log: invalid link: monitoring/log',
     },
     {
       url: 'monitoring/logs?q={kubernetes_namespace_name="default",kubernetes_pod_name="foo"}',
-      expected: 'No log class found in URL',
+      expected:
+        'domain log: invalid link: monitoring/logs?q=%7Bkubernetes_namespace_name%3D%22default%22%2Ckubernetes_pod_name%3D%22foo%22%7D',
     },
   ])('error from url: $url', ({ url, expected }) => {
-    expect(() => LogNode.fromURL(url)).toThrow(expected);
+    expect(() => new LogDomain().linkToQuery(new URIRef(url))).toThrow(expected);
   });
 
   it.each([
     {
       query: 'foo:bar:baz',
-      expected: 'Expected log query: foo:bar:baz',
+      expected: 'domain log: invalid query, unknown class: foo:bar:baz',
     },
     {
       query: 'log:incorrect:{}',
-      expected: 'Expected log class in query',
+      expected: 'domain log: invalid query, unknown class: log:incorrect:{}',
     },
   ])('error from query: $query', ({ query, expected }) => {
-    expect(() => LogNode.fromQuery(query, null)).toThrow(expected);
+    expect(() => new LogDomain().queryToLink(Query.parse(query))).toThrow(expected);
   });
 });

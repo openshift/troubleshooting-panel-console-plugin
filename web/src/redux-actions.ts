@@ -1,35 +1,41 @@
 import { action, ActionType as Action } from 'typesafe-actions';
+import { Constraint } from './korrel8r/types';
 
 export enum ActionType {
   CloseTroubleshootingPanel = 'closeTroubleshootingPanel',
   OpenTroubleshootingPanel = 'openTroubleshootingPanel',
-  SetPersistedQuery = 'setPersistedQuery',
+  SetPersistedSearch = 'setPersistedSearch',
 }
 
-export type Constraint = {
-  start: null | string;
-  end: null | string;
-};
-export enum QueryType {
+export enum SearchType {
   Neighbour,
   Goal,
 }
-export type Query = {
-  query: string;
-  queryType: QueryType;
-  depth: null | number;
-  goal: null | string;
-  constraint: Constraint;
+
+// Search parameters from panel widgets for korrel8r request.
+export type Search = {
+  queryStr?: string;
+  type?: SearchType;
+  depth?: number;
+  goal?: string;
+  constraint?: Constraint;
+};
+
+// Default search parameters for new searches.
+export const defaultSearch = {
+  type: SearchType.Neighbour,
+  depth: 3,
 };
 
 export const closeTP = () => action(ActionType.CloseTroubleshootingPanel);
 export const openTP = () => action(ActionType.OpenTroubleshootingPanel);
-export const setPersistedQuery = (query: Query) => action(ActionType.SetPersistedQuery, { query });
+export const setPersistedSearch = (query: Search) =>
+  action(ActionType.SetPersistedSearch, { query });
 
 const actions = {
   closeTP,
   openTP,
-  setPersistedQuery,
+  setPersistedSearch,
 };
 
 export type TPAction = Action<typeof actions>;

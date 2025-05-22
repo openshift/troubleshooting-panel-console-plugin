@@ -1,7 +1,4 @@
-import { Korrel8rNode, NodeError } from './korrel8r.types';
-import { parseQuery, parseURL } from './query-url';
-import { Constraint } from '../redux-actions';
-import { rfc5399ToUnixTimestamp } from '../korrel8r-utils';
+import { Class, Constraint, Domain, Query, unixSeconds, URIRef } from './types';
 
 // https://docs.openshift.com/container-platform/4.15/observability/network_observability/json-flows-format-reference.html
 // Netflow URL parameter names are equivalent to the LogQL query labels, but spelled differently.
@@ -21,81 +18,60 @@ const queryToURLName = {
 };
 
 // Inverse conversion of URL parmameter names to LogQL query names.
-const urlToQueryName = Object.entries(queryToURLName).reduce((result, [key, value]) => {
+const linkToQueryName = Object.entries(queryToURLName).reduce((result, [key, value]) => {
   result[value] = key;
   return result;
 }, {});
 
-export class NetflowNode extends Korrel8rNode {
-  query: string;
-  url: string;
-
-  constructor(url: string, query: string) {
-    super();
-    this.query = query;
-    this.url = url;
+export class NetflowDomain extends Domain {
+  constructor() {
+    super('netflow');
   }
 
-  // TODO: Add support for pulling parameters from filter query parameters
-  static fromURL(url: string): Korrel8rNode {
-    const [, params] = parseURL('netflow', 'netflow-traffic', url);
+  class(name: string): Class {
+    if (name !== 'network') throw this.badClass(name);
+    return new Class(this.name, name);
+  }
 
-    const selectors = params
+  linkToQuery(link: URIRef): Query {
+    if (!link.pathname.match(/netflow-traffic/)) throw this.badLink(link);
+    let selectors = link.searchParams
       .get('filters')
       ?.split(';')
       .map((filter) => {
         const [, key, operator, value] = filter.match(/^\s*([^!=\s]+)\s*(!?=~?)\s*(.+)\s*$/) || [];
         // Removes surrounding quotes
         const trimmedValue = value?.replace(/^"(.*)"$/, '$1');
-        return urlToQueryName[key] ? `${urlToQueryName[key]}${operator}"${trimmedValue}"` : '';
+        return linkToQueryName[key] ? `${linkToQueryName[key]}${operator}"${trimmedValue}"` : '';
       })
       .filter((s) => s)
       .join(',');
 
     // Set default selector if no valid selectors are present
-    const finalSelectors = selectors || 'DstK8S_Type="Pod",SrcK8S_Type="Pod"';
-
-    return new NetflowNode(url, `netflow:network:{${finalSelectors}}`);
+    selectors = selectors || 'DstK8S_Type="Pod",SrcK8S_Type="Pod"';
+    return this.class('network').query(`{${selectors}}`);
   }
 
-  static fromQuery(query: string, constraint?: Constraint): Korrel8rNode {
-    const [clazz, data] = parseQuery('netflow', query);
-    if (clazz !== 'network')
-      throw new NodeError(`Expected class netflow:network in query: ${query}`);
-    const filters = data
+  queryToLink(query: Query, constraint?: Constraint): string {
+    if (query.class.name !== 'network') throw this.badQuery(query, 'unknown class');
+    const filters = query.selector
       .match(/\s*\{\s*(.*)\s*\}\s*/)?.[1]
       ?.split(',')
-      ?.map((filter) => {
+      ?.map((filter: string) => {
         const [, key, operator, value] =
           filter.match(/^\s*([^!=\s]+)\s*(!?=~?)\s*"(.+)"\s*$/) || [];
-        if (!key) throw new NodeError(`Expected filter to be key="value": ${filter}`);
+        if (!key) throw this.badQuery(query);
         return queryToURLName[key] ? `${queryToURLName[key]}${operator}${value}` : '';
       })
       .filter((s) => s)
       .join(';');
 
     // Construct the base URL with required parameters
-    let url = `netflow-traffic?tenant=${clazz}${
-      filters ? `&filters=${encodeURIComponent(filters)}` : ''
-    }`;
-
-    // Add the start and end time to the URL
-    if (constraint.start !== null) {
-      const starttime = rfc5399ToUnixTimestamp(constraint.start);
-      url += `&startTime=${encodeURIComponent(starttime)}`;
-    }
-    if (constraint.end !== null) {
-      const endtime = rfc5399ToUnixTimestamp(constraint.end);
-      url += `&endTime=${encodeURIComponent(endtime)}`;
-    }
-    return new NetflowNode(url, query);
-  }
-
-  toURL(): string {
-    return this.url;
-  }
-
-  toQuery(): string {
-    return this.query;
+    return new URIRef('netflow-traffic', {
+      tenant: query.class.name,
+      filters: filters ? filters : undefined,
+      startTime: unixSeconds(constraint?.start),
+      endTime: unixSeconds(constraint?.end),
+    }).toString();
   }
 }

@@ -1,55 +1,37 @@
-import { cancellableFetch } from './cancellable-fetch';
-import { Korrel8rGraphResponse, Korrel8rResponse } from './korrel8r/query.types';
-import { Query } from './redux-actions';
+import { getCSRFToken } from '@openshift-console/dynamic-plugin-sdk/lib/utils/fetch/console-fetch-utils';
+import { Goals, Korrel8rClient, Neighbours } from './korrel8r/client';
 
-const KORREL8R_ENDPOINT = '/api/proxy/plugin/troubleshooting-panel-console-plugin/korrel8r';
+const KORREL8R_ENDPOINT =
+  '/api/proxy/plugin/troubleshooting-panel-console-plugin/korrel8r/api/v1alpha1';
 
 export const listDomains = () => {
-  const requestData = { method: 'GET' };
+  const korrel8rClient = new Korrel8rClient({
+    BASE: KORREL8R_ENDPOINT,
+  });
 
-  return cancellableFetch<Korrel8rResponse>(
-    `${KORREL8R_ENDPOINT}/api/v1alpha1/domains`,
-    requestData,
-  );
+  return korrel8rClient.default.getDomains();
 };
 
-export const getNeighborsGraph = (query: Query) => {
-  const requestData = {
-    method: 'POST',
-    body: JSON.stringify({
-      start: {
-        queries: query.query ? [query.query.trim()] : [],
-        constraint: {
-          start: query.constraint?.start,
-          end: query.constraint?.end,
-        },
-      },
-      depth: query.depth,
-    }),
-  };
-  return cancellableFetch<Korrel8rGraphResponse>(
-    `${KORREL8R_ENDPOINT}/api/v1alpha1/graphs/neighbours`,
-    requestData,
-  );
+export const getNeighborsGraph = (neighbours: Neighbours) => {
+  const korrel8rClient = new Korrel8rClient({
+    HEADERS: {
+      Accept: 'application/json',
+      'X-CSRFToken': getCSRFToken(),
+    },
+    BASE: KORREL8R_ENDPOINT,
+  });
+
+  return korrel8rClient.default.postGraphsNeighbours(neighbours);
 };
 
-export const getGoalsGraph = (query: Query) => {
-  const requestData = {
-    method: 'POST',
-    body: JSON.stringify({
-      start: {
-        queries: query.query ? [query.query.trim()] : [],
-        constraint: {
-          start: query.constraint?.start,
-          end: query.constraint?.end,
-        },
-      },
-      goals: [query.goal],
-    }),
-  };
+export const getGoalsGraph = (goals: Goals) => {
+  const korrel8rClient = new Korrel8rClient({
+    HEADERS: {
+      Accept: 'application/json',
+      'X-CSRFToken': getCSRFToken(),
+    },
+    BASE: KORREL8R_ENDPOINT,
+  });
 
-  return cancellableFetch<Korrel8rGraphResponse>(
-    `${KORREL8R_ENDPOINT}/api/v1alpha1/graphs/goals`,
-    requestData,
-  );
+  return korrel8rClient.default.postGraphsGoals(goals);
 };

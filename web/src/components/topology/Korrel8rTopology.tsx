@@ -1,16 +1,21 @@
+import { Badge } from '@patternfly/react-core';
 import { ClusterIcon } from '@patternfly/react-icons';
 import {
   action,
+  BadgeLocation,
   BreadthFirstLayout,
   ComponentFactory,
+  ContextMenuItem,
   createTopologyControlButtons,
   defaultControlButtonsOptions,
   DefaultEdge,
   DefaultGroup,
   DefaultNode,
   EdgeStyle,
+  ElementModel,
   Graph,
   GraphComponent,
+  GraphElement,
   Model,
   ModelKind,
   Node,
@@ -21,260 +26,181 @@ import {
   Visualization,
   VisualizationProvider,
   VisualizationSurface,
+  withContextMenu,
+  WithContextMenuProps,
   withPanZoom,
   withSelection,
+  WithSelectionProps,
 } from '@patternfly/react-topology';
 import * as React from 'react';
-import { TFunction, useTranslation } from 'react-i18next';
-import { useHistory, useLocation } from 'react-router';
-import { nodeToLabel } from '../../korrel8r-utils';
-import { InvalidNode } from '../../korrel8r/invalid';
-import { Korrel8rNode } from '../../korrel8r/korrel8r.types';
-import { Korrel8rNodeFactory } from '../../korrel8r/node-factory';
-import { QueryEdge, QueryNode } from '../../korrel8r/query.types';
-import { Query, QueryType } from '../../redux-actions';
-import { useSelector } from 'react-redux';
-import { State } from '../../redux-reducers';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom-v5-compat';
+import { allDomains } from '../../korrel8r/all-domains';
+import * as korrel8r from '../../korrel8r/types';
 import './korrel8rtopology.css';
+
+const capitalize = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : '');
+
+const nodeLabel = (node: korrel8r.Node): string => {
+  const c = node.class;
+  if (!c) return `[${node.id}]`; // Original un-parsed class name.
+  if (c.domain === c.name) return capitalize(c.domain);
+  let name = c.name;
+  if (c.domain === 'k8s') name = c.name.match(/^[^.]+/)?.[0] || name; // Kind without version
+  return `${capitalize(c.domain)} ${capitalize(name)} `;
+};
+
+const nodeBadge = (node: korrel8r.Node): string => {
+  const queries = nodeQueries(node);
+  return `${queries.length > 1 ? `${queries[0]?.count}/` : ''}${node?.count ?? '?'}`;
+};
+
+const nodeQueries = (node: korrel8r.Node) => node?.queries ?? [];
 
 interface Korrel8rTopologyNodeProps {
   element: Node;
-  onSelect: () => void;
-  selected: boolean;
 }
 
-type GraphNode = {
-  id: string;
-  type: string;
-  label: string;
-  width: number;
-  height: number;
-  shape: NodeShape;
-  data: {
-    korrel8rNode: Korrel8rNode;
-    tooltip: string;
-  };
-};
-
-type GraphEdge = {
-  id: string;
-  type: string;
-  source: string;
-  target: string;
-  edgeStyle: EdgeStyle;
-};
-
-export enum NodeError {
-  invalid = 'invalid',
-  log = 'log',
-  netflow = 'netflow',
-}
-
-const Korrel8rTopologyNode: React.FC<Korrel8rTopologyNodeProps> = ({
-  element,
-  selected,
-  onSelect,
-}) => {
-  if (element.getData().tooltip) {
-    return (
-      <g opacity="0.7" className="tp-plugin__topology_invalid_node">
-        <title>{element.getData().tooltip}</title>
-        <DefaultNode element={element} selected={selected} onSelect={onSelect} hover={false}>
-          <g transform={`translate(25, 25)`}>
-            <ClusterIcon style={{ color: '#393F44' }} width={25} height={25} />
-          </g>
-        </DefaultNode>
-      </g>
-    );
-  }
-
-  return (
-    <DefaultNode element={element} selected={selected} onSelect={onSelect}>
+const Korrel8rTopologyNode: React.FC<
+  Korrel8rTopologyNodeProps & WithContextMenuProps & WithSelectionProps
+> = ({ element, onSelect, selected, onContextMenu, contextMenuOpen }) => {
+  const node = element.getData();
+  const topologyNode = (
+    <DefaultNode
+      element={element}
+      onSelect={onSelect}
+      selected={selected}
+      onContextMenu={onContextMenu}
+      contextMenuOpen={contextMenuOpen}
+      hover={false}
+      label={nodeLabel(node)}
+      badge={nodeBadge(node)}
+      badgeLocation={BadgeLocation.below}
+    >
       <g transform={`translate(25, 25)`}>
         <ClusterIcon style={{ color: '#393F44' }} width={25} height={25} />
       </g>
     </DefaultNode>
   );
+  if (node.error) {
+    // Gray out, add error tool tip
+    return (
+      <g opacity="0.7" className="tp-plugin__topology_invalid_node">
+        <title>{node.error}</title>){topologyNode}
+      </g>
+    );
+  }
+  return topologyNode;
 };
 
-const baselineComponentFactory: ComponentFactory = (kind: ModelKind, type: string) => {
-  switch (type) {
-    case 'group':
-      return DefaultGroup;
-    default:
+const NODE_SHAPE = NodeShape.ellipse;
+const NODE_DIAMETER = 75;
+const PADDING = 30;
+
+export const Korrel8rTopology: React.FC<{
+  graph: korrel8r.Graph;
+  loggingAvailable: boolean;
+  netobserveAvailable: boolean;
+}> = ({ graph, loggingAvailable, netobserveAvailable }) => {
+  const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
+  const navigate = useNavigate();
+  const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
+
+  const nodes = React.useMemo(
+    () =>
+      graph.nodes.map((node: korrel8r.Node) => {
+        if (node.error) {
+          // eslint-disable-next-line no-console
+          console.error(node.error);
+          node.error = t('Unable to find Console Link');
+        } else if (node.class.domain === 'log' && !loggingAvailable) {
+          node.error = t('Logging Plugin Disabled');
+        } else if (node.class.domain === 'netflow' && !netobserveAvailable) {
+          node.error = t('Netflow Plugin Disabled');
+        }
+        return {
+          id: node.id,
+          type: 'node',
+          width: NODE_DIAMETER,
+          height: NODE_DIAMETER,
+          shape: NODE_SHAPE,
+          data: node,
+        };
+      }),
+    [graph, loggingAvailable, netobserveAvailable, t],
+  );
+
+  const edges = React.useMemo(
+    () =>
+      graph.edges.map((edge: korrel8r.Edge) => {
+        return {
+          id: `edge:${edge.start.id}-${edge.goal.id}`,
+          type: 'edge',
+          source: edge.start.id,
+          target: edge.goal.id,
+          edgeStyle: EdgeStyle.default,
+        };
+      }),
+    [graph],
+  );
+
+  const navigateToQuery = React.useCallback(
+    (query: korrel8r.Query) => {
+      try {
+        navigate('/' + allDomains.queryToLink(query));
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error(`navigateToQuery failed for: ${query.toString()}: `, e);
+      }
+    },
+    [navigate],
+  );
+
+  const selectionAction = React.useCallback(
+    (selected: Array<string>) => {
+      const id = selected?.[0]; // Select only one at a time.
+      setSelectedIds([id]);
+      const node = graph.node(id);
+      if (!node || node.error) return;
+      navigateToQuery(node.queries?.[0]?.query);
+    },
+    [graph, navigateToQuery, setSelectedIds],
+  );
+
+  const nodeMenu = React.useCallback(
+    (e: GraphElement<ElementModel, korrel8r.Node>): React.ReactElement[] => {
+      const node = e.getData();
+      return nodeQueries(node).map((qc) => (
+        <ContextMenuItem
+          key={qc.query.toString()}
+          onClick={() => {
+            navigateToQuery(qc.query);
+            setSelectedIds([node.id]);
+            navigator.clipboard.writeText(qc.query.toString());
+          }}
+        >
+          <Badge>{`${qc.count}`}</Badge> {`${qc.query.selector}`}
+        </ContextMenuItem>
+      ));
+    },
+    [navigateToQuery, setSelectedIds],
+  );
+
+  const componentFactory: ComponentFactory = React.useCallback(
+    (kind: ModelKind, type: string) => {
+      if (type === 'group') return DefaultGroup;
       switch (kind) {
         case ModelKind.graph:
           return withPanZoom()(GraphComponent);
         case ModelKind.node:
-          return withSelection()(Korrel8rTopologyNode);
+          return withContextMenu(nodeMenu)(withSelection()(Korrel8rTopologyNode));
         case ModelKind.edge:
           return DefaultEdge;
         default:
           return undefined;
       }
-  }
-};
-
-const NODE_SHAPE = NodeShape.ellipse;
-const NODE_DIAMETER = 75;
-
-const getErrorTooltip = (t: TFunction, error?: NodeError): string => {
-  switch (error) {
-    case NodeError.invalid:
-      return t('Unable to find Console Link');
-    case NodeError.log:
-      return t('Logging Plugin Disabled');
-    case NodeError.netflow:
-      return t('Netflow Plugin Disabled');
-    default:
-      return '';
-  }
-};
-
-const getNodesFromQueryResponse = (
-  queryResponse: Array<QueryNode>,
-  loggingAvailable: boolean,
-  netobserveAvailable: boolean,
-  t: TFunction,
-  persistedQuery: Query,
-): Array<GraphNode> => {
-  const nodes: Array<GraphNode> = [];
-  queryResponse.forEach((node) => {
-    let korrel8rNode: Korrel8rNode;
-    let error: NodeError;
-
-    try {
-      korrel8rNode = Korrel8rNodeFactory.fromQuery(
-        node.queries.at(0)?.query,
-        persistedQuery?.constraint,
-      );
-    } catch (e) {
-      korrel8rNode = InvalidNode.fromQuery(node.queries.at(0)?.query);
-      // eslint-disable-next-line no-console
-      console.error(e);
-      error = NodeError.invalid;
-    }
-
-    if (node.class.startsWith('log') && !loggingAvailable) {
-      korrel8rNode = InvalidNode.fromQuery(node.queries.at(0)?.query);
-      error = NodeError.log;
-    }
-    if (node.class.startsWith('netflow') && !netobserveAvailable) {
-      korrel8rNode = InvalidNode.fromQuery(node.queries.at(0)?.query);
-      error = NodeError.netflow;
-    }
-
-    nodes.push({
-      id: node.class + Date.now(),
-      type: 'node',
-      label: nodeToLabel(node),
-      width: NODE_DIAMETER,
-      height: NODE_DIAMETER,
-      shape: NODE_SHAPE,
-      data: {
-        korrel8rNode,
-        tooltip: getErrorTooltip(t, error),
-      },
-    });
-  });
-  return nodes;
-};
-
-const getEdgesFromQueryResponse = (
-  queryResponse: Array<QueryEdge>,
-  nodes: Array<GraphNode>,
-): Array<GraphEdge> => {
-  const edges: Array<GraphEdge> = [];
-
-  queryResponse.forEach((edge) => {
-    const sourceNode = nodes.find((node) => node.id.startsWith(edge.start));
-    const targetNode = nodes.find((node) => node.id.startsWith(edge.goal));
-    if (!sourceNode || !targetNode) {
-      return;
-    }
-    edges.push({
-      id: `edge-${edge.start}-${edge.goal}`,
-      type: 'edge',
-      source: sourceNode?.id,
-      target: targetNode?.id,
-      edgeStyle: EdgeStyle.default,
-    });
-  });
-  return edges;
-};
-
-export const Korrel8rTopology: React.FC<{
-  queryNodes: Array<QueryNode>;
-  queryEdges: Array<QueryEdge>;
-  loggingAvailable: boolean;
-  netobserveAvailable: boolean;
-  setQuery: (query: Query) => void;
-}> = ({ queryNodes, queryEdges, loggingAvailable, netobserveAvailable, setQuery }) => {
-  const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
-  const location = useLocation();
-  const history = useHistory();
-  const persistedQuery = useSelector((state: State) => {
-    return state.plugins?.tp?.get('persistedQuery');
-  }) as Query;
-
-  const nodes = React.useMemo(
-    () =>
-      getNodesFromQueryResponse(
-        queryNodes,
-        loggingAvailable,
-        netobserveAvailable,
-        t,
-        persistedQuery,
-      ),
-    [queryNodes, loggingAvailable, netobserveAvailable, t, persistedQuery],
-  );
-  const edges = React.useMemo(
-    () => getEdgesFromQueryResponse(queryEdges, nodes),
-    [queryEdges, nodes],
-  );
-
-  const selectedIds = React.useMemo(() => {
-    return nodes
-      .filter((node) => {
-        try {
-          // This is less efficient, but there are certain plugins which add query params
-          // to the URL that we don't want to match on
-          const currentURL = location.pathname + location.search;
-          const currentQuery = Korrel8rNodeFactory.fromURL(currentURL.slice(1))?.toQuery();
-          return node.data.korrel8rNode.toQuery() === currentQuery;
-        } catch (e) {
-          return false;
-        }
-      })
-      .map((node) => node.id);
-  }, [nodes, location.pathname, location.search]);
-
-  const selectionAction = React.useCallback(
-    (selected: Array<string>) => {
-      const newlySelectedNode = selected.find(
-        (eachSelection) => !selectedIds.includes(eachSelection),
-      );
-      if (!newlySelectedNode) {
-        return;
-      }
-      const node = nodes.find((node) => node.id.startsWith(newlySelectedNode));
-      if (!node || node.data.tooltip) {
-        return;
-      }
-      const korrel8rNode = node?.data?.korrel8rNode;
-      if (!korrel8rNode) {
-        return;
-      }
-      setQuery({
-        query: korrel8rNode.toQuery(),
-        queryType: QueryType.Neighbour,
-        depth: 3,
-        goal: null,
-        constraint: persistedQuery.constraint,
-      });
-      history.push('/' + korrel8rNode.toURL());
     },
-    [history, nodes, selectedIds, setQuery, persistedQuery],
+    [nodeMenu],
   );
 
   const controller = React.useMemo(() => {
@@ -288,22 +214,21 @@ export const Korrel8rTopology: React.FC<{
       },
     };
 
-    const newController = new Visualization();
-    newController.registerLayoutFactory((_, graph: Graph) => new BreadthFirstLayout(graph));
-    newController.registerComponentFactory(baselineComponentFactory);
-
-    newController.fromModel(model, false);
-    return newController;
+    const controller = new Visualization();
+    controller.registerLayoutFactory((_, graph: Graph) => new BreadthFirstLayout(graph));
+    controller.fromModel(model, false);
+    return controller;
   }, [nodes, edges]);
 
-  const eventController = React.useMemo(() => {
+  // NOTE: For some reason, the controller function above cannot depend on memoized functions
+  // like selectionAction or componentfactory. Using a separate memo works. Strange.
+  // The Visualization below must depend on controller 2.
+  const controller2 = React.useMemo(() => {
     controller.addEventListener(SELECTION_EVENT, selectionAction);
-    setTimeout(() => {
-      // Center the graph on the next render tick once the graph elements have been sized and placed
-      controller.getGraph().fit(30);
-    }, 100); // FIXME this timeout is racy, need to reliably centre graph after layout is done.
+    controller.registerComponentFactory(componentFactory);
+    controller.setFitToScreenOnLayout(true, PADDING);
     return controller;
-  }, [controller, selectionAction]);
+  }, [controller, selectionAction, componentFactory]);
 
   return (
     <TopologyView
@@ -318,18 +243,14 @@ export const Korrel8rTopology: React.FC<{
               controller.getGraph().scaleBy(0.75);
             }),
             fitToScreenCallback: action(() => {
-              controller.getGraph().fit(30);
-            }),
-            resetViewCallback: action(() => {
-              controller.getGraph().reset();
-              controller.getGraph().layout();
+              controller.getGraph().fit(PADDING);
             }),
             legend: false,
           })}
         />
       }
     >
-      <VisualizationProvider controller={eventController}>
+      <VisualizationProvider controller={controller2}>
         <VisualizationSurface state={{ selectedIds }} />
       </VisualizationProvider>
     </TopologyView>

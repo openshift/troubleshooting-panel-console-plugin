@@ -6,3 +6,6 @@ web/dist/
 web/node_modules/
 web/coverage/
 yarn-error.log
+
+# Ignore DevSpace cache and log folder
+.devspace/

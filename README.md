@@ -190,6 +190,22 @@ best practice is to prefix your CSS classnames with your plugin name to avoid
 conflicts. Please don't disable these rules without understanding how they can
 break console styles!
 
+### Running using Devspace
+
+Install the [devspace](https://www.devspace.sh/docs/getting-started/installation) cli.
+
+1. Install the frontend dependencies running `make install-frontend`.
+2. Start the frontend `make start-frontend`.
+3. Deploy the troubleshooting panel using COO/ObO.
+4. Select the namespace you want to deploy in using `devspace use namespace {NAMESPACE}`, make sure to set the namespace where the plugin has been deployed.
+5. In a different terminal start the devspace sync `devspace dev`.
+
+When running the `devspace dev` command, the pipeline will run the `scale_down_coo` function to prevent COO from fighting over control of the pod. After COO has been scaled down, devspace will "take over" the troubleshooting-panel-console-plugin pod, grabbing all of the certificates and backend binary and configuration to run in the devspace pod.
+
+After the pod has been "taken over" Devspace begins a sync process which will mirror changes from you local `./web/dist` folder into the `/opt/app-root/web/dist` folder in the devspace pod. You can then make changes to your frontend files locally which will trigger the locally running webpack dev server to rebuild the `./web/dist` folder, which will trigger Devspace to re-synced. You can then reload your console webpage to see your local changes running in the cluster.
+
+After development you can run `devspace purge` to cleanup and then call the `scale_up_coo` pipeline.
+
 ### Local Development Troubleshooting
 1. Disable cache. Select 'disable cache' in your browser's DevTools > Network > 'disable cache'. Or use private/incognito mode in your browser.
 2. Enable higher log verbosity by setting `-log-level=trace` when starting the plugin backend. For more options to set log level see [logrus documentation](https://github.com/sirupsen/logrus?tab=readme-ov-file#level-logging).
