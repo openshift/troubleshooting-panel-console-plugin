@@ -1,5 +1,5 @@
 import { getCachedResources } from '../getResources';
-import { Domain, Class, Query, URIRef, keyValueList } from './types';
+import { Class, Domain, Query, URIRef, keyValueList } from './types';
 
 // k8s model type stored in browser cache.
 type Model = {
@@ -18,9 +18,10 @@ type Selector = {
   fields?: { [key: string]: string };
 };
 
-const pathRegex = new RegExp(
+const PATH_RE = new RegExp(
   '(?:k8s|search)/(?:(?:ns/([^/]+))|cluster|all-namespaces)(?:/([^/]+)(?:/([^/]+))?)?(/events)?/?$',
 );
+const CLASS_RE = new RegExp('^([^./]+)(?:.(v[0-9]+(?:(?:alpha|beta)[0-9]*)?))?(?:.([^/]*))?$');
 
 export class K8sDomain extends Domain {
   constructor() {
@@ -28,7 +29,7 @@ export class K8sDomain extends Domain {
   }
 
   class(name: string): Class {
-    const m = name.match(/^([^.]+)(?:\.([^.]*)(?:\.(.*))?)?$/) ?? [];
+    const m = name.match(CLASS_RE);
     if (!m) throw this.badClass(name);
     const model = findGVK(m[3], m[2], m[1]);
     if (!model) throw this.badClass(name);
@@ -42,7 +43,7 @@ export class K8sDomain extends Domain {
   }
 
   linkToQuery(link: URIRef): Query {
-    const m = link.pathname.match(pathRegex);
+    const m = link.pathname.match(PATH_RE);
     if (!m) throw this.badLink(link);
     const [, namespace, resource, name, events] = m;
     const model = findResource(resource, link.searchParams.get('kind'));
@@ -57,7 +58,7 @@ export class K8sDomain extends Domain {
           'involvedObject.kind': model.kind,
         },
       };
-      return this.class('Event.v1').query(JSON.stringify(data));
+      return this.modelClass(eventModel()).query(JSON.stringify(data));
     } else {
       const data = {
         namespace: namespace,
@@ -79,27 +80,28 @@ export class K8sDomain extends Domain {
     if (!m) throw this.badQuery(query);
     let model = findGVK(m[3], m[2], m[1]);
     if (!model) throw this.badQuery(query);
-    let namespace = data.namespace,
-      name = data.name,
-      events = '';
-    if (model.kind == 'Event' && model.apiVersion == 'v1' && !model.apiGroup) {
+    let namespace = data.namespace;
+    let name = data.name;
+    let events = '';
+    if (isEvent(model)) {
       // Special treatment for event objects: focus on the involved object, not the event.
       events = '/events';
+      const about = eventAboutField(model);
       model = findGVK(
-        data.fields['involvedObject.apiGroup'],
-        data.fields['involvedObject.apiVersion'],
-        data.fields['involvedObject.kind'],
+        data.fields[`${about}.apiGroup`],
+        data.fields[`${about}.apiVersion`],
+        data.fields[`${about}.kind`],
       );
-      if (!model) throw this.badQuery(query);
-      namespace = data.fields['involvedObject.namespace'] || '';
-      name = data.fields['involvedObject.name'] || '';
+      if (!model)
+        throw this.badQuery(query, `no resource for '${about}' field in ${query.selector}`);
+      namespace = data.fields[`${about}.namespace`] || '';
+      name = data.fields[`${about}.name`] || '';
     }
     // Prepare parts of the URL
     const nsPath = namespace ? `ns/${namespace}` : 'all-namespaces';
     const labelsParam = data.labels
       ? `?labels=${encodeURIComponent(keyValueList(data.labels))}`
       : '';
-    model;
     if (!name && !namespace && labelsParam) {
       // Search URL
       return (
@@ -124,15 +126,41 @@ export class K8sDomain extends Domain {
   }
 }
 
+// Original k8s Event resource was in the core group, modern Event is in the events.k8s.io group.
+// Event.v1 has an 'involvedObject' field, Event.v1.events.k8s.io has a 'regarding' field.
+// Handle both variations.
+const EVENT = {
+  group: 'events.k8s.io',
+  version: 'v1',
+  kind: 'Event',
+};
+function isEvent(m: Model): boolean {
+  return (
+    m.kind == EVENT.kind &&
+    m.apiVersion == EVENT.version &&
+    (!m.apiGroup || m.apiGroup === EVENT.group)
+  );
+}
+function eventModel(): Model {
+  return findGVK(EVENT.group, EVENT.version, EVENT.kind) || findGVK('', EVENT.version, EVENT.kind);
+}
+
+function eventAboutField(m: Model): string {
+  return m?.apiGroup === EVENT.group ? 'regarding' : 'involvedObject';
+}
+
+// Find the cached resource model for a GVK. Same defaulting rules as korrel8r..
 function findGVK(group: string, version: string, kind: string): Model {
-  const model = getCachedResources()?.models.find(
-    (m: Model) =>
+  version = version || 'v1';
+  group = group || '';
+  return getCachedResources()?.models.find((m: Model) => {
+    return (
       m.kind === kind &&
       m.verbs.includes('watch') &&
-      (!group || group === m.apiGroup) &&
-      (!version || version === m.apiVersion),
-  );
-  return model || undefined;
+      m.apiVersion === version &&
+      (m.apiGroup || '') === group
+    );
+  });
 }
 
 // Return a model for the resource (path) or undefined

@@ -1,4 +1,4 @@
-import { Badge } from '@patternfly/react-core';
+import { Badge, Title } from '@patternfly/react-core';
 import { ClusterIcon } from '@patternfly/react-icons';
 import {
   action,
@@ -147,7 +147,8 @@ export const Korrel8rTopology: React.FC<{
   const navigateToQuery = React.useCallback(
     (query: korrel8r.Query) => {
       try {
-        navigate('/' + allDomains.queryToLink(query));
+        const link = allDomains.queryToLink(query);
+        navigate(link.startsWith('/') ? link : `/${link}`);
       } catch (e) {
         // eslint-disable-next-line no-console
         console.error(`navigateToQuery failed for: ${query.toString()}: `, e);
@@ -170,18 +171,27 @@ export const Korrel8rTopology: React.FC<{
   const nodeMenu = React.useCallback(
     (e: GraphElement<ElementModel, korrel8r.Node>): React.ReactElement[] => {
       const node = e.getData();
-      return nodeQueries(node).map((qc) => (
-        <ContextMenuItem
-          key={qc.query.toString()}
-          onClick={() => {
-            navigateToQuery(qc.query);
-            setSelectedIds([node.id]);
-            navigator.clipboard.writeText(qc.query.toString());
-          }}
-        >
-          <Badge>{`${qc.count}`}</Badge> {`${qc.query.selector}`}
-        </ContextMenuItem>
-      ));
+      const menu = [
+        <ContextMenuItem isDisabled={true} key={node.class.toString()}>
+          <Title headingLevel="h4">{node.class.toString()}</Title>
+        </ContextMenuItem>,
+      ];
+      nodeQueries(node).forEach((qc) =>
+        menu.push(
+          <ContextMenuItem
+            key={qc.query.toString()}
+            onClick={() => {
+              navigateToQuery(qc.query);
+              setSelectedIds([node.id]);
+              navigator.clipboard.writeText(qc.query.toString());
+            }}
+            icon={<Badge>{`${qc.count}`}</Badge>}
+          >
+            {`${qc.query.selector}`}
+          </ContextMenuItem>,
+        ),
+      );
+      return menu;
     },
     [navigateToQuery, setSelectedIds],
   );

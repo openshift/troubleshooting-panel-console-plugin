@@ -1,5 +1,5 @@
-import { URIRef, Query } from '../korrel8r/types';
 import { K8sDomain } from '../korrel8r/k8s';
+import { Query, URIRef } from '../korrel8r/types';
 
 const k8s = new K8sDomain();
 
@@ -138,10 +138,6 @@ describe('K8sNode.fromQuery', () => {
     },
 
     // Variations on korrel8r class spec.
-    { query: `k8s:Role:{"namespace":"x", "name":"y"}`, u: `k8s/ns/x/roles/y` },
-    { query: `k8s:Role.:{"namespace":"x", "name":"y"}`, u: `k8s/ns/x/roles/y` },
-    { query: `k8s:Role.v1:{"namespace":"x", "name":"y"}`, u: `k8s/ns/x/roles/y` },
-    { query: `k8s:Role.v1:{"namespace":"x", "name":"y"}`, u: `k8s/ns/x/roles/y` },
     {
       query: `k8s:Role.v1.rbac.authorization.k8s.io:{"namespace":"x", "name":"y"}`,
       u: `k8s/ns/x/roles/y`,
