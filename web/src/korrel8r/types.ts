@@ -2,7 +2,7 @@
 import * as api from './client';
 
 export class Class {
-  constructor(public domain: string, public name: string) {}
+  constructor(public domain: string, public name: string) { }
 
   query(selector: string) {
     return new Query(this, selector);
@@ -90,7 +90,7 @@ export class Constraint {
 
 // Domain converts between Korrel8r queries and URLs for a Korrel8r domain.
 export abstract class Domain {
-  constructor(public name: string) {}
+  constructor(public name: string) { }
 
   /** Construct a Class object for this domain.
    * @throw {TypeError} if the name is not valid.
@@ -103,7 +103,7 @@ export abstract class Domain {
 
   // Convert a Query to a relative URI reference.
   // @throws {TypeError} if the conversion fails.
-  abstract queryToLink(query: Query, constraint?: Constraint): string;
+  abstract queryToLink(query: Query, constraint?: Constraint): URIRef;
 
   protected error(msg: string): TypeError {
     return new TypeError(`domain ${this.name}: ${msg}`);
@@ -165,7 +165,7 @@ export class URIRef {
 
   toString(): string {
     const search = this.searchParams.toString();
-    return `${this.pathname}${search && '?'}${search}${this.hash}`;
+    return `${this.pathname}${search ? '?' : ''}${search}${this.hash}`;
   }
 }
 
@@ -173,7 +173,7 @@ export class URIRef {
 export const keyValueList = (obj: { [key: string]: string }): string => {
   return Object.keys(obj || {})
     .map((k) => `${k}=${obj[k]}`)
-    .join(',');
+    .join(',')
 };
 
 // Parse a key-value list: 'key=value,key=value...'
@@ -225,7 +225,7 @@ export class Domains {
   // Convert a korrel8r query to a relative URI Reference, try all available domains.
   // See {@link Domain#queryToLink}
   // @throws {TypeError} if the query cannot be converted.
-  queryToLink(query: Query, constraint?: Constraint): string {
+  queryToLink(query: Query, constraint?: Constraint): URIRef {
     const domain = this.get(query?.class?.domain);
     if (!domain) throw new TypeError(`unknown domain in query: ${query.toString()}`);
     return domain.queryToLink(query, constraint);
@@ -265,7 +265,7 @@ export class Node {
 }
 
 export class Edge {
-  constructor(public start: Node, public goal: Node, public rules: Rule[] = []) {}
+  constructor(public start: Node, public goal: Node, public rules: Rule[] = []) { }
 }
 
 export class QueryCount {

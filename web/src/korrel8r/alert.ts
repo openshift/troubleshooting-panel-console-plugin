@@ -1,4 +1,4 @@
-import { Domain, Class, Query, URIRef, keyValueList, parseKeyValueList } from './types';
+import { Class, Domain, Query, URIRef, keyValueList, parseKeyValueList } from './types';
 
 export class AlertDomain extends Domain {
   constructor() {
@@ -28,8 +28,8 @@ export class AlertDomain extends Domain {
     return new Query(this.class('alert'), JSON.stringify(selectors));
   }
 
-  queryToLink(query: Query): string {
+  queryToLink(query: Query): URIRef {
     const selectors = keyValueList(JSON.parse(query.selector));
-    return `monitoring/alerts${selectors ? `?alerts=${encodeURIComponent(selectors)}` : ''}`;
+    return new URIRef(`monitoring/alerts`, { alerts: selectors || undefined })
   }
 }

@@ -39,7 +39,7 @@ export class LogDomain extends Domain {
     return this.class(logClass).query(logQL);
   }
 
-  queryToLink(query: Query, constraint?: Constraint): string {
+  queryToLink(query: Query, constraint?: Constraint): URIRef {
     const logClass = LogClass[query.class.name as keyof typeof LogClass];
     if (!logClass) throw this.badQuery(query, 'unknown class');
     return new URIRef('monitoring/logs', {
@@ -47,6 +47,6 @@ export class LogDomain extends Domain {
       tenant: logClass,
       start: unixMilliseconds(constraint?.start),
       end: unixMilliseconds(constraint?.end),
-    }).toString();
+    })
   }
 }

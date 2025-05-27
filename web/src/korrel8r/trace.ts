@@ -27,7 +27,7 @@ export class TraceDomain extends Domain {
     return this.class('span').query(traceQL);
   }
 
-  queryToLink(query: Query, constraint?: Constraint): string {
+  queryToLink(query: Query, constraint?: Constraint): URIRef {
     this.checkQuery(query);
     const traceQL = query.selector;
     const traceID = traceQL.match(/\{ *trace:id *= *"([0-9a-fA-F]{32})" *\}/)?.[1] || '';
@@ -38,6 +38,6 @@ export class TraceDomain extends Domain {
       q: !traceID && !traceQL.match(/{[:space:]*}/) && traceQL,
       start: unixMilliseconds(constraint?.start),
       end: unixMilliseconds(constraint?.end),
-    }).toString();
+    });
   }
 }

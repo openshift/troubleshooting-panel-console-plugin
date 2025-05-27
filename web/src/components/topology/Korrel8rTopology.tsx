@@ -147,8 +147,8 @@ export const Korrel8rTopology: React.FC<{
   const navigateToQuery = React.useCallback(
     (query: korrel8r.Query) => {
       try {
-        const link = allDomains.queryToLink(query);
-        navigate(link.startsWith('/') ? link : `/${link}`);
+        const link = allDomains.queryToLink(query)?.toString();
+        if (link) navigate(link.startsWith('/') ? link : `/${link}`);
       } catch (e) {
         // eslint-disable-next-line no-console
         console.error(`korrel8r navigateToQuery: ${e}`, "\nquery", query);

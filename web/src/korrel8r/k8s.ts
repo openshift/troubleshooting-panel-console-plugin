@@ -71,7 +71,7 @@ export class K8sDomain extends Domain {
     }
   }
 
-  queryToLink(query: Query): string {
+  queryToLink(query: Query): URIRef {
     let data: Selector;
     try {
       data = JSON.parse(query.selector) as Selector;
@@ -98,18 +98,18 @@ export class K8sDomain extends Domain {
     }
     // Prepare parts of the URL
     const nsPath = namespace ? `ns/${namespace}` : 'all-namespaces';
-    const labelsParam = data.labels
-      ? `?labels=${encodeURIComponent(keyValueList(data.labels))}`
-      : '';
-    if (!name && !namespace && labelsParam) {
-      // Search URL
-      return (
-        `search/${nsPath}${labelsParam}&kind=` +
-        `${model.apiGroup || 'core'}~${model.apiVersion}~${model.kind}`
-      );
-    } else {
-      // Resource URL
-      return `k8s/${nsPath}/${model.path}${name ? `/${name}` : ''}${events}${labelsParam}`;
+    const params = {
+      labels: keyValueList(data.labels) || undefined,
+      fields: (!events && keyValueList(data.fields)) || undefined,
+    }
+    if (!name && !namespace && (params.labels || params.fields)) { // This is a search URL
+      return new URIRef(`search/${nsPath}`, {
+        ...params,
+        kind: `${model.apiGroup || 'core'}~${model.apiVersion}~${model.kind}`,
+      })
+    } else { // Specific resource URL
+      return new URIRef(
+        `k8s/${nsPath}/${model.path}${name ? `/${name}` : ''}${events}`, params)
     }
   }
 

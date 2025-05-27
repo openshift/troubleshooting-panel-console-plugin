@@ -72,5 +72,5 @@ it.each([
   },
 ])('convert URL<=>link', ({ url, query, constraint }) => {
   expect(allDomains.linkToQuery(new URIRef(url))).toEqual(Query.parse(query));
-  expect(allDomains.queryToLink(Query.parse(query), Constraint.fromAPI(constraint))).toEqual(url);
+  expect(allDomains.queryToLink(Query.parse(query), Constraint.fromAPI(constraint))).toEqual(new URIRef(url));
 });

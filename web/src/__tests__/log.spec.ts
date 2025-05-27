@@ -13,7 +13,7 @@ describe('LogDomain.fromURL', () => {
     {
       url: `monitoring/logs?q=${encodeURIComponent(
         '{kubernetes_namespace_name="default",' +
-          'kubernetes_pod_name="foo",log_type="infrastructure"}',
+        'kubernetes_pod_name="foo",log_type="infrastructure"}',
       )}`,
       query:
         `log:infrastructure:{kubernetes_namespace_name="default",` +
@@ -75,7 +75,7 @@ describe('LogDomain.fromQuery', () => {
       }),
     },
   ])('$query', ({ url, query, constraint }) =>
-    expect(new LogDomain().queryToLink(Query.parse(query), constraint)).toEqual(url),
+    expect(new LogDomain().queryToLink(Query.parse(query), constraint)).toEqual(new URIRef(url)),
   );
 });
 
