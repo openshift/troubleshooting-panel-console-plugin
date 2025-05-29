@@ -30,6 +30,6 @@ export class AlertDomain extends Domain {
 
   queryToLink(query: Query): URIRef {
     const selectors = keyValueList(JSON.parse(query.selector));
-    return new URIRef(`monitoring/alerts`, { alerts: selectors || undefined })
+    return new URIRef(`monitoring/alerts`, { alerts: selectors || undefined });
   }
 }
