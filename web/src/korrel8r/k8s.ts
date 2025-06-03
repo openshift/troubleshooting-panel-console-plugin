@@ -69,6 +69,7 @@ export class K8sDomain extends Domain {
     }
   }
 
+  // NOTE: k8s queries don't support query constraints, so neither do console k8s URIs.
   queryToLink(query: Query): URIRef {
     let data: Selector;
     try {
@@ -102,15 +103,16 @@ export class K8sDomain extends Domain {
     const params = {
       labels: keyValueList(data.labels) || undefined,
       fields: (!events && keyValueList(data.fields)) || undefined,
-    }
-    if (!name && !namespace && (params.labels || params.fields)) { // This is a search URL
+    };
+    if (!name && !namespace && (params.labels || params.fields)) {
+      // This is a search URL
       return new URIRef(`search/${nsPath}`, {
         ...params,
         kind: `${model.apiGroup || 'core'}~${model.apiVersion}~${model.kind}`,
-      })
-    } else { // Specific resource URL
-      return new URIRef(
-        `k8s/${nsPath}/${model.path}${name ? `/${name}` : ''}${events}`, params)
+      });
+    } else {
+      // Specific resource URL
+      return new URIRef(`k8s/${nsPath}/${model.path}${name ? `/${name}` : ''}${events}`, params);
     }
   }
 

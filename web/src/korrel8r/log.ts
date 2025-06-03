@@ -47,6 +47,6 @@ export class LogDomain extends Domain {
       tenant: logClass,
       start: unixMilliseconds(constraint?.start),
       end: unixMilliseconds(constraint?.end),
-    })
+    });
   }
 }
