@@ -151,7 +151,7 @@ export const Korrel8rTopology: React.FC<{
         navigate(link.startsWith('/') ? link : `/${link}`);
       } catch (e) {
         // eslint-disable-next-line no-console
-        console.error(`navigateToQuery failed for: ${query.toString()}: `, e);
+        console.error(`korrel8r navigateToQuery: ${e}`, "\nquery", query);
       }
     },
     [navigate],

@@ -79,9 +79,9 @@ export class K8sDomain extends Domain {
       throw this.badQuery(query, e.message);
     }
     const m = query.class.name.match(/^([^.]+)(?:\.([^.]*)(?:\.(.*))?)?$/) ?? [];
-    if (!m) throw this.badQuery(query);
+    if (!m) throw this.badQuery(query, "incorrect format");
     let model = findGVK(m[3], m[2], m[1]);
-    if (!model) throw this.badQuery(query);
+    if (!model) throw this.badQuery(query, "no matching resource");
     let namespace = data.namespace;
     let name = data.name;
     let events = '';
@@ -89,13 +89,10 @@ export class K8sDomain extends Domain {
       // Special treatment for event objects: focus on the involved object, not the event.
       events = '/events';
       const about = eventAboutField(model);
-      model = findGVK(
-        data.fields[`${about}.apiGroup`],
-        data.fields[`${about}.apiVersion`],
-        data.fields[`${about}.kind`],
-      );
-      if (!model)
-        throw this.badQuery(query, `no resource for '${about}' field in ${query.selector}`);
+      const [group, version] = data.fields[`${about}.apiVersion`]?.split("/") ?? []
+      const kind = data.fields[`${about}.kind`]
+      model = findGVK(group, version, kind)
+      if (!model) throw this.badQuery(query, `no resource for group=${group} version=${version} kind=${kind}`);
       namespace = data.fields[`${about}.namespace`] || '';
       name = data.fields[`${about}.name`] || '';
     }
