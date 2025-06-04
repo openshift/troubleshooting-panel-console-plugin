@@ -49,16 +49,18 @@ export class K8sDomain extends Domain {
     const model = findResource(resource, link.searchParams.get('kind'));
     if (!model || !model.kind) throw this.badLink(link, `unknown resource "${resource}"`);
     if (events) {
+      const event = eventModel();
+      const about = eventAboutField(event);
       const apiVersion = `${model.apiGroup ? `${model.apiGroup}/` : ''}${model.apiVersion || 'v1'}`;
       const data = {
         fields: {
-          'involvedObject.namespace': namespace,
-          'involvedObject.name': name,
-          'involvedObject.apiVersion': apiVersion,
-          'involvedObject.kind': model.kind,
+          [`${about}.namespace`]: namespace,
+          [`${about}.name`]: name,
+          [`${about}.apiVersion`]: apiVersion,
+          [`${about}.kind`]: model.kind,
         },
       };
-      return this.modelClass(eventModel()).query(JSON.stringify(data));
+      return this.modelClass(event).query(JSON.stringify(data));
     } else {
       const data = {
         namespace: namespace,
@@ -128,12 +130,13 @@ export class K8sDomain extends Domain {
 
 // Original k8s Event resource was in the core group, modern Event is in the events.k8s.io group.
 // Event.v1 has an 'involvedObject' field, Event.v1.events.k8s.io has a 'regarding' field.
-// Handle both variations.
+// Need to handle both variations.
 const EVENT = {
   group: 'events.k8s.io',
   version: 'v1',
   kind: 'Event',
 };
+
 function isEvent(m: Model): boolean {
   return (
     m.kind == EVENT.kind &&
