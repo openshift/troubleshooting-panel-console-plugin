@@ -49,16 +49,18 @@ export class K8sDomain extends Domain {
     const model = findResource(resource, link.searchParams.get('kind'));
     if (!model || !model.kind) throw this.badLink(link, `unknown resource "${resource}"`);
     if (events) {
+      const event = eventModel();
+      const about = eventAboutField(event);
       const apiVersion = `${model.apiGroup ? `${model.apiGroup}/` : ''}${model.apiVersion || 'v1'}`;
       const data = {
         fields: {
-          'involvedObject.namespace': namespace,
-          'involvedObject.name': name,
-          'involvedObject.apiVersion': apiVersion,
-          'involvedObject.kind': model.kind,
+          [`${about}.namespace`]: namespace,
+          [`${about}.name`]: name,
+          [`${about}.apiVersion`]: apiVersion,
+          [`${about}.kind`]: model.kind,
         },
       };
-      return this.modelClass(eventModel()).query(JSON.stringify(data));
+      return this.modelClass(event).query(JSON.stringify(data));
     } else {
       const data = {
         namespace: namespace,
@@ -77,9 +79,9 @@ export class K8sDomain extends Domain {
       throw this.badQuery(query, e.message);
     }
     const m = query.class.name.match(/^([^.]+)(?:\.([^.]*)(?:\.(.*))?)?$/) ?? [];
-    if (!m) throw this.badQuery(query);
+    if (!m) throw this.badQuery(query, "incorrect format");
     let model = findGVK(m[3], m[2], m[1]);
-    if (!model) throw this.badQuery(query);
+    if (!model) throw this.badQuery(query, "no matching resource");
     let namespace = data.namespace;
     let name = data.name;
     let events = '';
@@ -87,13 +89,10 @@ export class K8sDomain extends Domain {
       // Special treatment for event objects: focus on the involved object, not the event.
       events = '/events';
       const about = eventAboutField(model);
-      model = findGVK(
-        data.fields[`${about}.apiGroup`],
-        data.fields[`${about}.apiVersion`],
-        data.fields[`${about}.kind`],
-      );
-      if (!model)
-        throw this.badQuery(query, `no resource for '${about}' field in ${query.selector}`);
+      const [group, version] = data.fields[`${about}.apiVersion`]?.split("/") ?? []
+      const kind = data.fields[`${about}.kind`]
+      model = findGVK(group, version, kind)
+      if (!model) throw this.badQuery(query, `no resource for group=${group} version=${version} kind=${kind}`);
       namespace = data.fields[`${about}.namespace`] || '';
       name = data.fields[`${about}.name`] || '';
     }
@@ -128,12 +127,13 @@ export class K8sDomain extends Domain {
 
 // Original k8s Event resource was in the core group, modern Event is in the events.k8s.io group.
 // Event.v1 has an 'involvedObject' field, Event.v1.events.k8s.io has a 'regarding' field.
-// Handle both variations.
+// Need to handle both variations.
 const EVENT = {
   group: 'events.k8s.io',
   version: 'v1',
   kind: 'Event',
 };
+
 function isEvent(m: Model): boolean {
   return (
     m.kind == EVENT.kind &&
