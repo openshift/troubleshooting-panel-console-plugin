@@ -8,8 +8,6 @@ export const useLocationQuery = (): Query | undefined => {
   try {
     const link = new URIRef(location.pathname + location.search);
     const q = allDomains.linkToQuery(link);
-    // eslint-disable-next-line no-console
-    console.log('korrel8r linkToQuery', "\nlink", link, "\nquery", q);
     return q;
   } catch (e) {
     // eslint-disable-next-line no-console
