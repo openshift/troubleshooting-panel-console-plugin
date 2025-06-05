@@ -16,11 +16,11 @@ export class MetricDomain extends Domain {
     return new Query(this.class('metric'), promqlQuery);
   }
 
-  queryToLink(query: Query): string {
+  queryToLink(query: Query): URIRef {
     query = this.checkQuery(query);
     if (!query.selector || query.selector.match(/{ *}/)) {
       throw this.badQuery(query, 'empty selector');
     }
-    return `monitoring/query-browser?query0=${query.selector}`;
+    return new URIRef('monitoring/query-browser', { query0: query.selector })    // FIXME use explicit URIRef everywhere.
   }
 }

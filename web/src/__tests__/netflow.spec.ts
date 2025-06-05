@@ -46,7 +46,7 @@ describe('NetflowNode.fromQuery', () => {
   ])(`from $query`, ({ query, url, constraint }) =>
     expect(
       new NetflowDomain().queryToLink(Query.parse(query), Constraint.fromAPI(constraint)),
-    ).toEqual(url),
+    ).toEqual(new URIRef(url)),
   );
 });
 

@@ -107,44 +107,44 @@ describe('K8sNode.fromQuery', () => {
     // Note "fields" are ignored.
     {
       query: 'k8s:Pod.v1:{"namespace":"default","name":"bad-deployment-000000000-00000"}',
-      u: 'k8s/ns/default/pods/bad-deployment-000000000-00000',
+      url: 'k8s/ns/default/pods/bad-deployment-000000000-00000',
     },
     {
       query: `k8s:Pod:{"namespace":"x","name":"y","labels":{"a":"b","c":"d"},"fields": {"x":"y"}}`,
-      u: `k8s/ns/x/pods/y?labels=${encodeURIComponent('a=b,c=d')}`,
+      url: `k8s/ns/x/pods/y?labels=${encodeURIComponent('a=b,c=d')}&fields=${encodeURIComponent('x=y')}`,
     },
     {
       query:
         'k8s:Event.v1:{"fields":{"involvedObject.namespace":"default","involvedObject.name":"bad-deployment-000000000-00000","involvedObject.apiVersion":"v1","involvedObject.kind":"Pod"}}',
-      u: 'k8s/ns/default/pods/bad-deployment-000000000-00000/events',
+      url: 'k8s/ns/default/pods/bad-deployment-000000000-00000/events',
     },
     {
-      query: `k8s:Pod:{"namespace":"x","name":"y","labels":{"a":"b"}}`,
-      u: `k8s/ns/x/pods/y?labels=${encodeURIComponent('a=b')}`,
+      query: `k8s:Pod:{ "namespace":"x", "name":"y", "labels":{ "a":"b" } }`,
+      url: `k8s/ns/x/pods/y?labels=${encodeURIComponent('a=b')}`,
     },
     {
-      query: `k8s:Pod:{"namespace":"x","labels":{"a":"b"}}`,
-      u: `k8s/ns/x/pods?labels=${encodeURIComponent('a=b')}`,
+      query: `k8s:Pod:{ "namespace":"x", "labels":{ "a":"b" } }`,
+      url: `k8s/ns/x/pods?labels=${encodeURIComponent('a=b')}`,
     },
-    { query: `k8s:Pod.v1:{"namespace":"x","name":"y"}`, u: `k8s/ns/x/pods/y` },
-    { query: `k8s:Pod.v1:{"namespace":"x"}`, u: `k8s/ns/x/pods` },
+    { query: `k8s:Pod.v1:{ "namespace":"x", "name":"y" }`, url: `k8s/ns/x/pods/y` },
+    { query: `k8s:Pod.v1:{ "namespace":"x" }`, url: `k8s/ns/x/pods` },
     {
-      query: `k8s:Pod.v1:{"labels":{"a":"b"}}`,
-      u: `search/all-namespaces?labels=${encodeURIComponent('a=b')}&kind=core~v1~Pod`,
+      query: `k8s:Pod.v1:{ "labels":{ "a":"b" } }`,
+      url: `search/all-namespaces?labels=${encodeURIComponent('a=b')}&kind=core~v1~Pod`,
     },
     {
       query: `k8s:Pod.v1:{"namespace":"x","labels":{"a":"b"}}`,
-      u: `k8s/ns/x/pods?labels=${encodeURIComponent('a=b')}`,
+      url: `k8s/ns/x/pods?labels=${encodeURIComponent('a=b')}`,
     },
 
     // Variations on korrel8r class spec.
     {
-      query: `k8s:Role.v1.rbac.authorization.k8s.io:{"namespace":"x", "name":"y"}`,
-      u: `k8s/ns/x/roles/y`,
+      query: `k8s:Role.v1.rbac.authorization.k8s.io:{ "namespace":"x", "name":"y" }`,
+      url: `k8s/ns/x/roles/y`,
     },
-    { query: `k8s:Pod:{}`, u: 'k8s/all-namespaces/pods' },
-  ])('converts $query to $url', ({ u: u, query }) => {
-    expect(k8s.queryToLink(Query.parse(query))).toEqual(u);
+    { query: `k8s:Pod:{}`, url: 'k8s/all-namespaces/pods' },
+  ])('converts $query to $url', ({ url, query }) => {
+    expect(k8s.queryToLink(Query.parse(query))).toEqual(new URIRef(url));
   });
 
   it.each([{ query: `foo:bar:baz` }])('raises error on $query', ({ query }) =>

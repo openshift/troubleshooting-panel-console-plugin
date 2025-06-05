@@ -21,7 +21,8 @@ type Selector = {
 const PATH_RE = new RegExp(
   '(?:k8s|search)/(?:(?:ns/([^/]+))|cluster|all-namespaces)(?:/([^/]+)(?:/([^/]+))?)?(/events)?/?$',
 );
-const CLASS_RE = new RegExp('^([^./]+)(?:.(v[0-9]+(?:(?:alpha|beta)[0-9]*)?))?(?:.([^/]*))?$');
+const VERSION_RE = '(v[0-9]+(?:(?:alpha|beta)[0-9]*)?)';
+const CLASS_RE = new RegExp(`^([^./]+)(?:.${VERSION_RE})?(?:.([^/]*))?$`);
 
 export class K8sDomain extends Domain {
   constructor() {
@@ -71,7 +72,7 @@ export class K8sDomain extends Domain {
     }
   }
 
-  queryToLink(query: Query): string {
+  queryToLink(query: Query): URIRef {
     let data: Selector;
     try {
       data = JSON.parse(query.selector) as Selector;
@@ -79,9 +80,9 @@ export class K8sDomain extends Domain {
       throw this.badQuery(query, e.message);
     }
     const m = query.class.name.match(/^([^.]+)(?:\.([^.]*)(?:\.(.*))?)?$/) ?? [];
-    if (!m) throw this.badQuery(query, "incorrect format");
+    if (!m) throw this.badQuery(query, 'incorrect format');
     let model = findGVK(m[3], m[2], m[1]);
-    if (!model) throw this.badQuery(query, "no matching resource");
+    if (!model) throw this.badQuery(query, 'no matching resource');
     let namespace = data.namespace;
     let name = data.name;
     let events = '';
@@ -89,27 +90,32 @@ export class K8sDomain extends Domain {
       // Special treatment for event objects: focus on the involved object, not the event.
       events = '/events';
       const about = eventAboutField(model);
-      const [group, version] = data.fields[`${about}.apiVersion`]?.split("/") ?? []
-      const kind = data.fields[`${about}.kind`]
-      model = findGVK(group, version, kind)
-      if (!model) throw this.badQuery(query, `no resource for group=${group} version=${version} kind=${kind}`);
+      const [group, version] = parseAPIVersion(data.fields[`${about}.apiVersion`]);
+      const kind = data.fields[`${about}.kind`];
+      model = findGVK(group, version, kind);
+      if (!model)
+        throw this.badQuery(
+          query,
+          `no resource for group=${group} version=${version} kind=${kind}`,
+        );
       namespace = data.fields[`${about}.namespace`] || '';
       name = data.fields[`${about}.name`] || '';
     }
     // Prepare parts of the URL
     const nsPath = namespace ? `ns/${namespace}` : 'all-namespaces';
-    const labelsParam = data.labels
-      ? `?labels=${encodeURIComponent(keyValueList(data.labels))}`
-      : '';
-    if (!name && !namespace && labelsParam) {
-      // Search URL
-      return (
-        `search/${nsPath}${labelsParam}&kind=` +
-        `${model.apiGroup || 'core'}~${model.apiVersion}~${model.kind}`
-      );
+    const params = {
+      labels: keyValueList(data.labels) || undefined,
+      fields: (!events && keyValueList(data.fields)) || undefined,
+    };
+    if (!name && !namespace && (params.labels || params.fields)) {
+      // This is a search URL
+      return new URIRef(`search/${nsPath}`, {
+        ...params,
+        kind: `${model.apiGroup || 'core'}~${model.apiVersion}~${model.kind}`,
+      });
     } else {
-      // Resource URL
-      return `k8s/${nsPath}/${model.path}${name ? `/${name}` : ''}${events}${labelsParam}`;
+      // Specific resource URL
+      return new URIRef(`k8s/${nsPath}/${model.path}${name ? `/${name}` : ''}${events}`, params);
     }
   }
 
@@ -181,4 +187,17 @@ function findResource(resource: string, kind: string): Model {
     parts[1] || undefined,
     parts[2],
   );
+}
+
+const VERSION_ONLY_RE = new RegExp(`^${VERSION_RE}$`);
+function parseAPIVersion(apiVersion: string): [group: string, version: string] | undefined {
+  const gv = apiVersion.split('/') || [];
+  switch (gv.length) {
+    case 1:
+      return gv[0].match(VERSION_ONLY_RE) ? ['', gv[0]] : [gv[0], ''];
+    case 2:
+      return [gv[0], gv[1]];
+    default:
+      return ['', ''];
+  }
 }

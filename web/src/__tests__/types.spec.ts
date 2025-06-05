@@ -36,10 +36,9 @@ class FakeDomain extends Domain {
     return new Class(this.name, m[1]).query(link.searchParams.toString());
   }
 
-  queryToLink(query: Query, constraint?: Constraint): string {
+  queryToLink(query: Query, constraint?: Constraint): URIRef {
     if (!query || !query.class || query.class.domain != this.name) throw this.badQuery(query);
-    const c = constraint ? '&constraint=' + JSON.stringify(constraint) : '';
-    return `${query.class.domain}/${query.class.name}?${query.selector}${c}`;
+    return new URIRef(`${query.class.domain}/${query.class.name}?${query.selector}`, { constraint: constraint });
   }
 }
 
@@ -65,7 +64,7 @@ describe('Domain', () => {
   const d = new FakeDomain('a');
   const abc = d.class('b').query('c=d');
   it('queryToLink', () => {
-    expect(d.queryToLink(abc)).toEqual('a/b?c=d');
+    expect(d.queryToLink(abc).toString()).toEqual('a/b?c=d');
     const query = Query.parse('x:b:c');
     expect(() => d.queryToLink(query)).toThrow('domain a: invalid query: x:b:c');
   });
@@ -81,8 +80,8 @@ describe('Domains', () => {
   const abc = Query.parse('a:b:c=d');
   const xyz = Query.parse('x:y:z=z');
   it('queryToLink', () => {
-    expect(ds.queryToLink(abc)).toEqual('a/b?c=d');
-    expect(ds.queryToLink(xyz)).toEqual('x/y?z=z');
+    expect(ds.queryToLink(abc).toString()).toEqual('a/b?c=d');
+    expect(ds.queryToLink(xyz).toString()).toEqual('x/y?z=z');
     expect(() => ds.queryToLink(Query.parse('z:b:c'))).toThrow(/unknown domain .*: z:b:c/);
   });
   it('linkToQuery', () => {

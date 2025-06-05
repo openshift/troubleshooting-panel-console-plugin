@@ -1,5 +1,5 @@
-import { URIRef, Query } from '../korrel8r/types';
 import { TraceDomain } from '../korrel8r/trace';
+import { Query, URIRef } from '../korrel8r/types';
 
 const tempo = 'namespace=openshift-tracing&name=platform&tenant=platform';
 
@@ -38,6 +38,6 @@ describe('TraceDomain.fromQuery', () => {
       url: `observe/traces?${tempo}&q=%7Bresource.service.name%3D%22shop-backend%22%7D`,
     },
   ])('$query', ({ query, url }) => {
-    expect(new TraceDomain().queryToLink(Query.parse(query))).toEqual(url);
+    expect(new TraceDomain().queryToLink(Query.parse(query)).toString()).toEqual(url);
   });
 });

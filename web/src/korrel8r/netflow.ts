@@ -52,7 +52,7 @@ export class NetflowDomain extends Domain {
     return this.class('network').query(`{${selectors}}`);
   }
 
-  queryToLink(query: Query, constraint?: Constraint): string {
+  queryToLink(query: Query, constraint?: Constraint): URIRef {
     if (query.class.name !== 'network') throw this.badQuery(query, 'unknown class');
     const filters = query.selector
       .match(/\s*\{\s*(.*)\s*\}\s*/)?.[1]
@@ -72,6 +72,6 @@ export class NetflowDomain extends Domain {
       filters: filters ? filters : undefined,
       startTime: unixSeconds(constraint?.start),
       endTime: unixSeconds(constraint?.end),
-    }).toString();
+    })
   }
 }

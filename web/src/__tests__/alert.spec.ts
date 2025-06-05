@@ -1,5 +1,5 @@
-import { URIRef, Query } from '../korrel8r/types';
 import { AlertDomain } from '../korrel8r/alert';
+import { Query, URIRef } from '../korrel8r/types';
 
 describe('AlertNode.fromURL', () => {
   it.each([
@@ -33,7 +33,7 @@ describe('AlertDomain.fromQuery', () => {
     },
     { query: 'alert:alert:{}', url: 'monitoring/alerts' },
   ])('converts $query', ({ url, query }) => {
-    expect(new AlertDomain().queryToLink(Query.parse(query))).toEqual(url);
+    expect(new AlertDomain().queryToLink(Query.parse(query))).toEqual(new URIRef(url));
   });
 
   it('Query => URL => Query', () => {
@@ -42,7 +42,7 @@ describe('AlertDomain.fromQuery', () => {
     const got =
       'monitoring/alerts?alerts=alertname%3DKubePodCrashLooping%2Ccontainer%3Dbad-deployment%2Cnamespace%3Ddefault%2Cpod%3Dbad-pod';
     const want = new AlertDomain().queryToLink(Query.parse(query));
-    expect(want).toEqual(got);
-    expect(new AlertDomain().linkToQuery(new URIRef(want))).toEqual(Query.parse(query));
+    expect(want).toEqual(new URIRef(got));
+    expect(new AlertDomain().linkToQuery(want)).toEqual(Query.parse(query));
   });
 });
