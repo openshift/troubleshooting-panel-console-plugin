@@ -38,7 +38,9 @@ class FakeDomain extends Domain {
 
   queryToLink(query: Query, constraint?: Constraint): URIRef {
     if (!query || !query.class || query.class.domain != this.name) throw this.badQuery(query);
-    return new URIRef(`${query.class.domain}/${query.class.name}?${query.selector}`, { constraint: constraint });
+    return new URIRef(`${query.class.domain}/${query.class.name}?${query.selector}`, {
+      constraint: constraint,
+    });
   }
 }
 

@@ -54,10 +54,10 @@ export default function Korrel8rPanel() {
     persistedSearch?.queryStr
       ? persistedSearch
       : ({
-        ...defaultSearch,
-        queryStr: locationQuery?.toString(),
-        constraint: persistedSearch?.constraint,
-      } as Search),
+          ...defaultSearch,
+          queryStr: locationQuery?.toString(),
+          constraint: persistedSearch?.constraint,
+        } as Search),
   );
   const [result, setResult] = React.useState<Result | null>(null);
   const [showQuery, setShowQuery] = React.useState(false);

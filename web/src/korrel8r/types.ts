@@ -2,7 +2,7 @@
 import * as api from './client';
 
 export class Class {
-  constructor(public domain: string, public name: string) { }
+  constructor(public domain: string, public name: string) {}
 
   query(selector: string) {
     return new Query(this, selector);
@@ -90,7 +90,7 @@ export class Constraint {
 
 // Domain converts between Korrel8r queries and URLs for a Korrel8r domain.
 export abstract class Domain {
-  constructor(public name: string) { }
+  constructor(public name: string) {}
 
   /** Construct a Class object for this domain.
    * @throw {TypeError} if the name is not valid.
@@ -173,7 +173,7 @@ export class URIRef {
 export const keyValueList = (obj: { [key: string]: string }): string => {
   return Object.keys(obj || {})
     .map((k) => `${k}=${obj[k]}`)
-    .join(',')
+    .join(',');
 };
 
 // Parse a key-value list: 'key=value,key=value...'
@@ -265,7 +265,7 @@ export class Node {
 }
 
 export class Edge {
-  constructor(public start: Node, public goal: Node, public rules: Rule[] = []) { }
+  constructor(public start: Node, public goal: Node, public rules: Rule[] = []) {}
 }
 
 export class QueryCount {

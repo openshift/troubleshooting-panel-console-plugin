@@ -72,6 +72,6 @@ export class NetflowDomain extends Domain {
       filters: filters ? filters : undefined,
       startTime: unixSeconds(constraint?.start),
       endTime: unixSeconds(constraint?.end),
-    })
+    });
   }
 }

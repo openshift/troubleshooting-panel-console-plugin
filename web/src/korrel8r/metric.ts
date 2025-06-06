@@ -21,6 +21,6 @@ export class MetricDomain extends Domain {
     if (!query.selector || query.selector.match(/{ *}/)) {
       throw this.badQuery(query, 'empty selector');
     }
-    return new URIRef('monitoring/query-browser', { query0: query.selector })    // FIXME use explicit URIRef everywhere.
+    return new URIRef('monitoring/query-browser', { query0: query.selector }); // FIXME use explicit URIRef everywhere.
   }
 }

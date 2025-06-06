@@ -13,7 +13,7 @@ describe('LogDomain.fromURL', () => {
     {
       url: `monitoring/logs?q=${encodeURIComponent(
         '{kubernetes_namespace_name="default",' +
-        'kubernetes_pod_name="foo",log_type="infrastructure"}',
+          'kubernetes_pod_name="foo",log_type="infrastructure"}',
       )}`,
       query:
         `log:infrastructure:{kubernetes_namespace_name="default",` +

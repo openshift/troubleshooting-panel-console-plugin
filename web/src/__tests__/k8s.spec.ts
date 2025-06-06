@@ -111,7 +111,9 @@ describe('K8sNode.fromQuery', () => {
     },
     {
       query: `k8s:Pod:{"namespace":"x","name":"y","labels":{"a":"b","c":"d"},"fields": {"x":"y"}}`,
-      url: `k8s/ns/x/pods/y?labels=${encodeURIComponent('a=b,c=d')}&fields=${encodeURIComponent('x=y')}`,
+      url: `k8s/ns/x/pods/y?labels=${encodeURIComponent('a=b,c=d')}&fields=${encodeURIComponent(
+        'x=y',
+      )}`,
     },
     {
       query:
