@@ -10,12 +10,9 @@ import {
   ExpandableSectionToggle,
   Flex,
   FlexItem,
-  Icon,
-  NumberInput,
-  Radio,
+  Form,
+  FormGroup,
   TextArea,
-  TextInput,
-  Title,
   Tooltip,
 } from '@patternfly/react-core';
 import { CogIcon, CubesIcon, ExclamationCircleIcon, SyncIcon } from '@patternfly/react-icons';
@@ -29,8 +26,10 @@ import * as api from '../korrel8r/client';
 import * as korrel8r from '../korrel8r/types';
 import { defaultSearch, Search, SearchType, setPersistedSearch } from '../redux-actions';
 import { State } from '../redux-reducers';
-import DateTimeRangePicker from './DateTimeRangePicker';
+import * as time from '../time';
 import './korrel8rpanel.css';
+import { SearchFormGroup } from './SearchFormGroup';
+import TimeRangeFormGroup from './TimeRangeFormGroup';
 import { Korrel8rTopology } from './topology/Korrel8rTopology';
 import { LoadingTopology } from './topology/LoadingTopology';
 
@@ -62,7 +61,7 @@ export default function Korrel8rPanel() {
   const [result, setResult] = React.useState<Result | null>(null);
   const [showQuery, setShowQuery] = React.useState(false);
 
-  const focusTip = t('Generate a correlation graph starting from resources in the current view.');
+  const focusTip = t('Create a graph starting from resources in the current view.');
   const cannotFocus = t('The current view does not support correlation.');
 
   React.useEffect(() => {
@@ -74,9 +73,13 @@ export default function Korrel8rPanel() {
       setResult({ message: cannotFocus });
       return;
     }
-    // Make the search request
+    // eslint-disable-next-line no-console
+    console.log('korrel8r search', search);
     const queryStr = search?.queryStr?.trim();
-    const start: api.Start = { queries: queryStr ? [queryStr] : [] };
+    const start: api.Start = {
+      queries: queryStr ? [queryStr] : undefined,
+      constraint: search?.constraint?.toAPI() ?? undefined,
+    };
     const cancellableFetch =
       search.type === SearchType.Goal
         ? getGoalsGraph({ start, goals: [search.goal] })
@@ -102,40 +105,16 @@ export default function Korrel8rPanel() {
   const queryToggleID = 'query-toggle';
   const queryContentID = 'query-content';
   const queryInputID = 'query-input';
-  const searchTypeOptions = 'search-type-options';
 
-  // Handler for both 'start' and 'end' date/time changes
-  const handleDateChange = (
-    type: 'start' | 'end',
-    newDate: Date,
-    hour?: number,
-    minute?: number,
-  ): void => {
-    // Adjust time if hour and minute are provided
-    const updatedDate = new Date(newDate);
-    if (hour !== undefined && minute !== undefined) {
-      updatedDate.setHours(hour);
-      updatedDate.setMinutes(minute);
-    }
-
-    // Update the constraint based on 'start' or 'end' type
-    const updatedSearch = {
-      ...search,
-      constraint: new korrel8r.Constraint({
-        ...search.constraint,
-        [type]: updatedDate.toISOString(), // Update the corresponding date in search
-      }),
-    };
-
-    setSearch(updatedSearch); // Update the search state with the new object
-  };
-
-  const minDepth = 1;
-  const maxDepth = 10;
   const depthBounds = applyBounds(1, 10);
 
   const runSearch = React.useCallback(
     (newSearch: Search) => {
+      // Update constraint from time period
+      if (newSearch.period) {
+        const [start, end] = newSearch.period.startEnd();
+        newSearch.constraint = new korrel8r.Constraint({ ...newSearch.constraint, start, end });
+      }
       newSearch.depth = depthBounds(newSearch.depth);
       newSearch.type = !newSearch.goal ? SearchType.Neighbour : newSearch.type;
       setSearch(newSearch);
@@ -154,25 +133,29 @@ export default function Korrel8rPanel() {
               runSearch({
                 ...defaultSearch,
                 queryStr: locationQuery?.toString(),
-                constraint: persistedSearch.constraint,
+                constraint: persistedSearch?.constraint,
+                period: persistedSearch?.period,
               })
             }
           >
             {t('Focus')}
           </Button>
         </Tooltip>
+
         <Flex align={{ default: 'alignRight' }}>
-          <ExpandableSectionToggle
-            contentId={queryContentID}
-            toggleId={queryToggleID}
-            isExpanded={showQuery}
-            onToggle={(on: boolean) => setShowQuery(on)}
-          >
-            <Icon>
+          <Tooltip content={t('Open graph query settings.')}>
+            <ExpandableSectionToggle
+              contentId={queryContentID}
+              toggleId={queryToggleID}
+              isExpanded={showQuery}
+              onToggle={(on: boolean) => {
+                setShowQuery(on);
+              }}
+            >
               <CogIcon />
-            </Icon>
-          </ExpandableSectionToggle>
-          <Tooltip content={t('Refresh the graph using the current search settings')}>
+            </ExpandableSectionToggle>
+          </Tooltip>
+          <Tooltip content={t('Refresh graph from current settings')}>
             <Button
               isAriaDisabled={!search?.queryStr}
               onClick={() => runSearch(search)}
@@ -183,107 +166,46 @@ export default function Korrel8rPanel() {
           </Tooltip>
         </Flex>
       </Flex>
+
+      {/* Expandable settings */}
       <ExpandableSection
+        className="tp-plugin__panel-query-container"
         contentId={queryContentID}
         toggleId={queryToggleID}
         isExpanded={showQuery}
         isDetached
         isIndented
       >
-        <Flex className="tp-plugin__panel-query-container" direction={{ default: 'column' }}>
-          <Title headingLevel="h3">Time Range</Title>
-          <DateTimeRangePicker
-            // Pass the start date/time
-            from={search.constraint?.start ? new Date(search.constraint.start) : null}
-            // Pass the end date/time
-            to={search.constraint?.end ? new Date(search.constraint.end) : null}
-            onDateChange={handleDateChange} // Unified handler for both date and time changes
+        <Form>
+          {/* FIXME Rename */}
+          <TimeRangeFormGroup
+            label={t('Time Range')}
+            period={search.period}
+            onChange={(period: time.Period): void => setSearch({ ...search, period })}
           />
-
-          <Title headingLevel="h3">Search type</Title>
-          <Flex>
-            <FlexItem>
-              <Tooltip content={t('Search for  correlated resources up to the specified depth.')}>
-                <Radio
-                  label={t('Neighbourhood search')}
-                  name={searchTypeOptions}
-                  id="neighbourhood-option"
-                  isChecked={search.type === SearchType.Neighbour}
-                  onChange={(_: React.FormEvent, on: boolean) => {
-                    on && setSearch({ ...search, type: SearchType.Neighbour });
-                  }}
-                />
-              </Tooltip>
-            </FlexItem>
-            <FlexItem hidden={search.type !== SearchType.Neighbour}>{t('Depth')}</FlexItem>
-            <FlexItem hidden={search.type !== SearchType.Neighbour}>
-              <NumberInput
-                value={search.depth}
-                min={minDepth}
-                max={maxDepth}
-                onPlus={() => setSearch({ ...search, depth: (search.depth || 0) + 1 })}
-                onMinus={() =>
-                  search.depth > minDepth && setSearch({ ...search, depth: search.depth - 1 })
-                }
-                onChange={(event: React.FormEvent<HTMLInputElement>) => {
-                  const n = Number((event.target as HTMLInputElement).value);
-                  setSearch({ ...search, depth: isNaN(n) ? 1 : n });
-                }}
+          <SearchFormGroup
+            label={t('Search Type')}
+            search={search}
+            onChange={(s: Search) => setSearch(s)}
+            minDepth={1}
+            maxDepth={100}
+            t={t}
+          />
+          <FormGroup label={t('Query')} className="tp-plugin__panel-query-input">
+            <Tooltip content={t('Query selecting start resources for correlation.')}>
+              <TextArea
+                value={search.queryStr}
+                onChange={(_event, value) => setSearch({ ...search, queryStr: value })}
+                placeholder="domain:class:selector"
+                id={queryInputID}
               />
-            </FlexItem>
-          </Flex>
-          <Flex>
-            <FlexItem>
-              <Tooltip content={t('Search for paths to resources of the specified class.')}>
-                <Radio
-                  label={t('Goal directed search')}
-                  name={searchTypeOptions}
-                  id="goal-option"
-                  isChecked={search.type === SearchType.Goal}
-                  onChange={(_: React.FormEvent, on: boolean) =>
-                    on && setSearch({ ...search, type: SearchType.Goal })
-                  }
-                />
-              </Tooltip>
-            </FlexItem>
-            <FlexItem hidden={search.type !== SearchType.Goal}>Class</FlexItem>
-            <FlexItem hidden={search.type !== SearchType.Goal}>
-              <TextInput
-                label={'Class'}
-                value={search.goal}
-                placeholder="domain:class"
-                onChange={(event: React.FormEvent<HTMLInputElement>) => {
-                  setSearch({ ...search, goal: (event.target as HTMLInputElement).value });
-                }}
-              />
-            </FlexItem>
-          </Flex>
-          <Title headingLevel="h3">Query</Title>
-          <Tooltip content={t('Query to select the starting resources for correlation.')}>
-            <TextArea
-              className="tp-plugin__panel-query-input"
-              placeholder="domain:class:selector"
-              id={queryInputID}
-              value={search.queryStr}
-              onChange={(_event, value) => setSearch({ ...search, queryStr: value })}
-            />
-          </Tooltip>
-          <FlexItem align={{ default: 'alignLeft' }}>
-            <Tooltip content={t('Refresh the graph using the current search settings')}>
-              <Button
-                isAriaDisabled={!search?.queryStr}
-                onClick={() => runSearch(search)}
-                variant="secondary"
-              >
-                {t('Update')}
-              </Button>
             </Tooltip>
-          </FlexItem>
-        </Flex>
+          </FormGroup>
+        </Form>
       </ExpandableSection>
       <Divider />
       <FlexItem className="tp-plugin__panel-topology-container" grow={{ default: 'grow' }}>
-        <Topology result={result} t={t} setSearch={setSearch} />
+        <Topology result={result} constraint={search.constraint} t={t} setSearch={setSearch} />
       </FlexItem>
     </>
   );
@@ -291,11 +213,12 @@ export default function Korrel8rPanel() {
 
 interface TopologyProps {
   result?: Result;
+  constraint: korrel8r.Constraint;
   t: TFunction;
   setSearch: (search: Search) => void;
 }
 
-const Topology: React.FC<TopologyProps> = ({ result, t }) => {
+const Topology: React.FC<TopologyProps> = ({ result, t, constraint }) => {
   const [loggingAvailable, loggingAvailableLoading] = usePluginAvailable('logging-view-plugin');
   const [netobserveAvailable, netobserveAvailableLoading] = usePluginAvailable('netobserv-plugin');
 
@@ -311,6 +234,7 @@ const Topology: React.FC<TopologyProps> = ({ result, t }) => {
         graph={result.graph}
         loggingAvailable={loggingAvailable}
         netobserveAvailable={netobserveAvailable}
+        constraint={constraint}
       />
     );
   }
@@ -375,3 +299,5 @@ const applyBounds = (minValue: number, maxValue: number) => {
     }
   };
 };
+
+//          {/* FIXME Tooltips or popovers uniformly */}

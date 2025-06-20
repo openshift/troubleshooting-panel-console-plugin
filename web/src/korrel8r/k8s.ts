@@ -72,6 +72,7 @@ export class K8sDomain extends Domain {
     }
   }
 
+  // NOTE: k8s queries don't support query constraints, so neither do console k8s URIs.
   queryToLink(query: Query): URIRef {
     let data: Selector;
     try {

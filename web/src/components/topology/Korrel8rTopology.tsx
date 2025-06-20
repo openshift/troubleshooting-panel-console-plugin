@@ -99,9 +99,11 @@ const PADDING = 30;
 
 export const Korrel8rTopology: React.FC<{
   graph: korrel8r.Graph;
+  reFit?: boolean;
   loggingAvailable: boolean;
   netobserveAvailable: boolean;
-}> = ({ graph, loggingAvailable, netobserveAvailable }) => {
+  constraint: korrel8r.Constraint;
+}> = ({ graph, reFit, loggingAvailable, netobserveAvailable, constraint }) => {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
   const navigate = useNavigate();
   const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
@@ -145,10 +147,22 @@ export const Korrel8rTopology: React.FC<{
   );
 
   const navigateToQuery = React.useCallback(
-    (query: korrel8r.Query) => {
+    (query: korrel8r.Query, constraint: korrel8r.Constraint) => {
       try {
-        const link = allDomains.queryToLink(query)?.toString();
-        if (link) navigate(link.startsWith('/') ? link : `/${link}`);
+        let link = allDomains.queryToLink(query, constraint)?.toString();
+        if (!link) return;
+        if (!link.startsWith('/')) link = '/' + link;
+        // eslint-disable-next-line no-console
+        console.log(
+          'korrel8r navigate',
+          '\nquery',
+          query,
+          '\nconstraint',
+          constraint,
+          '\nlink',
+          link,
+        );
+        navigate(link);
       } catch (e) {
         // eslint-disable-next-line no-console
         console.error(`korrel8r navigateToQuery: ${e}`, '\nquery', query);
@@ -163,9 +177,9 @@ export const Korrel8rTopology: React.FC<{
       setSelectedIds([id]);
       const node = graph.node(id);
       if (!node || node.error) return;
-      navigateToQuery(node.queries?.[0]?.query);
+      navigateToQuery(node.queries?.[0]?.query, constraint);
     },
-    [graph, navigateToQuery, setSelectedIds],
+    [graph, navigateToQuery, setSelectedIds, constraint],
   );
 
   const nodeMenu = React.useCallback(
@@ -181,7 +195,7 @@ export const Korrel8rTopology: React.FC<{
           <ContextMenuItem
             key={qc.query.toString()}
             onClick={() => {
-              navigateToQuery(qc.query);
+              navigateToQuery(qc.query, constraint);
               setSelectedIds([node.id]);
               navigator.clipboard.writeText(qc.query.toString());
             }}
@@ -193,7 +207,7 @@ export const Korrel8rTopology: React.FC<{
       );
       return menu;
     },
-    [navigateToQuery, setSelectedIds],
+    [navigateToQuery, setSelectedIds, constraint],
   );
 
   const componentFactory: ComponentFactory = React.useCallback(
@@ -239,6 +253,8 @@ export const Korrel8rTopology: React.FC<{
     controller.setFitToScreenOnLayout(true, PADDING);
     return controller;
   }, [controller, selectionAction, componentFactory]);
+
+  if (reFit) controller2.getGraph().fit(PADDING);
 
   return (
     <TopologyView
