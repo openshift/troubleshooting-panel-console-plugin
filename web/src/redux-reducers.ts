@@ -6,6 +6,7 @@ import { ActionType, TPAction, defaultSearch } from './redux-actions';
 export type TPState = ImmutableMap<string, any>;
 
 export type State = {
+  observe: TPState;
   plugins: {
     tp: TPState;
   };

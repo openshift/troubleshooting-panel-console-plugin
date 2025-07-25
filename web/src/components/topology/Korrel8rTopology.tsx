@@ -35,7 +35,6 @@ import {
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom-v5-compat';
-import { allDomains } from '../../korrel8r/all-domains';
 import * as korrel8r from '../../korrel8r/types';
 import './korrel8rtopology.css';
 
@@ -98,12 +97,13 @@ const NODE_DIAMETER = 75;
 const PADDING = 30;
 
 export const Korrel8rTopology: React.FC<{
+  domains: korrel8r.Domains;
   graph: korrel8r.Graph;
   reFit?: boolean;
   loggingAvailable: boolean;
   netobserveAvailable: boolean;
   constraint: korrel8r.Constraint;
-}> = ({ graph, reFit, loggingAvailable, netobserveAvailable, constraint }) => {
+}> = ({ domains, graph, reFit, loggingAvailable, netobserveAvailable, constraint }) => {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
   const navigate = useNavigate();
   const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
@@ -149,7 +149,7 @@ export const Korrel8rTopology: React.FC<{
   const navigateToQuery = React.useCallback(
     (query: korrel8r.Query, constraint: korrel8r.Constraint) => {
       try {
-        let link = allDomains.queryToLink(query, constraint)?.toString();
+        let link = domains.queryToLink(query, constraint)?.toString();
         if (!link) return;
         if (!link.startsWith('/')) link = '/' + link;
         // eslint-disable-next-line no-console
@@ -168,7 +168,7 @@ export const Korrel8rTopology: React.FC<{
         console.error(`korrel8r navigateToQuery: ${e}`, '\nquery', query);
       }
     },
-    [navigate],
+    [navigate, domains],
   );
 
   const selectionAction = React.useCallback(

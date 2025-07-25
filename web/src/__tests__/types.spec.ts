@@ -68,7 +68,7 @@ describe('Domain', () => {
   it('queryToLink', () => {
     expect(d.queryToLink(abc).toString()).toEqual('a/b?c=d');
     const query = Query.parse('x:b:c');
-    expect(() => d.queryToLink(query)).toThrow('domain a: invalid query: x:b:c');
+    expect(() => d.queryToLink(query)).toThrow('invalid query for domain a: x:b:c');
   });
   it('linkToQuery', () => {
     expect(d.linkToQuery(new URIRef('a/b?c=d'))).toEqual(abc);

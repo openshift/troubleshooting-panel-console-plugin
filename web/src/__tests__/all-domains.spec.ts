@@ -1,5 +1,5 @@
 import { allDomains } from '../korrel8r/all-domains';
-import { Constraint, Query, URIRef } from '../korrel8r/types';
+import { Constraint, Domains, Query, URIRef } from '../korrel8r/types';
 
 beforeAll(() => {
   // Mock API discovery resources.
@@ -71,8 +71,9 @@ it.each([
       'log:infrastructure:{kubernetes_namespace_name="openshift-image-registry"}|json|kubernetes_labels_docker_registry="default"',
   },
 ])('convert URL<=>link', ({ url, query, constraint }) => {
-  expect(allDomains.linkToQuery(new URIRef(url))).toEqual(Query.parse(query));
-  expect(allDomains.queryToLink(Query.parse(query), Constraint.fromAPI(constraint))).toEqual(
+  const d = new Domains(...allDomains);
+  expect(d.linkToQuery(new URIRef(url))).toEqual(Query.parse(query));
+  expect(d.queryToLink(Query.parse(query), Constraint.fromAPI(constraint))).toEqual(
     new URIRef(url),
   );
 });

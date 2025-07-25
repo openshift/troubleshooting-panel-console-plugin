@@ -60,7 +60,7 @@ export class NetflowDomain extends Domain {
       ?.map((filter: string) => {
         const [, key, operator, value] =
           filter.match(/^\s*([^!=\s]+)\s*(!?=~?)\s*"(.+)"\s*$/) || [];
-        if (!key) throw this.badQuery(query);
+        if (!key) throw this.badQuery(query, 'bad selector format');
         return queryToURLName[key] ? `${queryToURLName[key]}${operator}${value}` : '';
       })
       .filter((s) => s)

@@ -22,6 +22,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useLocationQuery } from '../hooks/useLocationQuery';
 import { usePluginAvailable } from '../hooks/usePluginAvailable';
 import { getGoalsGraph, getNeighborsGraph } from '../korrel8r-client';
+import { AlertDomain } from '../korrel8r/alert';
+import { allDomains } from '../korrel8r/all-domains';
 import * as api from '../korrel8r/client';
 import * as korrel8r from '../korrel8r/types';
 import { defaultSearch, Search, SearchType, setPersistedSearch } from '../redux-actions';
@@ -48,7 +50,16 @@ export default function Korrel8rPanel() {
   const dispatch = useDispatch();
 
   // State
-  const locationQuery = useLocationQuery();
+  const alertRules = useSelector((state: State) => state.observe?.get('rules'));
+  const alertIDs = React.useMemo(
+    () => new Map<string, string>(alertRules.map(({ id, name }) => [id, name])),
+    [alertRules],
+  );
+  const domains = React.useMemo(
+    () => new korrel8r.Domains(...allDomains, new AlertDomain(alertIDs)),
+    [alertIDs],
+  );
+  const locationQuery = useLocationQuery(domains);
   const [search, setSearch] = React.useState<Search>(
     persistedSearch?.queryStr
       ? persistedSearch
@@ -205,20 +216,27 @@ export default function Korrel8rPanel() {
       </ExpandableSection>
       <Divider />
       <FlexItem className="tp-plugin__panel-topology-container" grow={{ default: 'grow' }}>
-        <Topology result={result} constraint={search.constraint} t={t} setSearch={setSearch} />
+        <Topology
+          domains={domains}
+          result={result}
+          constraint={search.constraint}
+          t={t}
+          setSearch={setSearch}
+        />
       </FlexItem>
     </>
   );
 }
 
 interface TopologyProps {
+  domains: korrel8r.Domains;
   result?: Result;
   constraint: korrel8r.Constraint;
   t: TFunction;
   setSearch: (search: Search) => void;
 }
 
-const Topology: React.FC<TopologyProps> = ({ result, t, constraint }) => {
+const Topology: React.FC<TopologyProps> = ({ domains, result, t, constraint }) => {
   const [loggingAvailable, loggingAvailableLoading] = usePluginAvailable('logging-view-plugin');
   const [netobserveAvailable, netobserveAvailableLoading] = usePluginAvailable('netobserv-plugin');
 
@@ -231,6 +249,7 @@ const Topology: React.FC<TopologyProps> = ({ result, t, constraint }) => {
     // Non-empty graph
     return (
       <Korrel8rTopology
+        domains={domains}
         graph={result.graph}
         loggingAvailable={loggingAvailable}
         netobserveAvailable={netobserveAvailable}

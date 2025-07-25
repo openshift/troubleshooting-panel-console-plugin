@@ -9,7 +9,7 @@ describe('AlertNode.fromURL', () => {
         'container=bad-deployment&endpoint=https-main&job=kube-state-metrics&namespace=default&pod=bad-deployment&' +
         'reason=CrashLoopBackOff&service=kube-state-metrics&uid=00000000-0000-0000-0000-000000000000',
       query:
-        'alert:alert:{"severity":"warning","alertname":"KubePodCrashLooping","container":"bad-deployment",' +
+        'alert:alert:{"prometheus":"openshift-monitoring/k8s","severity":"warning","alertname":"KubePodCrashLooping","container":"bad-deployment",' +
         '"endpoint":"https-main","job":"kube-state-metrics","namespace":"default","pod":"bad-deployment",' +
         '"reason":"CrashLoopBackOff","service":"kube-state-metrics","uid":"00000000-0000-0000-0000-000000000000"}',
     },
@@ -19,9 +19,33 @@ describe('AlertNode.fromURL', () => {
       query:
         'alert:alert:{"alertname":"KubePodCrashLooping","container":"bad-deployment","namespace":"default","pod":"bad-pod"}',
     },
-  ])('converts $url', ({ url, query }) =>
-    expect(new AlertDomain().linkToQuery(new URIRef(url))).toEqual(Query.parse(query)),
-  );
+    {
+      url: 'monitoring/alerts/12345',
+      query: 'alert:alert:{"alertname":"FooAlert"}',
+    },
+    {
+      url: 'monitoring/alertrules/12345',
+      query: 'alert:alert:{"alertname":"FooAlert"}',
+    },
+    {
+      url: 'monitoring/alertrules/12345?alertname=BarAlert',
+      query: 'alert:alert:{"alertname":"BarAlert"}',
+    },
+  ])('converts $url', ({ url, query }) => {
+    const domain = new AlertDomain(new Map([['12345', 'FooAlert']]));
+    expect(domain.linkToQuery(new URIRef(url)).toString()).toEqual(query);
+  });
+});
+
+describe('AlertNode.fromURL raises error', () => {
+  it.each([
+    {
+      url: 'monitoring/alertrules/999',
+      error: 'invalid link for domain alert: monitoring/alertrules/999: cannot find alertname',
+    },
+  ])('converts $url', ({ url, error }) => {
+    expect(() => new AlertDomain().linkToQuery(new URIRef(url))).toThrow(error);
+  });
 });
 
 describe('AlertDomain.fromQuery', () => {

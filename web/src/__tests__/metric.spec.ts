@@ -33,11 +33,11 @@ describe('metric', () => {
     it.each([
       {
         url: 'foobar',
-        error: new TypeError('domain metric: invalid link: foobar'),
+        error: new TypeError('invalid link for domain metric: foobar'),
       },
       {
         url: 'monitoring/query-browser',
-        error: 'domain metric: invalid link: monitoring/query-browser',
+        error: 'invalid link for domain metric: monitoring/query-browser',
       },
     ])('$url', ({ url, error }) => {
       expect(() => metric.linkToQuery(new URIRef(url))).toThrow(error);
@@ -48,11 +48,11 @@ describe('metric', () => {
     it.each([
       {
         query: 'wrongdomain:metric:foo',
-        error: 'domain metric: invalid query, wrong domain: wrongdomain:metric:foo',
+        error: 'invalid query for domain metric: wrongdomain:metric:foo',
       },
       {
         query: 'metric:badclass:foo',
-        error: 'domain metric: invalid class: badclass',
+        error: 'invalid class for domain metric: badclass',
       },
     ])('$query', ({ query, error }) => {
       expect(() => metric.queryToLink(Query.parse(query))).toThrow(error);
