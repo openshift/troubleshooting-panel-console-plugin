@@ -2,7 +2,6 @@ import {
   DatePicker,
   InputGroup,
   InputGroupItem,
-  InputGroupText,
   isValidDate,
   TimePicker,
   yyyyMMddFormat,
@@ -14,17 +13,14 @@ import { copyTime, setTime } from '../time';
 export const DateTimePicker: React.FC<{
   date: Date;
   onChange: (date: Date) => void;
-  label: string;
-}> = ({ date, onChange, label }) => {
+}> = ({ date, onChange }) => {
   if (!isValidDate(date)) date = new Date();
   return (
     <InputGroup>
-      <InputGroupText isPlain>{label}</InputGroupText>
       <InputGroupItem>
         <DatePicker
           value={isValidDate(date) ? yyyyMMddFormat(date) : ''}
           onChange={(_event, _inputDate, newDate) => onChange(copyTime(newDate, date))}
-          aria-label={label}
         />
       </InputGroupItem>
       <InputGroupItem>

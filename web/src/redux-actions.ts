@@ -9,7 +9,7 @@ export enum ActionType {
 }
 
 export enum SearchType {
-  Neighbour = 'neighbour',
+  Distance = 'distance',
   Goal = 'goal',
 }
 
@@ -25,7 +25,7 @@ export type Search = {
 
 // Default search parameters for new searches.
 export const defaultSearch = {
-  type: SearchType.Neighbour,
+  type: SearchType.Distance,
   depth: 3,
   period: new Duration(1, DAY),
 };
