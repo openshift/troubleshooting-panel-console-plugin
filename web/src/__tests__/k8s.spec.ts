@@ -28,6 +28,13 @@ beforeAll(() => {
         verbs: ['watch'],
       },
       {
+        kind: 'Event',
+        apiVersion: 'v1',
+        apiGroup: 'events.k8s.io',
+        path: 'events',
+        verbs: ['watch'],
+      },
+      {
         kind: 'Namespace',
         apiVersion: 'v1',
         path: 'namespaces',
@@ -65,25 +72,37 @@ beforeAll(() => {
   window['SERVER_FLAGS'] = { consoleVersion: 'x.y.z' };
 });
 
-describe('K8sNode.fromURL', () => {
+describe('K8sDomain.linkToQuery', () => {
   it.each([
-    { url: 'k8s/all-namespaces/apps~v1~Deployment', query: 'k8s:Deployment.v1.apps:{}' },
+    { url: '/k8s/all-namespaces/apps~v1~Deployment', query: 'k8s:Deployment.v1.apps:{}' },
+    { url: '/search/all-namespaces/apps~v1~Deployment', query: 'k8s:Deployment.v1.apps:{}' },
+    { url: '/api-resource/all-namespaces/apps~v1~Deployment', query: 'k8s:Deployment.v1.apps:{}' },
     {
       url: 'k8s/ns/korrel8r/apps~v1~Deployment',
       query: 'k8s:Deployment.v1.apps:{"namespace":"korrel8r"}',
     },
+
+    { url: '/k8s/ns/x/apps~v1~Deployment', query: 'k8s:Deployment.v1.apps:{"namespace":"x"}' },
+    { url: '/search/ns/x/apps~v1~Deployment', query: 'k8s:Deployment.v1.apps:{"namespace":"x"}' },
     {
-      url: 'k8s/ns/korrel8r/deployments/korrel8r',
-      query: 'k8s:Deployment.v1.apps:{"namespace":"korrel8r","name":"korrel8r"}',
+      url: '/api-resource/ns/x/apps~v1~Deployment',
+      query: 'k8s:Deployment.v1.apps:{"namespace":"x"}',
     },
     {
-      url: 'k8s/ns/default/core~v1~Pod/bad-deployment-000000000-00000',
+      url: '/api-resource/ns/x/apps~v1~Deployment/instances',
+      query: 'k8s:Deployment.v1.apps:{"namespace":"x"}',
+    },
+    {
+      url: '/k8s/ns/x/deployments/y',
+      query: 'k8s:Deployment.v1.apps:{"namespace":"x","name":"y"}',
+    },
+    {
+      url: '/k8s/ns/default/core~v1~Pod/bad-deployment-000000000-00000',
       query: 'k8s:Pod.v1:{"namespace":"default","name":"bad-deployment-000000000-00000"}',
     },
     {
-      url: 'k8s/ns/default/core~v1~Pod/bad-deployment-000000000-00000/events',
-      query:
-        'k8s:Event.v1:{"fields":{"involvedObject.namespace":"default","involvedObject.name":"bad-deployment-000000000-00000","involvedObject.apiVersion":"v1","involvedObject.kind":"Pod"}}',
+      url: '/k8s/ns/default/core~v1~Pod/bad-deployment-000000000-00000/events',
+      query: 'k8s:Pod.v1:{"namespace":"default","name":"bad-deployment-000000000-00000"}',
     },
     {
       url: `/k8s/ns/default/core~v1~Pod/foo`,
@@ -98,13 +117,14 @@ describe('K8sNode.fromURL', () => {
     { url: `/search/all-namespaces?kind=core~v1~Pod`, query: `k8s:Pod.v1:{}` },
     { url: `/k8s/all-namespaces/core~v1~Pod`, query: `k8s:Pod.v1:{}` },
     { url: `/k8s/cluster/nodes/oscar7`, query: `k8s:Node.v1:{"name":"oscar7"}` },
+    { url: `/api-resource/cluster/core~v1~Node`, query: `k8s:Node.v1:{}` },
     { url: '/k8s/ns/netobserv/core~v1~Pod', query: 'k8s:Pod.v1:{"namespace":"netobserv"}' },
   ])('converts $url', ({ url, query }) =>
     expect(k8s.linkToQuery(new URIRef(url))).toEqual(Query.parse(query)),
   );
 });
 
-describe('K8sNode.fromQuery', () => {
+describe('K8sDomain.queryToLink', () => {
   it.each([
     // Variations on query parameters.
     // Note "fields" are ignored.
@@ -121,6 +141,11 @@ describe('K8sNode.fromQuery', () => {
     {
       query:
         'k8s:Event.v1:{"fields":{"involvedObject.namespace":"default","involvedObject.name":"bad-deployment-000000000-00000","involvedObject.apiVersion":"v1","involvedObject.kind":"Pod"}}',
+      url: 'k8s/ns/default/core~v1~Pod/bad-deployment-000000000-00000/events',
+    },
+    {
+      query:
+        'k8s:Event.v1.events.k8s.io:{"fields":{"regarding.namespace":"default","regarding.name":"bad-deployment-000000000-00000","regarding.apiVersion":"v1","regarding.kind":"Pod"}}',
       url: 'k8s/ns/default/core~v1~Pod/bad-deployment-000000000-00000/events',
     },
     {
@@ -149,7 +174,7 @@ describe('K8sNode.fromQuery', () => {
     },
     { query: `k8s:Pod:{}`, url: 'k8s/all-namespaces/core~v1~Pod' },
   ])('converts $query to $url', ({ url, query }) => {
-    expect(k8s.queryToLink(Query.parse(query))).toEqual(new URIRef(url));
+    expect(k8s.queryToLink(Query.parse(query)).toString()).toEqual(new URIRef(url).toString());
   });
 
   it.each([{ query: `foo:bar:baz` }])('raises error on $query', ({ query }) =>

@@ -18,11 +18,13 @@ type Selector = {
   fields?: { [key: string]: string };
 };
 
-const PATH_RE = new RegExp(
-  '(?:k8s|search)/(?:(?:ns/([^/]+))|cluster|all-namespaces)(?:/([^/]+)(?:/([^/]+))?)?(/events)?/?$',
+const pathRE = new RegExp(
+  '(?<prefix>k8s|search|api-resource)' +
+    '/((ns/(?<namespace>[^/]+))|cluster|all-namespaces)' +
+    '(/(?<resource>[^/]+)(/(?<name>([^/]+))(?<events>/events)?)?)?',
 );
-const VERSION_RE = '(v[0-9]+(?:(?:alpha|beta)[0-9]*)?)';
-const CLASS_RE = new RegExp(`^([^./]+)(?:.${VERSION_RE})?(?:.([^/]*))?$`);
+const versionRE = /(?<version>v[0-9]+((alpha|beta)[0-9]*)?)/;
+const classRE = new RegExp(`^(?<kind>[^./]+)(\\.${versionRE.source})?(.(?<group>[^/]*))?$`);
 
 export class K8sDomain extends Domain {
   constructor() {
@@ -30,11 +32,15 @@ export class K8sDomain extends Domain {
   }
 
   class(name: string): Class {
-    const m = name.match(CLASS_RE);
-    if (!m) throw this.badClass(name);
-    const model = findGVK(m[3], m[2], m[1]);
+    const model = this.classModel(name);
     if (!model) throw this.badClass(name);
     return this.modelClass(model);
+  }
+
+  private classModel(name: string): Model | undefined {
+    const g = name.match(classRE)?.groups;
+    if (!g) return;
+    return findGVK(g.group, g.version, g.kind);
   }
 
   private modelClass(model: Model): Class {
@@ -44,77 +50,58 @@ export class K8sDomain extends Domain {
   }
 
   linkToQuery(link: URIRef): Query {
-    const m = link.pathname.match(PATH_RE);
-    if (!m) throw this.badLink(link);
-    const [, namespace, resource, name, events] = m;
-    const model = findResource(resource, link.searchParams.get('kind'));
-    if (!model || !model.kind) throw this.badLink(link, `unknown resource "${resource}"`);
-    if (events) {
-      const event = eventModel();
-      const about = eventAboutField(event);
-      const apiVersion = `${model.apiGroup ? `${model.apiGroup}/` : ''}${model.apiVersion || 'v1'}`;
-      const data = {
-        fields: {
-          [`${about}.namespace`]: namespace,
-          [`${about}.name`]: name,
-          [`${about}.apiVersion`]: apiVersion,
-          [`${about}.kind`]: model.kind,
-        },
-      };
-      return this.modelClass(event).query(JSON.stringify(data));
-    } else {
-      const data = {
-        namespace: namespace,
-        name: name,
-        labels: K8sDomain.parseSelector(link.searchParams.get('labels')) || undefined,
-      };
-      return this.modelClass(model).query(JSON.stringify(data));
-    }
+    const g = link.pathname.match(pathRE)?.groups;
+    if (!g) throw this.badLink(link);
+    const resource = g.resource || link.searchParams.get('kind');
+    const model = findResource(resource);
+    if (!model?.kind) throw this.badLink(link, `unknown resource: ${resource}`);
+    const name = g.prefix === 'api-resource' ? undefined : g.name;
+    const data = {
+      namespace: g.namespace,
+      name,
+      labels: K8sDomain.parseSelector(link.searchParams.get('labels')) || undefined,
+    };
+    return this.modelClass(model).query(JSON.stringify(data));
   }
 
   // NOTE: k8s queries don't support query constraints, so neither do console k8s URIs.
   queryToLink(query: Query): URIRef {
-    let data: Selector;
+    let selector: Selector;
     try {
-      data = JSON.parse(query.selector) as Selector;
+      selector = JSON.parse(query.selector) as Selector;
     } catch (e) {
       throw this.badQuery(query, e.message);
     }
-    const m = query.class.name.match(/^([^.]+)(?:\.([^.]*)(?:\.(.*))?)?$/) ?? [];
-    if (!m) throw this.badQuery(query, 'incorrect format');
-    let model = findGVK(m[3], m[2], m[1]);
-    if (!model) throw this.badQuery(query, 'no matching resource');
-    let namespace = data.namespace;
-    let name = data.name;
+    let model = this.classModel(query.class.name);
+    if (!model) throw this.badQuery(query, `no resources match class`);
+    let namespace = selector.namespace;
+    let name = selector.name;
     let events = '';
     if (isEvent(model)) {
-      // Special treatment for event objects: focus on the involved object, not the event.
-      events = '/events';
+      // Special case for events, use involved object with '/events' modifier.
+      const eventClass = this.modelClass(model);
       const about = eventAboutField(model);
-      const [group, version] = parseAPIVersion(data.fields[`${about}.apiVersion`]);
-      const kind = data.fields[`${about}.kind`];
+      const [group, version] = parseAPIVersion(selector.fields[`${about}.apiVersion`]);
+      const kind = selector.fields[`${about}.kind`];
       model = findGVK(group, version, kind);
-      if (!model)
-        throw this.badQuery(
-          query,
-          `no resource for group=${group} version=${version} kind=${kind}`,
-        );
-      namespace = data.fields[`${about}.namespace`] || '';
-      name = data.fields[`${about}.name`] || '';
+      if (!model) throw this.badQuery(query, `no resource matching ${eventClass}.${about}`);
+      namespace = selector.fields[`${about}.namespace`] || '';
+      name = selector.fields[`${about}.name`] || '';
+      events = '/events';
     }
     // Prepare parts of the URL
     const nsPath = namespace ? `ns/${namespace}` : 'all-namespaces';
     const kind = `${model.apiGroup || 'core'}~${model.apiVersion}~${model.kind}`;
     const params = {
-      labels: keyValueList(data.labels) || undefined,
-      fields: (!events && keyValueList(data.fields)) || undefined,
+      labels: keyValueList(selector.labels) || undefined,
+      fields: (!events && keyValueList(selector.fields)) || undefined,
     };
     if (!name && !namespace && (params.labels || params.fields)) {
       // Search URL
       return new URIRef(`search/${nsPath}`, { ...params, kind });
     } else {
       // Specific resource URL
-      return new URIRef(`k8s/${nsPath}/${kind}${name ? `/${name}` : ''}${events}`, params);
+      return new URIRef(`k8s/${nsPath}/${kind}${name ? `/${name}` : ''}${events}`, { ...params });
     }
   }
 
@@ -146,54 +133,42 @@ function isEvent(m: Model): boolean {
     (!m.apiGroup || m.apiGroup === EVENT.group)
   );
 }
-function eventModel(): Model {
-  return findGVK(EVENT.group, EVENT.version, EVENT.kind) || findGVK('', EVENT.version, EVENT.kind);
-}
 
 function eventAboutField(m: Model): string {
   return m?.apiGroup === EVENT.group ? 'regarding' : 'involvedObject';
 }
 
-// Find the cached resource model for a GVK. Same defaulting rules as korrel8r..
+// Find the cached resource model for a GVK. Same defaulting rules as korrel8r.
 function findGVK(group: string, version: string, kind: string): Model {
   version = version || 'v1';
   group = group || '';
-  return getCachedResources()?.models.find((m: Model) => {
-    return (
+  return getCachedResources()?.models.find(
+    (m: Model) =>
       m.kind === kind &&
       m.verbs.includes('watch') &&
       m.apiVersion === version &&
-      (m.apiGroup || '') === group
-    );
-  });
-}
-
-// Return a model for the resource (path) or undefined
-function findResource(resource: string, kind: string): Model {
-  if (resource === 'projects') resource = 'namespaces'; // Alias
-  if (resource && !resource.includes('~')) {
-    // Try the resource as a straight resource name
-    const model = getCachedResources()?.models.find(
-      (m: Model) => m.path === resource && m.verbs.includes('watch'),
-    );
-    if (model) return model;
-  }
-  // Either kind or resource may be a g~v~k string.
-  const parts = (resource || kind)?.split('~');
-  if (!parts || parts.length !== 3 || !parts[2]) return;
-  return findGVK(
-    !parts[0] || parts[0] === 'core' ? undefined : parts[0],
-    parts[1] || undefined,
-    parts[2],
+      (m.apiGroup || '') === group,
   );
 }
 
-const VERSION_ONLY_RE = new RegExp(`^${VERSION_RE}$`);
+// Return a model for the resource, can be G~V~K or path. Return undefined if not found.
+function findResource(resource: string): Model {
+  if (!resource) return;
+  // Try as a G~V~K string.
+  const [g, v, k] = resource.split('~');
+  if (k) return findGVK(g === 'core' ? '' : g, v, k);
+  // Try as a resource path
+  if (resource === 'projects') resource = 'namespaces'; // Alias
+  return getCachedResources()?.models?.find(
+    (m: Model) => m.path === resource && m.verbs.includes('watch'),
+  );
+}
+
 function parseAPIVersion(apiVersion: string): [group: string, version: string] | undefined {
-  const gv = apiVersion.split('/') || [];
+  const gv = apiVersion?.split('/') || [];
   switch (gv.length) {
     case 1:
-      return gv[0].match(VERSION_ONLY_RE) ? ['', gv[0]] : [gv[0], ''];
+      return gv[0].match(versionRE) ? ['', gv[0]] : [gv[0], ''];
     case 2:
       return [gv[0], gv[1]];
     default:

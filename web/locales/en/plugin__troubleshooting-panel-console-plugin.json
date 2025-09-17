@@ -1,5 +1,6 @@
 {
   "Advanced": "Advanced",
+  "Ago": "Ago",
   "Correlation result was empty.": "Correlation result was empty.",
   "Create a graph of correlated items from resources in the current view.": "Create a graph of correlated items from resources in the curret view.",
   "Distance": "Distance",
@@ -22,6 +23,7 @@
   "Return only results more recent than the specified duration.": "Return only results more recent than the specified duration.",
   "Search Type": "Search Type",
   "Selects the starting point for correlation search. This query is set automatically by the <1>Focus</1> button. You can edit it manually to specify a custom query.": "Selects the starting point for correlation search. This query is set automatically by the <1>Focus</1> button. You can edit it manually to specify a custom query.",
+  "Since": "Since",
   "The current view does not support correlation.": "The current view does not support correlation.",
   "Time": "Time",
   "to": "to",
