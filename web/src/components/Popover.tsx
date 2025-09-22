@@ -1,13 +1,14 @@
+import { useActivePerspective } from '@openshift-console/dynamic-plugin-sdk';
+import { Button, Flex, FlexItem, Title } from '@patternfly/react-core';
+import { TimesCircleIcon } from '@patternfly/react-icons';
 import * as React from 'react';
+import { useTranslation } from 'react-i18next';
+import { useDispatch, useSelector } from 'react-redux';
+import { closeTP } from '../redux-actions';
+import { State } from '../redux-reducers';
+import { HelpPopover } from './HelpPopover';
 import Korrel8rPanel from './Korrel8rPanel';
 import './popover.css';
-import { useDispatch, useSelector } from 'react-redux';
-import { Button, Title, Flex, FlexItem } from '@patternfly/react-core';
-import { TimesCircleIcon } from '@patternfly/react-icons';
-import { State } from '../redux-reducers';
-import { closeTP } from '../redux-actions';
-import { useTranslation } from 'react-i18next';
-import { useActivePerspective } from '@openshift-console/dynamic-plugin-sdk';
 
 export default function Popover() {
   const dispatch = useDispatch();
@@ -39,8 +40,14 @@ export default function Popover() {
       >
         <Flex className="tp-plugin__popover-title-bar" gap={{ default: 'gapNone' }}>
           <FlexItem grow={{ default: 'grow' }}>
-            <Title headingLevel="h1">{t('Troubleshooting')}</Title>
-            <p>{t('Find related resources.')}</p>
+            <Title headingLevel="h1">
+              {t('Troubleshooting')}
+              <HelpPopover
+                header={t(
+                  'Quickly diagnose and resolve issues by exploring correlated observability signals for resources.',
+                )}
+              ></HelpPopover>
+            </Title>
           </FlexItem>
           <FlexItem>
             <Button variant="plain" aria-label="Close" onClick={close}>

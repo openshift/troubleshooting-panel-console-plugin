@@ -9,7 +9,7 @@ describe('AlertNode.fromURL', () => {
         'container=bad-deployment&endpoint=https-main&job=kube-state-metrics&namespace=default&pod=bad-deployment&' +
         'reason=CrashLoopBackOff&service=kube-state-metrics&uid=00000000-0000-0000-0000-000000000000',
       query:
-        'alert:alert:{"prometheus":"openshift-monitoring/k8s","severity":"warning","alertname":"KubePodCrashLooping","container":"bad-deployment",' +
+        'alert:alert:{"severity":"warning","alertname":"KubePodCrashLooping","container":"bad-deployment",' +
         '"endpoint":"https-main","job":"kube-state-metrics","namespace":"default","pod":"bad-deployment",' +
         '"reason":"CrashLoopBackOff","service":"kube-state-metrics","uid":"00000000-0000-0000-0000-000000000000"}',
     },

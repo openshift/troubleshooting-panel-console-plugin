@@ -99,11 +99,10 @@ const PADDING = 30;
 export const Korrel8rTopology: React.FC<{
   domains: korrel8r.Domains;
   graph: korrel8r.Graph;
-  reFit?: boolean;
   loggingAvailable: boolean;
   netobserveAvailable: boolean;
   constraint: korrel8r.Constraint;
-}> = ({ domains, graph, reFit, loggingAvailable, netobserveAvailable, constraint }) => {
+}> = ({ domains, graph, loggingAvailable, netobserveAvailable, constraint }) => {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
   const navigate = useNavigate();
   const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
@@ -153,7 +152,7 @@ export const Korrel8rTopology: React.FC<{
         if (!link) return;
         if (!link.startsWith('/')) link = '/' + link;
         // eslint-disable-next-line no-console
-        console.log(
+        console.debug(
           'korrel8r navigate',
           '\nquery',
           query,
@@ -253,8 +252,6 @@ export const Korrel8rTopology: React.FC<{
     controller.setFitToScreenOnLayout(true, PADDING);
     return controller;
   }, [controller, selectionAction, componentFactory]);
-
-  if (reFit) controller2.getGraph().fit(PADDING);
 
   return (
     <TopologyView

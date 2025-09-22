@@ -13,12 +13,18 @@ export const Chooser: React.FC<ChooserProps> = ({ selectedID, items, onChange })
     {items.map(({ label, id, tooltip }) => {
       let item = (
         <ToggleGroupItem
+          key={`chooser-togglegroupitem-${id}`}
           text={label}
           isSelected={selectedID === id}
           onChange={(_, on) => on && onChange && onChange(id)}
         />
       );
-      if (tooltip) item = <Tooltip content={tooltip}>{item}</Tooltip>;
+      if (tooltip)
+        item = (
+          <Tooltip key={`chooser-tooltip-${id}`} content={tooltip}>
+            {item}
+          </Tooltip>
+        );
       return item;
     })}
   </ToggleGroup>

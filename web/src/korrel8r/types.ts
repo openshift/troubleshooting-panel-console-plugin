@@ -2,7 +2,7 @@
 import * as api from './client';
 
 export class Class {
-  constructor(public domain: string, public name: string) { }
+  constructor(public domain: string, public name: string) {}
 
   query(selector: string) {
     return new Query(this, selector);
@@ -90,7 +90,7 @@ export class Constraint {
 
 // Domain converts between Korrel8r queries and URLs for a Korrel8r domain.
 export abstract class Domain {
-  constructor(public name: string) { }
+  constructor(public name: string) {}
 
   /** Construct a Class object for this domain.
    * @throw {TypeError} if the name is not valid.
@@ -216,8 +216,8 @@ export class Domains {
     for (const domain of this.domains.values()) {
       try {
         return domain.linkToQuery(link);
-      } catch (_) {
-        true;
+      } catch {
+        continue;
       }
     }
     throw new TypeError(`cannot convert link: ${link}`);
@@ -266,7 +266,7 @@ export class Node {
 }
 
 export class Edge {
-  constructor(public start: Node, public goal: Node, public rules: Rule[] = []) { }
+  constructor(public start: Node, public goal: Node, public rules: Rule[] = []) {}
 }
 
 export class QueryCount {

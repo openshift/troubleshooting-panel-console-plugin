@@ -1,5 +1,5 @@
 import { action, ActionType as Action } from 'typesafe-actions';
-import { Constraint } from './korrel8r/types';
+import { Constraint, Graph } from './korrel8r/types';
 import { DAY, Duration, Period } from './time';
 
 export enum ActionType {
@@ -23,7 +23,21 @@ export type Search = {
   period?: Period; // Constraint is updated from period on each call.
 };
 
-// Default search parameters for new searches.
+// Result displayed in troubleshooting panel, graph or error.
+export type Result = {
+  graph?: Graph;
+  message?: string;
+  title?: string;
+  isError?: boolean;
+};
+
+// Search parameters and result of the last search.
+export type SearchResult = {
+  search: Search;
+  result?: Result;
+};
+
+// Default search parameters do a neighbourhood search of depth 3.
 export const defaultSearch = {
   type: SearchType.Distance,
   depth: 3,
@@ -32,10 +46,10 @@ export const defaultSearch = {
 
 export const closeTP = () => action(ActionType.CloseTroubleshootingPanel);
 export const openTP = () => action(ActionType.OpenTroubleshootingPanel);
-export const setPersistedSearch = (query: Search) =>
-  action(ActionType.SetPersistedSearch, { query });
+export const setPersistedSearch = (searchResult: SearchResult) =>
+  action(ActionType.SetPersistedSearch, searchResult);
 
-const actions = {
+export const actions = {
   closeTP,
   openTP,
   setPersistedSearch,

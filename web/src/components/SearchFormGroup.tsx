@@ -3,14 +3,17 @@ import {
   DescriptionListDescription,
   DescriptionListGroup,
   DescriptionListTerm,
+  Flex,
+  FlexItem,
   FormGroup,
   InputGroup,
   InputGroupItem,
   NumberInput,
   TextInput,
+  Title,
 } from '@patternfly/react-core';
 import * as React from 'react';
-import { TFunction, Trans } from 'react-i18next';
+import { TFunction } from 'react-i18next';
 import { Search, SearchType } from '../redux-actions';
 import { Chooser } from './Chooser';
 import { HelpPopover } from './HelpPopover';
@@ -82,34 +85,38 @@ export const SearchFormGroup: React.FC<SearchFormGroupProps> = ({
 
   const help = (
     <HelpPopover header={label}>
-      <Trans t={t}>
-        <DescriptionList>
-          <DescriptionListGroup>
-            <DescriptionListTerm>Distance</DescriptionListTerm>
-            <DescriptionListDescription>
-              Find all related items up to the specified distance.
-            </DescriptionListDescription>
-          </DescriptionListGroup>
-          <DescriptionListGroup>
-            <DescriptionListTerm>Goal Class</DescriptionListTerm>
-            <DescriptionListDescription>
-              Find all paths to items of the specified goal class.
-            </DescriptionListDescription>
-          </DescriptionListGroup>
-        </DescriptionList>
-      </Trans>
+      <DescriptionList>
+        <DescriptionListGroup>
+          <DescriptionListTerm>Distance</DescriptionListTerm>
+          <DescriptionListDescription>
+            {t(
+              'Follows correlation rules from the starting point to find related data, then continues the search from that data, up to the number of steps you specify.',
+            )}
+          </DescriptionListDescription>
+        </DescriptionListGroup>
+        <DescriptionListGroup>
+          <DescriptionListTerm>Goal Class</DescriptionListTerm>
+          <DescriptionListDescription>
+            {t('Find all paths to items of the specified goal class.')}
+          </DescriptionListDescription>
+        </DescriptionListGroup>
+      </DescriptionList>
     </HelpPopover>
   );
 
   return (
     <FormGroup
-      label=<>
-        {label}
-        {help}
-      </>
+      label={
+        <Title headingLevel="h4">
+          {label}
+          {help}
+        </Title>
+      }
     >
-      {chooser}
-      {search.type == SearchType.Distance ? distanceInput : goalInput}
+      <Flex direction={{ default: 'column' }}>
+        <FlexItem>{chooser}</FlexItem>
+        {search.type == SearchType.Distance ? distanceInput : goalInput}
+      </Flex>
     </FormGroup>
   );
 };

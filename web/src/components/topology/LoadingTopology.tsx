@@ -1,4 +1,3 @@
-import * as React from 'react';
 import {
   action,
   BreadthFirstLayout,
@@ -18,6 +17,7 @@ import {
   VisualizationProvider,
   VisualizationSurface,
 } from '@patternfly/react-topology';
+import * as React from 'react';
 
 const baselineComponentFactory: ComponentFactory = (kind: ModelKind, type: string) => {
   switch (type) {
@@ -75,6 +75,7 @@ export const LoadingTopology: React.FC = () => {
             resetViewCallback: action(() => {
               controller.getGraph().reset();
               controller.getGraph().layout();
+              controller.getGraph().fit(30);
             }),
             legend: false,
             zoomInDisabled: true,

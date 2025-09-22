@@ -1,7 +1,7 @@
 import { LogDomain } from '../korrel8r/log';
 import { Constraint, Query, URIRef } from '../korrel8r/types';
 
-describe('LogDomain.fromURL', () => {
+describe('LogDomain.linkToQuery', () => {
   it.each([
     {
       url: `monitoring/logs?q=${encodeURIComponent(
@@ -52,7 +52,7 @@ describe('LogDomain.fromURL', () => {
   );
 });
 
-describe('LogDomain.fromQuery', () => {
+describe('LogDomain.queryToLink', () => {
   it.each([
     {
       url: `monitoring/logs?q=${encodeURIComponent(

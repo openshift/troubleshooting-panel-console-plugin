@@ -70,5 +70,3 @@ export const copyTime = (to: Date, from: Date): Date => {
 
 // NOTE: Define our own isValidDate - don't import react modules in a plain .ts file.
 export const isValidDate = (date?: Date) => Boolean(date && !isNaN(date.valueOf()));
-
-// FIXME validation

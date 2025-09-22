@@ -1,6 +1,7 @@
-const { defineConfig } = require('cypress');
+import { defineConfig } from 'cypress';
+import plugin from './plugins/index';
 
-module.exports = defineConfig({
+export default defineConfig({
   viewportWidth: 1920,
   viewportHeight: 1080,
   screenshotsFolder: './screenshots',
@@ -18,7 +19,7 @@ module.exports = defineConfig({
   },
   e2e: {
     setupNodeEvents(on, config) {
-      return require('./plugins/index.ts')(on, config);
+      return plugin(on, config);
     },
     specPattern: 'tests/**/*.cy.{js,jsx,ts,tsx}',
     supportFile: false,

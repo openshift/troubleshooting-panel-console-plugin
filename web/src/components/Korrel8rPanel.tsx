@@ -13,6 +13,7 @@ import {
   Form,
   FormGroup,
   TextArea,
+  Title,
   Tooltip,
 } from '@patternfly/react-core';
 import { CubesIcon, ExclamationCircleIcon, SyncIcon } from '@patternfly/react-icons';
@@ -26,7 +27,14 @@ import { AlertDomain } from '../korrel8r/alert';
 import { allDomains } from '../korrel8r/all-domains';
 import * as api from '../korrel8r/client';
 import * as korrel8r from '../korrel8r/types';
-import { defaultSearch, Search, SearchType, setPersistedSearch } from '../redux-actions';
+import {
+  defaultSearch,
+  Result,
+  Search,
+  SearchResult,
+  SearchType,
+  setPersistedSearch,
+} from '../redux-actions';
 import { State } from '../redux-reducers';
 import * as time from '../time';
 import { HelpPopover as FieldLevelHelp } from './HelpPopover';
@@ -36,48 +44,37 @@ import TimeRangeFormGroup from './TimeRangeFormGroup';
 import { Korrel8rTopology } from './topology/Korrel8rTopology';
 import { LoadingTopology } from './topology/LoadingTopology';
 
-type Result = {
-  graph?: korrel8r.Graph;
-  message?: string;
-  title?: string;
-  isError?: boolean;
-};
-
 export default function Korrel8rPanel() {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
-  const persistedSearch = useSelector((state: State) => {
+  const searchResult: SearchResult = useSelector((state: State) => {
     return state.plugins?.tp?.get('persistedSearch');
-  }) as Search;
+  });
   const dispatch = useDispatch();
 
   // State
   const alertRules = useSelector((state: State) => state.observe?.get('rules'));
-  const alertIDs = React.useMemo(
-    () => new Map<string, string>(alertRules.map(({ id, name }) => [id, name])),
-    [alertRules],
-  );
+  const alertIDs = React.useMemo(() => {
+    if (!alertRules) return new Map<string, string>();
+    return new Map<string, string>(alertRules.map(({ id, name }) => [id, name]));
+  }, [alertRules]);
   const domains = React.useMemo(
     () => new korrel8r.Domains(...allDomains, new AlertDomain(alertIDs)),
     [alertIDs],
   );
   const locationQuery = useLocationQuery(domains);
-  const [search, setSearch] = React.useState<Search>(
-    persistedSearch?.queryStr
-      ? persistedSearch
-      : ({
-          ...defaultSearch,
-          queryStr: locationQuery?.toString(),
-          constraint: persistedSearch?.constraint,
-        } as Search),
-  );
-  const [result, setResult] = React.useState<Result | null>(null);
+  const [search, setSearch] = React.useState<Search>({
+    ...defaultSearch, // Default search parameters.
+    queryStr: locationQuery?.toString(), // Default query string.
+    ...searchResult?.search, // Use persisted search if available.
+  });
+  const [result, setResult] = React.useState<Result | null>(searchResult?.result ?? null);
   const [showQuery, setShowQuery] = React.useState(false);
 
   const focusTip = t('Create a graph of correlated items from resources in the current view.');
   const cannotFocus = t('The current view does not support correlation.');
 
   React.useEffect(() => {
-    // Set result = null to trigger a reload, don't run the query till then.
+    // Set result = null to trigger a new client request, don't run the query till then.
     if (result !== null) {
       return;
     }
@@ -86,7 +83,7 @@ export default function Korrel8rPanel() {
       return;
     }
     // eslint-disable-next-line no-console
-    console.log('korrel8r search', search);
+    console.debug('korrel8r search', search);
     const queryStr = search?.queryStr?.trim();
     const start: api.Start = {
       queries: queryStr ? [queryStr] : undefined,
@@ -99,17 +96,21 @@ export default function Korrel8rPanel() {
 
     cancellableFetch
       .then((response: api.Graph) => {
-        setResult({ graph: new korrel8r.Graph(response) });
-        // Only set the persisted search upon a successful query. It would be a
-        // poor feeling to create a query that fails, and then be forced to rerun it
-        // when opening the panel later
-        dispatch(setPersistedSearch(search));
+        const result: Result = { graph: new korrel8r.Graph(response) };
+        // eslint-disable-next-line no-console
+        console.debug('korrel8r result', result);
+        setResult(result);
+        dispatch(setPersistedSearch({ search, result }));
       })
       .catch((e: api.ApiError) => {
-        setResult({
+        const result = {
           message: e.body?.error || e.message || 'Unknown Error',
           title: e?.body?.error ? t('Korrel8r Error') : t('Request Failed'),
-        });
+        };
+        // eslint-disable-next-line no-console
+        console.debug('korrel8r result', result);
+        setResult(result);
+        dispatch(setPersistedSearch({ search, result }));
       });
     return () => cancellableFetch.cancel();
   }, [result, t, dispatch, search, cannotFocus, locationQuery]);
@@ -137,15 +138,17 @@ export default function Korrel8rPanel() {
 
   const queryHelp = (
     <>
-      {t('Query')}
-      <FieldLevelHelp header={t('Query')}>
-        <Trans t={t}>
+      <Title headingLevel="h4">
+        {t('Query')}
+        <FieldLevelHelp header={t('Query')}>
           <p>
-            Selects the starting point for correlation search. The query is set by the
-            <code>Focus</code> button or you can edit it manually.
+            <Trans t={t}>
+              Selects the starting point for correlation search. This query is set automatically by
+              the <code>Focus</code> button. You can edit it manually to specify a custom query.
+            </Trans>
           </p>
-        </Trans>
-      </FieldLevelHelp>
+        </FieldLevelHelp>
+      </Title>
     </>
   );
 
@@ -159,8 +162,8 @@ export default function Korrel8rPanel() {
               runSearch({
                 ...defaultSearch,
                 queryStr: locationQuery?.toString(),
-                constraint: persistedSearch?.constraint,
-                period: persistedSearch?.period,
+                constraint: searchResult?.search?.constraint,
+                period: searchResult?.search?.period,
               })
             }
           >
@@ -320,16 +323,6 @@ const TopologyInfoState: React.FC<TopologyInfoStateProps> = ({ titleText, text, 
   );
 };
 
-const applyBounds = (minValue: number, maxValue: number) => {
-  return (val: number) => {
-    if (!val || val < minValue) {
-      return minValue;
-    } else if (val > maxValue) {
-      return maxValue;
-    } else {
-      return val;
-    }
-  };
+const applyBounds = (min: number, max: number) => {
+  return (val: number) => Math.max(min, Math.min(val, max));
 };
-
-//          {/* FIXME Tooltips or popovers uniformly */}

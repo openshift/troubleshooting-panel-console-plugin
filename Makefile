@@ -18,7 +18,7 @@ install-frontend-ci-clean: install-frontend-ci
 	cd web && npm cache clean --force
 
 .PHONY: build-frontend
-build-frontend:
+build-frontend: lint-frontend
 	cd web && npm run i18n && npm run build
 
 .PHONY: start-frontend
@@ -31,7 +31,7 @@ start-console:
 
 .PHONY: lint-frontend
 lint-frontend:
-	cd web && npm run lint
+	cd web && npm run lint && npm run lint:tsc
 
 .PHONY: install-backend
 install-backend:
@@ -44,6 +44,9 @@ build-backend:
 .PHONY: start-backend
 start-backend:
 	go run ./cmd/plugin-backend.go -port='9002' -config-path='./web/dist' -static-path='./web/dist' -plugin-config-path='ct.yaml'
+
+.PHONY: install
+install: install-frontend install-backend
 
 .PHONY: build-image
 build-image: test-frontend

@@ -3,7 +3,7 @@ import { InfrastructureIcon } from '@patternfly/react-icons';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
-import { defaultSearch, openTP, setPersistedSearch } from '../redux-actions';
+import { openTP } from '../redux-actions';
 import { useKorrel8r } from './useKorrel8r';
 
 const useTroubleshootingPanel: ExtensionHook<Array<Action>> = () => {
@@ -12,7 +12,6 @@ const useTroubleshootingPanel: ExtensionHook<Array<Action>> = () => {
   const [perspective] = useActivePerspective();
   const dispatch = useDispatch();
   const open = React.useCallback(() => {
-    dispatch(setPersistedSearch(defaultSearch));
     dispatch(openTP());
   }, [dispatch]);
 

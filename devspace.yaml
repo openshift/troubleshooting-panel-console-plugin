@@ -31,6 +31,7 @@ dev:
     sync:
       - path: ./web/dist:/opt/app-root/web/dist
         startContainer: true
+        printLogs: true
     command: ["make"]
     args: ["start-devspace-backend"]
     # Inject a lightweight SSH server into the container (so your IDE can connect to the remote dev env)
