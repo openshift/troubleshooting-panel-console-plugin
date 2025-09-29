@@ -19,10 +19,11 @@ type Selector = {
 };
 
 const pathRE = new RegExp(
-  '(?<prefix>k8s|search|api-resource)' +
-    '/((ns/(?<namespace>[^/]+))|cluster|all-namespaces)' +
-    '(/(?<resource>[^/]+)(/(?<name>([^/]+))(?<events>/events)?)?)?',
+  '(?<prefix>k8s|search|api-resource)' + // prefix
+    '/((ns/(?<namespace>[^/]+))|cluster|all-namespaces)' + // /namespace
+    '(/(?<resource>[^/]+)(/(?<name>([^/]+))(?<events>/events)?)?)?', // [/resource[/name[/events]]]
 );
+
 const versionRE = /(?<version>v[0-9]+((alpha|beta)[0-9]*)?)/;
 const classRE = new RegExp(`^(?<kind>[^./]+)(\\.${versionRE.source})?(.(?<group>[^/]*))?$`);
 
@@ -55,13 +56,30 @@ export class K8sDomain extends Domain {
     const resource = g.resource || link.searchParams.get('kind');
     const model = findResource(resource);
     if (!model?.kind) throw this.badLink(link, `unknown resource: ${resource}`);
+    // api-resource is a resource type not a named instance, ignore the name part of the URL.
     const name = g.prefix === 'api-resource' ? undefined : g.name;
-    const data = {
-      namespace: g.namespace,
-      name,
-      labels: K8sDomain.parseSelector(link.searchParams.get('labels')) || undefined,
-    };
-    return this.modelClass(model).query(JSON.stringify(data));
+    if (g.events) {
+      // Special case for /events, query for events with this resource as involved object
+      const event = eventModel();
+      const about = eventAboutField(event);
+      const apiVersion = `${model.apiGroup ? `${model.apiGroup}/` : ''}${model.apiVersion || 'v1'}`;
+      const data = {
+        fields: {
+          [`${about}.namespace`]: g.namespace,
+          [`${about}.name`]: name,
+          [`${about}.apiVersion`]: apiVersion,
+          [`${about}.kind`]: model.kind,
+        },
+      };
+      return this.modelClass(event).query(JSON.stringify(data));
+    } else {
+      const data = {
+        namespace: g.namespace,
+        name,
+        labels: K8sDomain.parseSelector(link.searchParams.get('labels')) || undefined,
+      };
+      return this.modelClass(model).query(JSON.stringify(data));
+    }
   }
 
   // NOTE: k8s queries don't support query constraints, so neither do console k8s URIs.
@@ -78,7 +96,7 @@ export class K8sDomain extends Domain {
     let name = selector.name;
     let events = '';
     if (isEvent(model)) {
-      // Special case for events, use involved object with '/events' modifier.
+      // Special case for events, generate URL of involved object with '/events' modifier.
       const eventClass = this.modelClass(model);
       const about = eventAboutField(model);
       const [group, version] = parseAPIVersion(selector.fields[`${about}.apiVersion`]);
@@ -132,6 +150,12 @@ function isEvent(m: Model): boolean {
     m.apiVersion == EVENT.version &&
     (!m.apiGroup || m.apiGroup === EVENT.group)
   );
+}
+
+// Returns an event resource model that is supported by the cluster.
+// Prefer the older version as there are still many older clusters out there.
+function eventModel(): Model {
+  return findGVK('', EVENT.version, EVENT.kind) || findGVK(EVENT.group, EVENT.version, EVENT.kind);
 }
 
 function eventAboutField(m: Model): string {

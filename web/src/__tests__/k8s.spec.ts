@@ -101,10 +101,6 @@ describe('K8sDomain.linkToQuery', () => {
       query: 'k8s:Pod.v1:{"namespace":"default","name":"bad-deployment-000000000-00000"}',
     },
     {
-      url: '/k8s/ns/default/core~v1~Pod/bad-deployment-000000000-00000/events',
-      query: 'k8s:Pod.v1:{"namespace":"default","name":"bad-deployment-000000000-00000"}',
-    },
-    {
       url: `/k8s/ns/default/core~v1~Pod/foo`,
       query: `k8s:Pod.v1:{"namespace":"default","name":"foo"}`,
     },
@@ -119,9 +115,19 @@ describe('K8sDomain.linkToQuery', () => {
     { url: `/k8s/cluster/nodes/oscar7`, query: `k8s:Node.v1:{"name":"oscar7"}` },
     { url: `/api-resource/cluster/core~v1~Node`, query: `k8s:Node.v1:{}` },
     { url: '/k8s/ns/netobserv/core~v1~Pod', query: 'k8s:Pod.v1:{"namespace":"netobserv"}' },
-  ])('converts $url', ({ url, query }) =>
-    expect(k8s.linkToQuery(new URIRef(url))).toEqual(Query.parse(query)),
-  );
+    {
+      url: '/k8s/ns/foo/core~v1~Pod/bar/events',
+      query:
+        'k8s:Event.v1:{"fields":{"involvedObject.namespace":"foo","involvedObject.name":"bar","involvedObject.apiVersion":"v1","involvedObject.kind":"Pod"}}',
+    },
+    {
+      url: '/k8s/ns/openshift-lightspeed/operators.coreos.com~v1alpha1~ClusterServiceVersion/lightspeed-operator.v1.0.5/events',
+      query:
+        'k8s:Event.v1:{"fields":{"involvedObject.namespace":"openshift-lightspeed","involvedObject.name":"lightspeed-operator.v1.0.5","involvedObject.apiVersion":"operators.coreos.com/v1alpha1","involvedObject.kind":"ClusterServiceVersion"}}',
+    },
+  ])('converts $url', ({ url, query }) => {
+    expect(k8s.linkToQuery(new URIRef(url))).toEqual(Query.parse(query));
+  });
 });
 
 describe('K8sDomain.queryToLink', () => {
