@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi8/nodejs-18:latest AS web-builder
+FROM registry.access.redhat.com/ubi8/nodejs-22:latest AS web-builder
 
 WORKDIR /opt/app-root
 
@@ -11,7 +11,7 @@ RUN make install-frontend
 COPY web/ web/
 RUN make build-frontend
 
-FROM registry.ci.openshift.org/ocp/builder:rhel-8-golang-1.22-openshift-4.17 as go-builder
+FROM registry.ci.openshift.org/ocp/builder:rhel-8-golang-1.24-openshift-4.20 as go-builder
 
 WORKDIR /opt/app-root
 
