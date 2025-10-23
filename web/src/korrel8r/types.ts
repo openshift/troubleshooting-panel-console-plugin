@@ -2,7 +2,7 @@
 import * as api from './client';
 
 export class Class {
-  constructor(public domain: string, public name: string) { }
+  constructor(public domain: string, public name: string) {}
 
   query(selector: string) {
     return new Query(this, selector);
@@ -90,7 +90,7 @@ export class Constraint {
 
 // Domain converts between Korrel8r queries and URLs for a Korrel8r domain.
 export abstract class Domain {
-  constructor(public name: string) { }
+  constructor(public name: string) {}
 
   /** Construct a Class object for this domain.
    * @throw {TypeError} if the name is not valid.
@@ -105,21 +105,22 @@ export abstract class Domain {
   // @throws {TypeError} if the conversion fails.
   abstract queryToLink(query: Query, constraint?: Constraint): URIRef;
 
-  protected error(msg: string): TypeError {
-    return new TypeError(`domain ${this.name}: ${msg}`);
+  private error(type: string, data: string, msg?: string): TypeError {
+    msg = msg ? `: ${msg}` : '';
+    return new TypeError(`invalid ${type} for domain ${this.name}: ${data}${msg}`);
   }
   protected badClass(name: string, msg?: string): TypeError {
-    return this.error(`invalid class${msg ? ', ' + msg : ''}: ${name}`);
+    return this.error('class', name, msg);
   }
   protected badQuery(q: Query, msg?: string): TypeError {
-    return this.error(`invalid query${msg ? ', ' + msg : ''}: ${q}`);
+    return this.error('query', q?.toString(), msg);
   }
   protected badLink(link: URIRef, msg?: string): TypeError {
-    return this.error(`invalid link${msg ? ', ' + msg : ''}: ${link}`);
+    return this.error('link', link?.toString(), msg);
   }
 
   protected checkQuery(q: Query): Query {
-    if (q.class.domain != this.name) throw this.badQuery(q, 'wrong domain');
+    if (q.class.domain != this.name) throw this.badQuery(q);
     q.class = this.class(q.class.name); // Validate and normalize
     return q;
   }
@@ -169,11 +170,17 @@ export class URIRef {
   }
 }
 
+// Join and normalize paths, no leading, trailing or repeated '/' charactersa
+export const joinPath = (path0: string, ...paths: string[]): string => {
+  const clean = paths.map((path: string) => path.replaceAll(/(^\/*)|(\/*$)/g, ''));
+  return [path0.replace(/\/*$/, ''), ...clean].join('/');
+};
+
 // Encode an object as a comma-separated, key=value list: 'key=value,key=value...'. No URI encoding.
 export const keyValueList = (obj: { [key: string]: string }): string => {
   return Object.keys(obj || {})
     .map((k) => `${k}=${obj[k]}`)
-    .join(',')
+    .join(',');
 };
 
 // Parse a key-value list: 'key=value,key=value...'
@@ -215,8 +222,8 @@ export class Domains {
     for (const domain of this.domains.values()) {
       try {
         return domain.linkToQuery(link);
-      } catch (_) {
-        true;
+      } catch {
+        continue;
       }
     }
     throw new TypeError(`cannot convert link: ${link}`);
@@ -265,7 +272,7 @@ export class Node {
 }
 
 export class Edge {
-  constructor(public start: Node, public goal: Node, public rules: Rule[] = []) { }
+  constructor(public start: Node, public goal: Node, public rules: Rule[] = []) {}
 }
 
 export class QueryCount {

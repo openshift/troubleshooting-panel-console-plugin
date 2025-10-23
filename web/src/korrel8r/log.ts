@@ -6,6 +6,8 @@ enum LogClass {
   audit = 'audit',
 }
 
+// TODO: Aggregated log links and k8s:pod style log queries ignore the containers parameter.
+
 export class LogDomain extends Domain {
   constructor() {
     super('log');
@@ -16,7 +18,7 @@ export class LogDomain extends Domain {
     return new Class(this.name, name);
   }
 
-  // There are 2 types of URL: pod logs, and log search.
+  // There are 2 types of URL: pod logs, and logQL searches.
   linkToQuery(link: URIRef): Query {
     // First check for aggregated pod logs URL
     const [, namespace, name] =
@@ -43,10 +45,34 @@ export class LogDomain extends Domain {
     const logClass = LogClass[query.class.name as keyof typeof LogClass];
     if (!logClass) throw this.badQuery(query, 'unknown class');
     return new URIRef('monitoring/logs', {
-      q: query.selector,
+      // Try to translate as a direct pod selector, otherwise use as logQL query
+      q: directToLogQL(query.selector) || query.selector,
       tenant: logClass,
       start: unixMilliseconds(constraint?.start),
       end: unixMilliseconds(constraint?.end),
-    })
+    });
   }
 }
+
+const directToLogQL = (maybeDirect: string): string | undefined => {
+  try {
+    // Try to parse the selector as k8s pod selector, and translate to logQL.
+    const direct = JSON.parse(maybeDirect);
+    if (!direct || typeof direct !== 'object') return undefined;
+    const streams = [
+      direct?.namespace && `kubernetes_namespace_name="${direct.namespace}"`,
+      direct?.name && `kubernetes_pod_name="${direct.name}"`,
+    ]
+      .filter((x) => x)
+      .join(',');
+    const pipeline =
+      direct?.labels && typeof direct.labels === 'object'
+        ? Object.entries(direct.labels)
+            .map(([k, v]) => `|kubernetes_labels_${k}="${v}"`)
+            .join('')
+        : '';
+    return `{${streams}}${pipeline ? '|json' + pipeline : ''}`;
+  } catch {
+    return undefined;
+  }
+};

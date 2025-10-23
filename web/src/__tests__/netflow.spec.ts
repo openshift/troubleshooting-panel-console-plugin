@@ -72,7 +72,7 @@ describe('', () => {
   it.each([
     {
       url: 'netflow-traffi',
-      expected: 'domain netflow: invalid link: netflow-traffi',
+      expected: 'invalid link for domain netflow: netflow-traffi',
     },
   ])('expect error fromURL($url)', ({ url, expected }) => {
     expect(() => new NetflowDomain().linkToQuery(new URIRef(url))).toThrow(expected);
@@ -85,15 +85,15 @@ describe('', () => {
     },
     {
       query: 'netflow:incorrect:{}',
-      expected: 'invalid query, unknown class: netflow:incorrect:{}',
+      expected: 'invalid query for domain netflow: netflow:incorrect:{}: unknown class',
     },
     {
       query: 'netflow:network:{SrcK8S_Type="Pod"=wrong}',
-      expected: 'domain netflow: invalid query: netflow:network:{SrcK8S_Type="Pod"=wrong}',
+      expected: 'invalid query for domain netflow: netflow:network:{SrcK8S_Type="Pod"=wrong}',
     },
     {
       query: 'netflow:network:{SrcK8S_Type}',
-      expected: 'domain netflow: invalid query: netflow:network:{SrcK8S_Type}',
+      expected: 'invalid query for domain netflow: netflow:network:{SrcK8S_Type}',
     },
   ])('expect error fromQuery($query)', ({ query, expected }) => {
     expect(() => new NetflowDomain().queryToLink(Query.parse(query))).toThrow(expected);

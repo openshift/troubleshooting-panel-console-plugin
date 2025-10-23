@@ -6,6 +6,7 @@ import { ActionType, TPAction, defaultSearch } from './redux-actions';
 export type TPState = ImmutableMap<string, any>;
 
 export type State = {
+  observe: TPState;
   plugins: {
     tp: TPState;
   };
@@ -27,7 +28,7 @@ const reducer = (state: TPState, action: TPAction): TPState => {
       return state.set('isOpen', true);
 
     case ActionType.SetPersistedSearch:
-      return state.set('persistedSearch', action.payload.query);
+      return state.set('persistedSearch', action.payload);
 
     default:
       break;
