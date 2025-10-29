@@ -54,6 +54,23 @@ export class LogDomain extends Domain {
   }
 }
 
+/**
+ * Converts a string to a legal Loki label name by replacing illegal characters with underscores.
+ * Loki label names must match the regex [a-zA-Z_:][a-zA-Z0-9_:]*
+ * @param input - The input string to sanitize
+ * @returns A sanitized string safe for use as a Loki label name
+ */
+export const cleanLokiLabel = (input: string): string => {
+  if (!input) return '_';
+  // Replace any character that's not alphanumeric, underscore, or colon with underscore
+  const sanitized = input.replace(/[^a-zA-Z0-9_:]/g, '_');
+  // Ensure the first character is valid (letter, underscore, or colon)
+  if (!/^[a-zA-Z_:]/.test(sanitized)) {
+    return '_' + sanitized;
+  }
+  return sanitized;
+};
+
 const directToLogQL = (maybeDirect: string): string | undefined => {
   try {
     // Try to parse the selector as k8s pod selector, and translate to logQL.
@@ -68,7 +85,7 @@ const directToLogQL = (maybeDirect: string): string | undefined => {
     const pipeline =
       direct?.labels && typeof direct.labels === 'object'
         ? Object.entries(direct.labels)
-            .map(([k, v]) => `|kubernetes_labels_${k}="${v}"`)
+            .map(([k, v]) => `|kubernetes_labels_${cleanLokiLabel(k)}="${v}"`)
             .join('')
         : '';
     return `{${streams}}${pipeline ? '|json' + pipeline : ''}`;
