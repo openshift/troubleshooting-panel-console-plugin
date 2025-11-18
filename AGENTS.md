@@ -7,7 +7,7 @@ A frontend plugin to the OpenShit Console of the [Korrel8r](https://github.com/k
 
 | System | Repository | Purpose |
 |--------|------------|---------|
-| COO | https://github.com/rhobs/observability-operator | Manages monitoring-console-plugin |
+| COO | https://github.com/rhobs/observability-operator | Manages troubleshooting-panel-console-plugin |
 | Korrel8r | https://github.com/korrel8r/korrel8r | Correlation backend |
 | Console SDK | https://github.com/openshift/console | Plugin framework |
 
@@ -57,6 +57,19 @@ The troubelshooting-panel uses the following technologies:
 - react 17
 - i18next
 - redux
+
+#### i18next
+When working with i18next the react hook should contain the troubleshooting panels namespace, and each piece of static text should be wrapped in the returned translation function. After adding a new tranlated text, make sure to run `make build-frontend` which will regenerate the translation files.
+
+```ts
+  const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
+  return <div>{`t('Korrel8r')`}</div>
+```
+
+### Backend
+The troubelshooting-panel uses the following technologies:
+- go
+- gorilla/mux
 
 ### Console Plugin Framework:
 - Dynamic Plugin: https://github.com/openshift/enhancements/blob/master/enhancements/console/dynamic-plugins.md
