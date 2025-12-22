@@ -3,6 +3,7 @@ VERSION     ?= latest
 PLATFORMS   ?= linux/arm64,linux/amd64
 ORG         ?= openshift-observability-ui
 IMAGE       ?= quay.io/${ORG}/troubleshooting-panel-console-plugin:${VERSION}
+TAG         ?= $(VERSION)
 
 .PHONY: test
 test: test-frontend
@@ -56,7 +57,7 @@ install: install-frontend install-backend
 
 .PHONY: build-image
 build-image: build-frontend test-frontend
-	./scripts/build-image.sh
+	TAG=$(TAG) ./scripts/build-image.sh
 
 .PHONY: start-forward
 start-forward:

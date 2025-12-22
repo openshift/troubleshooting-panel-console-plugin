@@ -1,5 +1,4 @@
 import { Badge, Title } from '@patternfly/react-core';
-import { ClusterIcon } from '@patternfly/react-icons';
 import {
   action,
   BadgeLocation,
@@ -36,6 +35,7 @@ import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom-v5-compat';
 import * as korrel8r from '../../korrel8r/types';
+import { getIcon } from '../icons';
 import './korrel8rtopology.css';
 
 const capitalize = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : '');
@@ -43,15 +43,13 @@ const capitalize = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : '');
 const nodeLabel = (node: korrel8r.Node): string => {
   const c = node.class;
   if (!c) return `[${node.id}]`; // Original un-parsed class name.
-  if (c.domain === c.name) return capitalize(c.domain);
-  let name = c.name;
-  if (c.domain === 'k8s') name = c.name.match(/^[^.]+/)?.[0] || name; // Kind without version
-  return `${capitalize(c.domain)} ${capitalize(name)} `;
+  if (c.domain === 'k8s') return c.name.replace(/\..*$/, ''); // Strip group/version
+  return capitalize(c.name);
 };
 
 const nodeBadge = (node: korrel8r.Node): string => {
   const queries = nodeQueries(node);
-  return `${queries.length > 1 ? `${queries[0]?.count}/` : ''}${node?.count ?? '?'}`;
+  return `${queries.length > 1 ? `${queries[0]?.count}/` : ''}${node?.count ?? '?'} `;
 };
 
 const nodeQueries = (node: korrel8r.Node) => node?.queries ?? [];
@@ -76,9 +74,7 @@ const Korrel8rTopologyNode: React.FC<
       badge={nodeBadge(node)}
       badgeLocation={BadgeLocation.below}
     >
-      <g transform={`translate(25, 25)`}>
-        <ClusterIcon style={{ color: '#393F44' }} width={25} height={25} />
-      </g>
+      <g transform={`translate(25, 25)`}>{getIcon(node.class)}</g>
     </DefaultNode>
   );
   if (node.error) {
@@ -135,7 +131,7 @@ export const Korrel8rTopology: React.FC<{
     () =>
       graph.edges.map((edge: korrel8r.Edge) => {
         return {
-          id: `edge:${edge.start.id}-${edge.goal.id}`,
+          id: `edge:${edge.start.id} -${edge.goal.id} `,
           type: 'edge',
           source: edge.start.id,
           target: edge.goal.id,
@@ -164,7 +160,7 @@ export const Korrel8rTopology: React.FC<{
         navigate(link);
       } catch (e) {
         // eslint-disable-next-line no-console
-        console.error(`korrel8r navigateToQuery: ${e}`, '\nquery', query);
+        console.error(`korrel8r navigateToQuery: ${e} `, '\nquery', query);
       }
     },
     [navigate, domains],
@@ -198,9 +194,9 @@ export const Korrel8rTopology: React.FC<{
               setSelectedIds([node.id]);
               navigator.clipboard.writeText(qc.query.toString());
             }}
-            icon={<Badge>{`${qc.count}`}</Badge>}
+            icon={<Badge>{`${qc.count} `}</Badge>}
           >
-            {`${qc.query.selector}`}
+            {`${qc.query.selector} `}
           </ContextMenuItem>,
         ),
       );
