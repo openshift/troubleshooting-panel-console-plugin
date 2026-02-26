@@ -20,8 +20,6 @@
   "Include data from this time range": "Include data from this time range",
   "Korrel8r Error": "Korrel8r Error",
   "Last": "Last",
-  "Last {{count}} {{unit}}_one": "Last {{count}} {{unit}}_one",
-  "Last {{count}} {{unit}}_other": "Last {{count}} {{unit}}_other",
   "Logging Plugin Disabled": "Logging Plugin Disabled",
   "Neighbours": "Neighbours",
   "Neighbours or Goal search": "Neighbours or Goal search",
