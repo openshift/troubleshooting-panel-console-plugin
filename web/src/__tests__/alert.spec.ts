@@ -31,6 +31,11 @@ describe('AlertNode.fromURL', () => {
       url: 'monitoring/alertrules/12345?alertname=BarAlert',
       query: 'alert:alert:{"alertname":"BarAlert"}',
     },
+    {
+      url: 'monitoring/alerts/2848814126?managed_cluster=3f790d42-1f5b-4946-8bb2-ab4cfcbf255d&namespace=openshift-monitoring&severity=none&alertname=Watchdog',
+      query:
+        'alert:alert:{"namespace":"openshift-monitoring","severity":"none","alertname":"Watchdog"}',
+    },
   ])('converts $url', ({ url, query }) => {
     const domain = new AlertDomain(new Map([['12345', 'FooAlert']]));
     expect(domain.linkToQuery(new URIRef(url)).toString()).toEqual(query);
@@ -41,7 +46,7 @@ describe('AlertNode.fromURL raises error', () => {
   it.each([
     {
       url: 'monitoring/alertrules/999',
-      error: 'invalid link for domain alert: monitoring/alertrules/999: cannot find alertname',
+      error: 'unknown alert link: monitoring/alertrules/999: cannot find alertname',
     },
   ])('converts $url', ({ url, error }) => {
     expect(() => new AlertDomain().linkToQuery(new URIRef(url))).toThrow(error);

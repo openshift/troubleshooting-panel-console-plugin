@@ -1,5 +1,5 @@
 import { useActivePerspective } from '@openshift-console/dynamic-plugin-sdk';
-import { Button, Flex, FlexItem, Title } from '@patternfly/react-core';
+import { Button, Flex, FlexItem, Stack, StackItem, Title } from '@patternfly/react-core';
 import { TimesCircleIcon } from '@patternfly/react-icons';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -33,11 +33,7 @@ export default function Popover() {
 
   return (
     <>
-      <Flex
-        className="tp-plugin__popover"
-        direction={{ default: 'column' }}
-        gap={{ default: 'gapNone' }}
-      >
+      <Stack className="tp-plugin__popover">
         <Flex className="tp-plugin__popover-title-bar" gap={{ default: 'gapNone' }}>
           <FlexItem grow={{ default: 'grow' }}>
             <Title headingLevel="h1">
@@ -55,15 +51,10 @@ export default function Popover() {
             </Button>
           </FlexItem>
         </Flex>
-        <Flex
-          className="tp-plugin__popover-content"
-          direction={{ default: 'column' }}
-          grow={{ default: 'grow' }}
-          gap={{ default: 'gapNone' }}
-        >
+        <StackItem className="tp-plugin__popover-content" isFilled={true}>
           <Korrel8rPanel />
-        </Flex>
-      </Flex>
+        </StackItem>
+      </Stack>
     </>
   );
 }

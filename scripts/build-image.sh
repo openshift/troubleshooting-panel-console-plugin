@@ -4,7 +4,7 @@ set -euo pipefail
 
 PREFER_PODMAN="${PREFER_PODMAN:-1}"
 PUSH="${PUSH:-0}"
-TAG="${TAG:-v0.1.0}"
+TAG="${TAG:-latest}"
 
 REGISTRY_HOST=${REGISTRY_HOST:-quay.io}
 REGISTRY_ORG="${REGISTRY_ORG:-openshift-observability-ui}"

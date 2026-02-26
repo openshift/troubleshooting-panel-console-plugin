@@ -1,5 +1,4 @@
 import { Badge, Title } from '@patternfly/react-core';
-import { ClusterIcon } from '@patternfly/react-icons';
 import {
   action,
   BadgeLocation,
@@ -34,8 +33,9 @@ import {
 } from '@patternfly/react-topology';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom-v5-compat';
+import { useNavigateToQuery } from '../../hooks/useNavigateToQuery';
 import * as korrel8r from '../../korrel8r/types';
+import { getIcon } from '../icons';
 import './korrel8rtopology.css';
 
 const capitalize = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : '');
@@ -43,15 +43,13 @@ const capitalize = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : '');
 const nodeLabel = (node: korrel8r.Node): string => {
   const c = node.class;
   if (!c) return `[${node.id}]`; // Original un-parsed class name.
-  if (c.domain === c.name) return capitalize(c.domain);
-  let name = c.name;
-  if (c.domain === 'k8s') name = c.name.match(/^[^.]+/)?.[0] || name; // Kind without version
-  return `${capitalize(c.domain)} ${capitalize(name)} `;
+  if (c.domain === 'k8s') return c.name.replace(/\..*$/, ''); // Strip group/version
+  return capitalize(c.name);
 };
 
 const nodeBadge = (node: korrel8r.Node): string => {
   const queries = nodeQueries(node);
-  return `${queries.length > 1 ? `${queries[0]?.count}/` : ''}${node?.count ?? '?'}`;
+  return `${queries.length > 1 ? `${queries[0]?.count}/` : ''}${node?.count ?? '?'} `;
 };
 
 const nodeQueries = (node: korrel8r.Node) => node?.queries ?? [];
@@ -76,9 +74,7 @@ const Korrel8rTopologyNode: React.FC<
       badge={nodeBadge(node)}
       badgeLocation={BadgeLocation.below}
     >
-      <g transform={`translate(25, 25)`}>
-        <ClusterIcon style={{ color: '#393F44' }} width={25} height={25} />
-      </g>
+      <g transform={`translate(25, 25)`}>{getIcon(node.class)}</g>
     </DefaultNode>
   );
   if (node.error) {
@@ -97,14 +93,13 @@ const NODE_DIAMETER = 75;
 const PADDING = 30;
 
 export const Korrel8rTopology: React.FC<{
-  domains: korrel8r.Domains;
   graph: korrel8r.Graph;
   loggingAvailable: boolean;
   netobserveAvailable: boolean;
   constraint: korrel8r.Constraint;
-}> = ({ domains, graph, loggingAvailable, netobserveAvailable, constraint }) => {
+}> = ({ graph, loggingAvailable, netobserveAvailable, constraint }) => {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
-  const navigate = useNavigate();
+  const navigateToQuery = useNavigateToQuery();
   const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
 
   const nodes = React.useMemo(
@@ -112,7 +107,7 @@ export const Korrel8rTopology: React.FC<{
       graph.nodes.map((node: korrel8r.Node) => {
         if (node.error) {
           // eslint-disable-next-line no-console
-          console.error(node.error);
+          console.warn(`korrel8r node: ${node.error}`);
           node.error = t('Unable to find Console Link');
         } else if (node.class.domain === 'log' && !loggingAvailable) {
           node.error = t('Logging Plugin Disabled');
@@ -135,7 +130,7 @@ export const Korrel8rTopology: React.FC<{
     () =>
       graph.edges.map((edge: korrel8r.Edge) => {
         return {
-          id: `edge:${edge.start.id}-${edge.goal.id}`,
+          id: `edge:${edge.start.id} -${edge.goal.id} `,
           type: 'edge',
           source: edge.start.id,
           target: edge.goal.id,
@@ -143,31 +138,6 @@ export const Korrel8rTopology: React.FC<{
         };
       }),
     [graph],
-  );
-
-  const navigateToQuery = React.useCallback(
-    (query: korrel8r.Query, constraint: korrel8r.Constraint) => {
-      try {
-        let link = domains.queryToLink(query, constraint)?.toString();
-        if (!link) return;
-        if (!link.startsWith('/')) link = '/' + link;
-        // eslint-disable-next-line no-console
-        console.debug(
-          'korrel8r navigate',
-          '\nquery',
-          query,
-          '\nconstraint',
-          constraint,
-          '\nlink',
-          link,
-        );
-        navigate(link);
-      } catch (e) {
-        // eslint-disable-next-line no-console
-        console.error(`korrel8r navigateToQuery: ${e}`, '\nquery', query);
-      }
-    },
-    [navigate, domains],
   );
 
   const selectionAction = React.useCallback(
@@ -198,9 +168,9 @@ export const Korrel8rTopology: React.FC<{
               setSelectedIds([node.id]);
               navigator.clipboard.writeText(qc.query.toString());
             }}
-            icon={<Badge>{`${qc.count}`}</Badge>}
+            icon={<Badge>{`${qc.count} `}</Badge>}
           >
-            {`${qc.query.selector}`}
+            {`${qc.query.selector} `}
           </ContextMenuItem>,
         ),
       );
@@ -253,29 +223,49 @@ export const Korrel8rTopology: React.FC<{
     return controller;
   }, [controller, selectionAction, componentFactory]);
 
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    const element = containerRef.current;
+    if (!element) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const observer = new ResizeObserver(() => {
+      clearTimeout(timer);
+      timer = setTimeout(() => controller.getGraph().fit(PADDING), 150);
+    });
+    observer.observe(element);
+    return () => {
+      clearTimeout(timer);
+      observer.disconnect();
+    };
+  }, [controller]);
+
   return (
-    <TopologyView
-      controlBar={
-        <TopologyControlBar
-          controlButtons={createTopologyControlButtons({
-            ...defaultControlButtonsOptions,
-            zoomInCallback: action(() => {
-              controller.getGraph().scaleBy(4 / 3);
-            }),
-            zoomOutCallback: action(() => {
-              controller.getGraph().scaleBy(0.75);
-            }),
-            fitToScreenCallback: action(() => {
-              controller.getGraph().fit(PADDING);
-            }),
-            legend: false,
-          })}
-        />
-      }
-    >
-      <VisualizationProvider controller={controller2}>
-        <VisualizationSurface state={{ selectedIds }} />
-      </VisualizationProvider>
-    </TopologyView>
+    <div ref={containerRef} style={{ width: '100%', height: '100%' }}>
+      <TopologyView
+        controlBar={
+          <TopologyControlBar
+            controlButtons={createTopologyControlButtons({
+              ...defaultControlButtonsOptions,
+              zoomInCallback: action(() => {
+                controller.getGraph().scaleBy(4 / 3);
+              }),
+              zoomOutCallback: action(() => {
+                controller.getGraph().scaleBy(0.75);
+              }),
+              fitToScreen: false, // Same thing as resetView
+              resetViewCallback: action(() => {
+                controller.getGraph().reset();
+                controller.getGraph().layout();
+              }),
+              legend: false,
+            })}
+          />
+        }
+      >
+        <VisualizationProvider controller={controller2}>
+          <VisualizationSurface state={{ selectedIds }} />
+        </VisualizationProvider>
+      </TopologyView>
+    </div>
   );
 };

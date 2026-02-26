@@ -16,7 +16,7 @@
     "lint": "eslint ./src ./integration-tests --fix &&  stylelint \"src/**/*.css\" --allow-empty-input --fix",
     "lint:tsc": "tsc --noEmit",
     "test:e2e": "cd ./integration-tests && cypress open --env openshift=true",
-    "test:unit": "jest --config jest.config.js",
+    "test:unit": "jest --runInBand --logHeapUsage --config jest.config.js",
     "test:unit:watch": "jest --config jest.config.js --watch",
     "test:unit:coverage": "jest --config jest.config.js --coverage"
   },
@@ -26,7 +26,6 @@
     "@openshift-console/dynamic-plugin-sdk-webpack": "^4.19.0",
     "@patternfly/react-core": "^5.1.1",
     "@patternfly/react-icons": "^5.1.1",
-    "@patternfly/react-styles": "^5.1.1",
     "@patternfly/react-topology": "^6.2.0",
     "@types/jest": "^29.5.12",
     "@types/node": "^18.0.0",
@@ -57,7 +56,6 @@
     "prettier": "^2.7.1",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
-    "react-helmet": "^6.1.0",
     "react-i18next": "^11.7.3",
     "react-redux": "^7.2.9",
     "style-loader": "^3.3.1",
@@ -67,8 +65,8 @@
     "ts-loader": "^9.3.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.0",
-    "webpack": "^5.101.3",
-    "webpack-cli": "^4.9.2",
+    "webpack": "^5.104.0",
+    "webpack-cli": "^6.0.1",
     "webpack-dev-server": "^5.2.2"
   },
   "consolePlugin": {
@@ -87,6 +85,11 @@
     }
   },
   "dependencies": {
-    "react-router-dom-v5-compat": "^6.30.0"
+    "@fortawesome/fontawesome-common-types": "^7.1.0",
+    "@fortawesome/free-solid-svg-icons": "^7.1.0",
+    "@fortawesome/react-fontawesome": "^0.2.6",
+    "immutable": "^5.1.4",
+    "react-router-dom-v5-compat": "^6.30.0",
+    "typesafe-actions": "^5.1.0"
   }
 }

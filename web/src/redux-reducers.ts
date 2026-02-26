@@ -16,7 +16,8 @@ const reducer = (state: TPState, action: TPAction): TPState => {
   if (!state) {
     return ImmutableMap({
       isOpen: false,
-      persistedSearch: defaultSearch,
+      search: defaultSearch,
+      result: null,
     });
   }
 
@@ -27,8 +28,11 @@ const reducer = (state: TPState, action: TPAction): TPState => {
     case ActionType.OpenTroubleshootingPanel:
       return state.set('isOpen', true);
 
-    case ActionType.SetPersistedSearch:
-      return state.set('persistedSearch', action.payload);
+    case ActionType.SetSearch:
+      return state.set('search', action.payload).set('result', null);
+
+    case ActionType.SetResult:
+      return state.set('result', action.payload);
 
     default:
       break;

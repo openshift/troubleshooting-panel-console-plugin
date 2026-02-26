@@ -1,8 +1,14 @@
+.tp-plugin__panel-toolbar {
+  padding: var(--pf-v5-global--spacer--xs) var(--pf-v5-global--spacer--sm);
+  border-bottom: var(--pf-v5-global--BorderWidth--sm) solid var(--pf-v5-global--BorderColor--100);
+}
+
+.tp-plugin__compact-control {
+  padding: var(--pf-v5-global--spacer--xs) var(--pf-v5-global--spacer--sm);
+}
+
 .tp-plugin__panel-query-container {
-  padding: var(--pf-v5-global--spacer--md);
-  border: solid var(--pf-v5-global--BorderColor--100) var(--pf-v5-global--BorderWidth--sm);
-  border-top: 0;
-  border-right: 0
+  padding: var(--pf-v5-global--spacer--sm) var(--pf-v5-global--spacer--md);
 }
 
 .tp-plugin__panel-topology-container {
@@ -11,7 +17,7 @@
 }
 
 .tp-plugin__panel-query-input {
-  margin: var(--pf-v5-global--spacer--sm) 0 var(--pf-v5-global--spacer--md) 0;
+  margin: 0 var(--pf-v5-global--spacer--md) var(--pf-v5-global--spacer--sm) var(--pf-v5-global--spacer--md);
 }
 
 .tp-plugin__panel-topology-info {

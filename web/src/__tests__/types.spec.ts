@@ -18,7 +18,7 @@ describe('Query', () => {
     const abc = new Class('a', 'b').query('c=d');
     expect(abc.toString()).toEqual('a:b:c=d');
     expect(Query.parse('a:b:c=d')).toEqual(abc);
-    expect(() => Query.parse('x')).toThrow(/invalid.*: x/);
+    expect(() => Query.parse('x')).toThrow(/invalid query: x/);
   });
 });
 
@@ -27,7 +27,7 @@ class FakeDomain extends Domain {
     super(name);
   }
 
-  class(name: string): Class | undefined {
+  class(name: string): Class {
     return new Class(this.name, name);
   }
 
@@ -69,7 +69,7 @@ describe('Domain', () => {
   it('queryToLink', () => {
     expect(d.queryToLink(abc).toString()).toEqual('a/b?c=d');
     const query = Query.parse('x:b:c');
-    expect(() => d.queryToLink(query)).toThrow('invalid query for domain a: x:b:c');
+    expect(() => d.queryToLink(query)).toThrow('unknown query: x:b:c');
   });
   it('linkToQuery', () => {
     expect(d.linkToQuery(new URIRef('a/b?c=d'))).toEqual(abc);
@@ -85,7 +85,7 @@ describe('Domains', () => {
   it('queryToLink', () => {
     expect(ds.queryToLink(abc).toString()).toEqual('a/b?c=d');
     expect(ds.queryToLink(xyz).toString()).toEqual('x/y?z=z');
-    expect(() => ds.queryToLink(Query.parse('z:b:c'))).toThrow(/unknown domain .*: z:b:c/);
+    expect(() => ds.queryToLink(Query.parse('z:b:c'))).toThrow(/unknown domain: z/);
   });
   it('linkToQuery', () => {
     expect(ds.linkToQuery(new URIRef('x/y?z=z'))).toEqual(xyz);

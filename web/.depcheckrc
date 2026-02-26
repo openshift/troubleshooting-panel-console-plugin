@@ -1,0 +1,19 @@
+# .depcheckrc config file for `npx depcheck`
+# Ignore packages not explicitly imported but still needed.
+# For example packages used as or via other executables, or imported via configuration files.
+ignores:
+  - "@types/*"
+  - css-loader
+  - cypress-multi-reporters
+  - eslint
+  - husky
+  - jest
+  - jest-environment-jsdom
+  - lint-staged
+  - mocha-junit-reporter
+  - mochawesome
+  - prettier
+  - style-loader
+  - stylelint-config-standard
+  - ts-loader
+ignore-bin-package: true

@@ -8,7 +8,7 @@ import type { Node } from './Node';
  * Graph resulting from a correlation search.
  */
 export type Graph = {
-    edges?: Array<Edge>;
-    nodes?: Array<Node>;
+  edges?: Array<Edge>;
+  nodes?: Array<Node>;
 };
 

@@ -43,6 +43,17 @@ describe('NetflowNode.fromQuery', () => {
         end: '2025-03-25T22:00:00.000Z',
       },
     },
+    {
+      url: `netflow-traffic?tenant=network&filters=${encodeURIComponent(
+        'dst_kind=Pod;src_namespace="openshift-oauth-apiserver","tracing-app-k6"',
+      )}&startTime=1742896800&endTime=1742940000`,
+      query:
+        'netflow:network:{DstK8S_Type="Pod",SrcK8S_Namespace=~"openshift-oauth-apiserver|tracing-app-k6"}',
+      constraint: {
+        start: '2025-03-25T10:00:00.000Z',
+        end: '2025-03-25T22:00:00.000Z',
+      },
+    },
   ])(`from $query`, ({ query, url, constraint }) =>
     expect(
       new NetflowDomain().queryToLink(Query.parse(query), Constraint.fromAPI(constraint)),
@@ -63,6 +74,13 @@ describe('NetflowNode.fromURL', () => {
       url: 'netflow-traffic?timeRange=300&limit=5&match=all&packetLoss=all&recordType=flowLog&filters=flow_layer%3Dapp%3Bdst_kind%3DPod%3Bsrc_kind%3DPod&bnf=false',
       query: 'netflow:network:{DstK8S_Type="Pod",SrcK8S_Type="Pod"}',
     },
+    {
+      url: `netflow-traffic?tenant=network&filters=${encodeURIComponent(
+        'dst_kind=Pod;dst_namespace=hostpath-provisioner;src_namespace="openshift-oauth-apiserver","tracing-app-k6"',
+      )}`,
+      query:
+        'netflow:network:{DstK8S_Type="Pod",DstK8S_Namespace="hostpath-provisioner",SrcK8S_Namespace=~"openshift-oauth-apiserver|tracing-app-k6"}',
+    },
   ])(`from $url`, ({ query, url }) =>
     expect(new NetflowDomain().linkToQuery(new URIRef(url))).toEqual(Query.parse(query)),
   );
@@ -72,7 +90,7 @@ describe('', () => {
   it.each([
     {
       url: 'netflow-traffi',
-      expected: 'invalid link for domain netflow: netflow-traffi',
+      expected: 'unknown netflow link: netflow-traffi',
     },
   ])('expect error fromURL($url)', ({ url, expected }) => {
     expect(() => new NetflowDomain().linkToQuery(new URIRef(url))).toThrow(expected);
@@ -85,15 +103,15 @@ describe('', () => {
     },
     {
       query: 'netflow:incorrect:{}',
-      expected: 'invalid query for domain netflow: netflow:incorrect:{}: unknown class',
+      expected: 'unknown query: netflow:incorrect:{}: unknown class',
     },
     {
       query: 'netflow:network:{SrcK8S_Type="Pod"=wrong}',
-      expected: 'invalid query for domain netflow: netflow:network:{SrcK8S_Type="Pod"=wrong}',
+      expected: 'unknown query: netflow:network:{SrcK8S_Type="Pod"=wrong}',
     },
     {
       query: 'netflow:network:{SrcK8S_Type}',
-      expected: 'invalid query for domain netflow: netflow:network:{SrcK8S_Type}',
+      expected: 'unknown query: netflow:network:{SrcK8S_Type}',
     },
   ])('expect error fromQuery($query)', ({ query, expected }) => {
     expect(() => new NetflowDomain().queryToLink(Query.parse(query))).toThrow(expected);

@@ -38,7 +38,7 @@ export class Query {
     return new Query(new Class(m[1], m[2]), m[3]);
   }
 
-  // Convert tog string.
+  // Convert to string.
   toString(): string {
     return `${this.class}:${this.selector}`;
   }
@@ -95,7 +95,7 @@ export abstract class Domain {
   /** Construct a Class object for this domain.
    * @throw {TypeError} if the name is not valid.
    */
-  abstract class(name: string): Class | undefined;
+  abstract class(name: string): Class;
 
   // Convert a URI reference to a Query.
   // @throws {TypeError} if the conversion fails.
@@ -105,18 +105,16 @@ export abstract class Domain {
   // @throws {TypeError} if the conversion fails.
   abstract queryToLink(query: Query, constraint?: Constraint): URIRef;
 
-  private error(type: string, data: string, msg?: string): TypeError {
-    msg = msg ? `: ${msg}` : '';
-    return new TypeError(`invalid ${type} for domain ${this.name}: ${data}${msg}`);
-  }
-  protected badClass(name: string, msg?: string): TypeError {
-    return this.error('class', name, msg);
+  protected badClass(name: string): TypeError {
+    return new TypeError(`class not found: ${this.name}:${name}`);
   }
   protected badQuery(q: Query, msg?: string): TypeError {
-    return this.error('query', q?.toString(), msg);
+    return new TypeError(`unknown query: ${q}${msg ? `: ${msg}` : ''}`);
   }
   protected badLink(link: URIRef, msg?: string): TypeError {
-    return this.error('link', link?.toString(), msg);
+    return new TypeError(
+      `unknown ${this.name} link: ${link?.toString() ?? '<empty>'}${msg ? `: ${msg}` : ''}`,
+    );
   }
 
   protected checkQuery(q: Query): Query {
@@ -211,8 +209,11 @@ export class Domains {
   }
 
   // Get a domain by name.
+  // @throw TypeError if domain is not found
   get(name: string): Domain {
-    return this.domains.get(name);
+    const domain = this.domains.get(name);
+    if (!domain) throw new TypeError(`unknown domain: ${name}`);
+    return domain;
   }
 
   // Convert URI Reference to korrel8r query, try all available domains.
@@ -233,9 +234,15 @@ export class Domains {
   // See {@link Domain#queryToLink}
   // @throws {TypeError} if the query cannot be converted.
   queryToLink(query: Query, constraint?: Constraint): URIRef {
-    const domain = this.get(query?.class?.domain);
-    if (!domain) throw new TypeError(`unknown domain in query: ${query.toString()}`);
-    return domain.queryToLink(query, constraint);
+    return this.get(query?.class?.domain).queryToLink(query, constraint);
+  }
+
+  // Parse and validate a class string, return a class object.
+  // @throws {TypeError} if the class string is not valid..
+  class(fullName: string): Class {
+    const c = Class.parse(fullName);
+    const domain = this.get(c.domain);
+    return domain.class(c.name);
   }
 }
 

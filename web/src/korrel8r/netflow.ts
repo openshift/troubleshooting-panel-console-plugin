@@ -40,9 +40,21 @@ export class NetflowDomain extends Domain {
       ?.split(';')
       .map((filter) => {
         const [, key, operator, value] = filter.match(/^\s*([^!=\s]+)\s*(!?=~?)\s*(.+)\s*$/) || [];
-        // Removes surrounding quotes
+
+        if (!key || !linkToQueryName[key]) return '';
+
+        // Check if value contains multiple comma-separated quoted strings like "val1","val2"
+        const quotedValues = value?.match(/"([^"]+)"/g);
+        if (quotedValues && quotedValues.length > 1) {
+          // Extract the actual values (remove quotes)
+          const values = quotedValues.map((v) => v.slice(1, -1));
+          // Convert to LogQL regex syntax with OR operator
+          return `${linkToQueryName[key]}=~"${values.join('|')}"`;
+        }
+
+        // Single value - removes surrounding quotes
         const trimmedValue = value?.replace(/^"(.*)"$/, '$1');
-        return linkToQueryName[key] ? `${linkToQueryName[key]}${operator}"${trimmedValue}"` : '';
+        return `${linkToQueryName[key]}${operator}"${trimmedValue}"`;
       })
       .filter((s) => s)
       .join(',');
@@ -61,7 +73,20 @@ export class NetflowDomain extends Domain {
         const [, key, operator, value] =
           filter.match(/^\s*([^!=\s]+)\s*(!?=~?)\s*"(.+)"\s*$/) || [];
         if (!key) throw this.badQuery(query, 'bad selector format');
-        return queryToURLName[key] ? `${queryToURLName[key]}${operator}${value}` : '';
+
+        // Convert LogQL regex pattern to URL format for netflow
+        if (queryToURLName[key]) {
+          // If operator is =~ and value contains |, convert to comma-separated quoted format
+          if (operator === '=~' && value.includes('|')) {
+            const values = value
+              .split('|')
+              .map((v) => `"${v}"`)
+              .join(',');
+            return `${queryToURLName[key]}=${values}`;
+          }
+          return `${queryToURLName[key]}${operator}${value}`;
+        }
+        return '';
       })
       .filter((s) => s)
       .join(';');

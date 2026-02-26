@@ -130,12 +130,12 @@ describe('expected errors', () => {
   it.each([
     {
       url: 'monitoring/log',
-      expected: 'invalid link for domain log: monitoring/log',
+      expected: 'unknown log link: monitoring/log',
     },
     {
       url: 'monitoring/logs?q={kubernetes_namespace_name="default",kubernetes_pod_name="foo"}',
       expected:
-        'invalid link for domain log: monitoring/logs?q=%7Bkubernetes_namespace_name%3D%22default%22%2Ckubernetes_pod_name%3D%22foo%22%7D',
+        'unknown log link: monitoring/logs?q=%7Bkubernetes_namespace_name%3D%22default%22%2Ckubernetes_pod_name%3D%22foo%22%7D',
     },
   ])('error from url: $url', ({ url, expected }) => {
     expect(() => new LogDomain().linkToQuery(new URIRef(url))).toThrow(expected);
@@ -144,11 +144,11 @@ describe('expected errors', () => {
   it.each([
     {
       query: 'foo:bar:baz',
-      expected: 'invalid query for domain log: foo:bar:baz: unknown class',
+      expected: 'unknown query: foo:bar:baz: unknown class',
     },
     {
       query: 'log:incorrect:{}',
-      expected: 'invalid query for domain log: log:incorrect:{}: unknown class',
+      expected: 'unknown query: log:incorrect:{}: unknown class',
     },
   ])('error from query: $query', ({ query, expected }) => {
     expect(() => new LogDomain().queryToLink(Query.parse(query))).toThrow(expected);

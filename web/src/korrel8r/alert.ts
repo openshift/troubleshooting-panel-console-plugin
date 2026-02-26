@@ -49,4 +49,5 @@ const nonLabelParams = new Set<string>([
   'rowFilter-alert-state',
   'rowFilter-alert-source',
   'rowFilter-alerting-rule-source',
+  'managed_cluster',
 ]);
