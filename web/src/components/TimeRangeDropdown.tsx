@@ -48,7 +48,7 @@ const formatDate = (d: Date): string =>
 
 const labelFromPeriod = (period: time.Period, t: TFunction): string => {
   if (period instanceof time.Duration) {
-    return t('Last {{count}} {{unit}}', { count: period.count, unit: period.unit.name });
+    return `${t('Last')} ${period.count} ${t(period.unit.name)}`;
   }
   if (period instanceof time.Range) {
     return `${formatDate(period.start)}–${formatDate(period.end)}`;
@@ -221,7 +221,7 @@ export const TimeRangeDropdown: React.FC<TimeRangeDropdownProps> = ({
               isSelected={key === selectedKey}
               onClick={() => onChange(optPeriod)}
             >
-              {t('Last {{count}} {{unit}}', { count: optPeriod.count, unit: optPeriod.unit.name })}
+              {labelFromPeriod(optPeriod, t)}
             </DropdownItem>
           ))}
           <Divider />

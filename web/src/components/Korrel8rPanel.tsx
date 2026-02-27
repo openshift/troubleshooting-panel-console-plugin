@@ -30,14 +30,7 @@ import { usePluginAvailable } from '../hooks/usePluginAvailable';
 import { getGoalsGraph, getNeighborsGraph } from '../korrel8r-client';
 import * as api from '../korrel8r/client';
 import * as korrel8r from '../korrel8r/types';
-import {
-  defaultSearch,
-  Result,
-  Search,
-  SearchType,
-  setResult as setResultAction,
-  setSearch as setSearchAction,
-} from '../redux-actions';
+import { defaultSearch, Result, Search, SearchType, setResult, setSearch } from '../redux-actions';
 import { State } from '../redux-reducers';
 import * as time from '../time';
 import { AdvancedSearchForm } from './AdvancedSearchForm';
@@ -74,7 +67,7 @@ export default function Korrel8rPanel() {
     if (initialized.current) return; // Run once on mount
     initialized.current = true;
     if (!search?.queryStr && locationQuery) {
-      dispatch(setSearchAction({ ...defaultSearch, queryStr: locationQuery.toString() }));
+      dispatch(setSearch({ ...defaultSearch, queryStr: locationQuery.toString() }));
     }
   }, [search?.queryStr, locationQuery, dispatch]);
 
@@ -90,7 +83,7 @@ export default function Korrel8rPanel() {
     };
     let cancelled = false;
     const onResult = (newResult: Result) => {
-      if (!cancelled) dispatch(setResultAction(newResult));
+      if (!cancelled) dispatch(setResult(newResult));
     };
     const fetch =
       search.searchType === SearchType.Goal
@@ -115,7 +108,7 @@ export default function Korrel8rPanel() {
 
   // Dispatch a new search.
   // The SetSearch reducer clears result, triggering the fetch effect.
-  const doSearch = React.useCallback((s: Search) => dispatch(setSearchAction(s)), [dispatch]);
+  const doSearch = React.useCallback((s: Search) => dispatch(setSearch(s)), [dispatch]);
 
   return (
     <>
