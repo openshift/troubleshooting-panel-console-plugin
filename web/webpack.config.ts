@@ -69,6 +69,18 @@ const config: Configuration = {
     devMiddleware: {
       writeToDisk: true,
     },
+    client: {
+      overlay: {
+        runtimeErrors: (error) => {
+          // This benign browser error is triggered by ResizeObserver callbacks that cause
+          // layout changes within the same frame. It does not indicate a real problem.
+          if (error.message === 'ResizeObserver loop completed with undelivered notifications.') {
+            return false;
+          }
+          return true;
+        },
+      },
+    },
   },
   plugins: [
     new ConsoleRemotePlugin(),
