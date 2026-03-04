@@ -15,6 +15,10 @@ test: test-frontend
 test-frontend: lint-frontend
 	cd web && npm run test:unit
 
+.PHONY: test-e2e
+test-e2e:
+	cd web && npm install && npm run test:e2e
+
 .PHONY: install-frontend
 install-frontend:
 	cd web && npm install
