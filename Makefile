@@ -90,6 +90,7 @@ web/src/korrel8r/client: korrel8r/swagger.json
 
 .PHONY: podman-cross-build
 podman-cross-build:
-	podman manifest create -a ${IMAGE}
+	podman manifest rm ${IMAGE} || true
+	podman manifest create ${IMAGE}
 	podman build --platform=${PLATFORMS} --manifest ${IMAGE} -f Dockerfile.dev
 	podman manifest push ${IMAGE}
