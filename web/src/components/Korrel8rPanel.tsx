@@ -62,46 +62,66 @@ export default function Korrel8rPanel() {
     return new korrel8r.Constraint({ start: pStart, end: pEnd });
   }, [search.period]);
 
-  const initialized = React.useRef(false);
+  // Call korrel8r service to get results for the current search.
   React.useEffect(() => {
-    if (initialized.current) return; // Run once on mount
-    initialized.current = true;
-    if (!search?.queryStr && locationQuery) {
-      dispatch(setSearch({ ...defaultSearch, queryStr: locationQuery.toString() }));
-    }
-  }, [search?.queryStr, locationQuery, dispatch]);
-
-  React.useEffect(() => {
-    // Leave stored result in place if there is one.
-    // Dispatching SetSearch clears result to null, triggering a new fetch.
+    // If we already have a stored result, do nothing.
+    // Dispatching SetSearch sets result=null, triggering a new fetch.
     if (result) return;
 
-    const queryStr = search?.queryStr?.trim();
-    const start: api.Start = {
-      queries: queryStr ? [queryStr] : undefined,
-      constraint: constraint?.toAPI(),
-    };
     let cancelled = false;
     const onResult = (newResult: Result) => {
       if (!cancelled) dispatch(setResult(newResult));
     };
+
+    const queryStr = (search?.queryStr ?? '').trim();
+
+    if (!queryStr) {
+      // Default query or empty result
+      if (locationQuery?.toString()) {
+        dispatch(setSearch({ ...defaultSearch, queryStr: locationQuery?.toString() }));
+      } else {
+        dispatch(
+          setResult({
+            title: t('Empty Query'),
+            message: t('No starting point for correlation'),
+          }),
+        );
+      }
+      return;
+    }
+
+    const start: api.Start = {
+      queries: queryStr ? [queryStr] : undefined,
+      constraint: constraint?.toAPI(),
+    };
+
     const fetch =
       search.searchType === SearchType.Goal
         ? getGoalsGraph({ start, goals: [search.goal] })
         : getNeighborsGraph({ start, depth: search.depth });
     fetch
-      .then((response: api.Graph) => onResult({ graph: new korrel8r.Graph(response) }))
+      .then((response: api.Graph) => {
+        if (Array.isArray(response?.nodes) && response.nodes.length > 0) {
+          onResult({ graph: new korrel8r.Graph(response) });
+        } else {
+          onResult({
+            title: t('Empty Result'),
+            message: t('No correlated data was found'),
+          });
+        }
+      })
       .catch((e: api.ApiError) => {
         onResult({
           title: e?.body?.error ? t('Korrel8r Error') : t('Request Failed'),
           message: e?.body?.error || e.message || 'Unknown Error',
+          isError: true,
         });
       });
     return () => {
       cancelled = true;
       fetch.cancel();
     };
-  }, [search, t, result, constraint, dispatch]);
+  }, [search, t, result, constraint, dispatch, locationQuery]);
 
   const advancedToggleID = 'query-toggle';
   const advancedContentID = 'query-content';
@@ -124,9 +144,9 @@ export default function Korrel8rPanel() {
             content={
               locationQuery
                 ? isFocused
-                  ? t('Correlation graph is focused on the main view.')
-                  : t('Focus the correlation on the main view.')
-                : t('Current view does not allow correlation.')
+                  ? t('Correlation graph is already focused on the current view.')
+                  : t('Focus the correlation on the current view.')
+                : t('Current view does not provide a starting point for correlation')
             }
           >
             <Button
