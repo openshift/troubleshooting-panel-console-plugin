@@ -10,20 +10,23 @@ describe('Range', () => {
 
 describe('Duration', () => {
   it('constructs', () => {
-    const duration = new time.Duration(1000, time.SECOND);
+    const duration = new time.Duration(1000, time.Unit.SECOND);
     const [start, end] = duration.startEnd();
     const now = Date.now();
-    expect(duration.duration()).toEqual(1000 * time.SECOND.value);
-    expect(end.getTime() - start.getTime()).toEqual(1000 * time.SECOND.value);
+    expect(duration.duration()).toEqual(1000 * time.Unit.SECOND);
+    expect(end.getTime() - start.getTime()).toEqual(1000 * time.Unit.SECOND);
     expect(Math.floor(end.getTime() / 100)).toEqual(Math.floor(now / 100));
   });
 });
 
 describe('Unit', () => {
-  it('all', () => {
-    expect(time.Unit.all()).toEqual([time.SECOND, time.MINUTE, time.HOUR, time.DAY, time.WEEK]);
-  });
-  it('get', () => {
-    expect(time.Unit.get('seconds')).toEqual(time.SECOND);
+  it('units lists all units in order', () => {
+    expect(time.units).toEqual([
+      time.Unit.SECOND,
+      time.Unit.MINUTE,
+      time.Unit.HOUR,
+      time.Unit.DAY,
+      time.Unit.WEEK,
+    ]);
   });
 });
