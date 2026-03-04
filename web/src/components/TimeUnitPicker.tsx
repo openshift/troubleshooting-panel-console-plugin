@@ -5,7 +5,9 @@ import {
   SelectList,
   SelectOption,
 } from '@patternfly/react-core';
+
 import * as React from 'react';
+import { useTimeUnits } from '../hooks/useTimeUnits';
 import * as time from '../time';
 
 interface TimeUnitPickerProps {
@@ -16,31 +18,30 @@ interface TimeUnitPickerProps {
 /** Pick a time unit (hours, days etc) */
 export const TimeUnitPicker: React.FC<TimeUnitPickerProps> = ({ unit, onChange }) => {
   const [isOpen, setIsOpen] = React.useState(false);
+  const unitToLabel = useTimeUnits();
 
   const toggle = (toggleRef: React.Ref<MenuToggleElement>) => (
     <MenuToggle ref={toggleRef} onClick={() => setIsOpen(!isOpen)} isExpanded={isOpen}>
-      {unit.name}
+      {unitToLabel(unit)}
     </MenuToggle>
   );
 
   return (
     <Select
       id={'unit-select'}
-      selected={unit.name}
+      selected={unit}
       isOpen={isOpen}
-      onSelect={(_: React.MouseEvent, value: string) => {
-        const newUnit = time.Unit.get(value);
-        if (newUnit) onChange(newUnit);
+      onSelect={(_: React.MouseEvent, value: string | number) => {
+        onChange(value as time.Unit);
         setIsOpen(false);
       }}
-      onOpenChange={(isOpen: boolean) => setIsOpen(!isOpen)}
+      onOpenChange={setIsOpen}
       toggle={toggle}
     >
       <SelectList>
-        {time.Unit.all().map((u) => (
-          <SelectOption key={u.name} value={u.name}>
-            {' '}
-            {u.name}{' '}
+        {time.units.map((u) => (
+          <SelectOption key={u} value={u}>
+            {unitToLabel(u)}
           </SelectOption>
         ))}
       </SelectList>

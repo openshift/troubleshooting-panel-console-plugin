@@ -17,7 +17,9 @@ import {
   NumberInput,
 } from '@patternfly/react-core';
 import * as React from 'react';
+import * as ReactDOM from 'react-dom';
 import { TFunction, useTranslation } from 'react-i18next';
+import { useTimeUnits } from '../hooks/useTimeUnits';
 import * as time from '../time';
 import { DateTimePicker } from './DateTimePicker';
 import { TimeUnitPicker } from './TimeUnitPicker';
@@ -26,11 +28,11 @@ const CUSTOM_RANGE_KEY = 'CUSTOM_RANGE';
 const CUSTOM_DURATION_KEY = 'CUSTOM_DURATION';
 
 const timeRangeOptions = [
-  { key: '5m', period: new time.Duration(5, time.MINUTE) },
-  { key: '30m', period: new time.Duration(30, time.MINUTE) },
-  { key: '1h', period: new time.Duration(1, time.HOUR) },
-  { key: '1d', period: new time.Duration(1, time.DAY) },
-  { key: '1w', period: new time.Duration(1, time.WEEK) },
+  { key: '5m', period: new time.Duration(5, time.Unit.MINUTE) },
+  { key: '30m', period: new time.Duration(30, time.Unit.MINUTE) },
+  { key: '1h', period: new time.Duration(1, time.Unit.HOUR) },
+  { key: '1d', period: new time.Duration(1, time.Unit.DAY) },
+  { key: '1w', period: new time.Duration(1, time.Unit.WEEK) },
 ];
 
 const keyFromPeriod = (period: time.Period): string => {
@@ -44,21 +46,6 @@ const keyFromPeriod = (period: time.Period): string => {
   return CUSTOM_RANGE_KEY;
 };
 
-const formatDate = (d: Date): string =>
-  d
-    .toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short', hour12: false })
-    .replace(/,/g, '');
-
-const labelFromPeriod = (period: time.Period, t: TFunction): string => {
-  if (period instanceof time.Duration) {
-    return `${t('Last')} ${period.count} ${t(period.unit.name)}`;
-  }
-  if (period instanceof time.Range) {
-    return `${formatDate(period.start)}–${formatDate(period.end)}`;
-  }
-  return t('Custom');
-};
-
 interface TimeRangeModalProps {
   initialRange: time.Range;
   onSave: (range: time.Range) => void;
@@ -69,7 +56,6 @@ const TimeRangeModal: React.FC<TimeRangeModalProps> = ({ initialRange, onSave, o
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
   const [start, setStart] = React.useState(initialRange.start);
   const [end, setEnd] = React.useState(initialRange.end);
-
   const isValid = start < end;
 
   return (
@@ -197,9 +183,20 @@ export const TimeRangeDropdown: React.FC<TimeRangeDropdownProps> = ({
   }, [period]);
 
   const initialDuration = React.useMemo(
-    () => (period instanceof time.Duration ? period : new time.Duration(1, time.DAY)),
+    () => (period instanceof time.Duration ? period : new time.Duration(1, time.Unit.DAY)),
     [period],
   );
+
+  const labels = useTimeUnits();
+  const labelFromPeriod = (period: time.Period, t: TFunction): string => {
+    if (period instanceof time.Duration) {
+      return `${t('Last')} ${period.count} ${labels(period.unit)}`;
+    }
+    if (period instanceof time.Range) {
+      return `${time.formatDate(period.start)} – ${time.formatDate(period.end)}`;
+    }
+    return t('Custom');
+  };
 
   return (
     <>
@@ -245,26 +242,30 @@ export const TimeRangeDropdown: React.FC<TimeRangeDropdownProps> = ({
           </DropdownItem>
         </DropdownList>
       </Dropdown>
-      {rangeModalOpen && (
-        <TimeRangeModal
-          initialRange={initialRange}
-          onSave={(range) => {
-            setRangeModalOpen(false);
-            onChange(range);
-          }}
-          onClose={() => setRangeModalOpen(false)}
-        />
-      )}
-      {durationModalOpen && (
-        <DurationModal
-          initialDuration={initialDuration}
-          onSave={(duration) => {
-            setDurationModalOpen(false);
-            onChange(duration);
-          }}
-          onClose={() => setDurationModalOpen(false)}
-        />
-      )}
+      {rangeModalOpen &&
+        ReactDOM.createPortal(
+          <TimeRangeModal
+            initialRange={initialRange}
+            onSave={(range) => {
+              setRangeModalOpen(false);
+              onChange(range);
+            }}
+            onClose={() => setRangeModalOpen(false)}
+          />,
+          document.body,
+        )}
+      {durationModalOpen &&
+        ReactDOM.createPortal(
+          <DurationModal
+            initialDuration={initialDuration}
+            onSave={(duration) => {
+              setDurationModalOpen(false);
+              onChange(duration);
+            }}
+            onClose={() => setDurationModalOpen(false)}
+          />,
+          document.body,
+        )}
     </>
   );
 };
