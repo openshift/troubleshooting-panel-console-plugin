@@ -44,14 +44,17 @@ export default function Korrel8rPanel() {
   const search: Search = useSelector((state: State) => state.plugins?.tp?.get('search'));
   const result: Result | null = useSelector((state: State) => state.plugins?.tp?.get('result'));
 
-  // Is the search panel already in focus on the main view?
-  const isFocused = React.useMemo(
-    () => locationQuery?.toString() === search.queryStr,
-    [locationQuery, search.queryStr],
-  );
-
   // Showing advanced query
   const [showAdvanced, setShowAdvanced] = React.useState(false);
+
+  // Cancel holds a cancel function while fetch is running, null otherwise.
+  const [cancel, setCancel] = React.useState<(() => void) | null>(null);
+
+  // Focus button is disabled if search matches location and we have a graph or are fetching one.
+  const isFocused = React.useMemo(
+    () => locationQuery?.toString() === search.queryStr && !!(result?.graph || cancel),
+    [locationQuery, search.queryStr, result?.graph, cancel],
+  );
 
   // Compute constraint from search period.
   const constraint = React.useMemo((): korrel8r.Constraint | undefined => {
@@ -103,6 +106,13 @@ export default function Korrel8rPanel() {
       constraint: constraint?.toAPI(),
     };
 
+    const doCancel = () => {
+      cancelled = true;
+      setCancel(null);
+      fetch.cancel();
+    };
+    setCancel(() => doCancel);
+
     const fetch =
       search.searchType === SearchType.Goal
         ? getGoalsGraph({ start, goals: [search.goal] })
@@ -123,15 +133,26 @@ export default function Korrel8rPanel() {
           message: e?.body?.error || e.message || 'Unknown Error',
           isError: true,
         });
+      })
+      .finally(() => {
+        setCancel(null);
       });
-    return () => {
-      cancelled = true;
-      fetch.cancel();
-    };
+
+    return doCancel;
   }, [search, constraint, dispatchResult, t]);
 
   const advancedToggleID = 'query-toggle';
   const advancedContentID = 'query-content';
+
+  const handleCancel = React.useCallback(() => {
+    if (!cancel) return;
+    cancel();
+    dispatch(
+      setResult({
+        title: t('Cancelled'),
+        message: t('Search was cancelled'),
+      }));
+  }, [dispatch, cancel, t]);
 
   return (
     <>
@@ -195,18 +216,31 @@ export default function Korrel8rPanel() {
               </ExpandableSectionToggle>
             </Tooltip>
 
-            {/* Refresh button */}
-            <Tooltip content={t('Refresh the graph by re-running the current search.')}>
-              <Button
-                variant="link"
-                size="sm"
-                isAriaDisabled={!search?.queryStr}
-                onClick={() => dispatchSearch(search)}
-                aria-label={t('Refresh')}
-              >
-                <SyncIcon />
-              </Button>
-            </Tooltip>
+            {/* Refresh / Cancel button */}
+            {cancel ? (
+              <Tooltip content={t('Cancel the current search')}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleCancel}
+                  aria-label={t('Cancel')}
+                >
+                  {t('Cancel')}
+                </Button>
+              </Tooltip>
+            ) : (
+              <Tooltip content={t('Refresh the graph by re-running the current search.')}>
+                <Button
+                  variant="link"
+                  size="sm"
+                  isAriaDisabled={!search?.queryStr}
+                  onClick={() => dispatchSearch(search)}
+                  aria-label={t('Refresh')}
+                >
+                  <SyncIcon />
+                </Button>
+              </Tooltip>
+            )}
           </Flex>
         </Flex>
 
@@ -220,7 +254,7 @@ export default function Korrel8rPanel() {
           <AdvancedSearchForm
             search={search}
             onSearch={dispatchSearch}
-            onCancel={() => setShowAdvanced(false)}
+            onClose={() => setShowAdvanced(false)}
           />
         </ExpandableSection>
 
