@@ -10,6 +10,9 @@ import {
   MenuToggle,
   MenuToggleElement,
   Modal,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
   ModalVariant,
   NumberInput,
 } from '@patternfly/react-core';
@@ -70,12 +73,29 @@ const TimeRangeModal: React.FC<TimeRangeModalProps> = ({ initialRange, onSave, o
   const isValid = start < end;
 
   return (
-    <Modal
-      variant={ModalVariant.small}
-      title={t('Custom time range')}
-      isOpen
-      onClose={onClose}
-      actions={[
+    <Modal variant={ModalVariant.small} isOpen onClose={onClose}>
+      <ModalHeader title={t('Custom time range')} />
+      <ModalBody>
+        <Flex direction={{ default: 'column' }} spaceItems={{ default: 'spaceItemsMd' }}>
+          <FlexItem>
+            <label>{t('From')}</label>
+            <DateTimePicker date={start} onChange={setStart} />
+          </FlexItem>
+          <FlexItem>
+            <label>{t('To')}</label>
+            <DateTimePicker date={end} onChange={setEnd} />
+          </FlexItem>
+          {!isValid && (
+            <Alert
+              variant="danger"
+              isInline
+              isPlain
+              title={t('End time must be after start time')}
+            />
+          )}
+        </Flex>
+      </ModalBody>
+      <ModalFooter>
         <Button
           key="save"
           variant="primary"
@@ -83,25 +103,11 @@ const TimeRangeModal: React.FC<TimeRangeModalProps> = ({ initialRange, onSave, o
           isDisabled={!isValid}
         >
           {t('Save')}
-        </Button>,
+        </Button>
         <Button key="cancel" variant="link" onClick={onClose}>
           {t('Cancel')}
-        </Button>,
-      ]}
-    >
-      <Flex direction={{ default: 'column' }} spaceItems={{ default: 'spaceItemsMd' }}>
-        <FlexItem>
-          <label>{t('From')}</label>
-          <DateTimePicker date={start} onChange={setStart} />
-        </FlexItem>
-        <FlexItem>
-          <label>{t('To')}</label>
-          <DateTimePicker date={end} onChange={setEnd} />
-        </FlexItem>
-        {!isValid && (
-          <Alert variant="danger" isInline isPlain title={t('End time must be after start time')} />
-        )}
-      </Flex>
+        </Button>
+      </ModalFooter>
     </Modal>
   );
 };
@@ -120,12 +126,27 @@ const DurationModal: React.FC<DurationModalProps> = ({ initialDuration, onSave, 
   const onChangeCount = (n: number) => setCount(Math.max(1, n || 1));
 
   return (
-    <Modal
-      variant={ModalVariant.small}
-      title={t('Custom duration')}
-      isOpen
-      onClose={onClose}
-      actions={[
+    <Modal variant={ModalVariant.small} isOpen onClose={onClose}>
+      <ModalHeader title={t('Custom duration')} />
+      <ModalBody>
+        <Flex alignItems={{ default: 'alignItemsCenter' }} spaceItems={{ default: 'spaceItemsSm' }}>
+          <FlexItem>{t('Last')}</FlexItem>
+          <FlexItem>
+            <NumberInput
+              value={count}
+              min={1}
+              onPlus={() => onChangeCount(count + 1)}
+              onMinus={() => onChangeCount(count - 1)}
+              onChange={(e) => onChangeCount(Number((e.target as HTMLInputElement).value))}
+              widthChars={3}
+            />
+          </FlexItem>
+          <FlexItem>
+            <TimeUnitPicker unit={unit} onChange={setUnit} />
+          </FlexItem>
+        </Flex>
+      </ModalBody>
+      <ModalFooter>
         <Button
           key="save"
           variant="primary"
@@ -133,28 +154,11 @@ const DurationModal: React.FC<DurationModalProps> = ({ initialDuration, onSave, 
           isDisabled={count < 1}
         >
           {t('Save')}
-        </Button>,
+        </Button>
         <Button key="cancel" variant="link" onClick={onClose}>
           {t('Cancel')}
-        </Button>,
-      ]}
-    >
-      <Flex alignItems={{ default: 'alignItemsCenter' }} spaceItems={{ default: 'spaceItemsSm' }}>
-        <FlexItem>{t('Last')}</FlexItem>
-        <FlexItem>
-          <NumberInput
-            value={count}
-            min={1}
-            onPlus={() => onChangeCount(count + 1)}
-            onMinus={() => onChangeCount(count - 1)}
-            onChange={(e) => onChangeCount(Number((e.target as HTMLInputElement).value))}
-            widthChars={3}
-          />
-        </FlexItem>
-        <FlexItem>
-          <TimeUnitPicker unit={unit} onChange={setUnit} />
-        </FlexItem>
-      </Flex>
+        </Button>
+      </ModalFooter>
     </Modal>
   );
 };

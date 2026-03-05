@@ -130,7 +130,7 @@ export const AdvancedSearchForm: React.FC<AdvancedSearchFormProps> = ({
         label={t('Start Query')}
         labelInfo={t('Select starting data')}
         hasNoPaddingTop={true}
-        labelIcon={
+        labelHelp={
           <HelpPopover>
             <Trans t={t}>
               <p>Query to select the starting data for the search.</p>
@@ -177,7 +177,7 @@ export const AdvancedSearchForm: React.FC<AdvancedSearchFormProps> = ({
         label={t('Search Type')}
         labelInfo={t('Neighbours or Goal search')}
         hasNoPaddingTop={true}
-        labelIcon={
+        labelHelp={
           <HelpPopover>
             <Trans t={t}>
               <p>There are two types of correlation search:</p>
