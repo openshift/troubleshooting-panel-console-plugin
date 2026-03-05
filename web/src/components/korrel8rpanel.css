@@ -1,23 +1,23 @@
 .tp-plugin__panel-toolbar {
-  padding: var(--pf-v5-global--spacer--xs) var(--pf-v5-global--spacer--sm);
-  border-bottom: var(--pf-v5-global--BorderWidth--sm) solid var(--pf-v5-global--BorderColor--100);
+  padding: var(--pf-t--global--spacer--xs) var(--pf-t--global--spacer--sm);
+  border-bottom: var(--pf-t--global--border--width--regular) solid var(--pf-t--global--border--color--default);
 }
 
 .tp-plugin__compact-control {
-  padding: var(--pf-v5-global--spacer--xs) var(--pf-v5-global--spacer--sm);
+  padding: var(--pf-t--global--spacer--xs) var(--pf-t--global--spacer--sm);
 }
 
 .tp-plugin__panel-query-container {
-  padding: var(--pf-v5-global--spacer--sm) var(--pf-v5-global--spacer--md);
+  padding: var(--pf-t--global--spacer--sm) var(--pf-t--global--spacer--md);
 }
 
 .tp-plugin__panel-topology-container {
-  border-left: var(--pf-v5-global--BorderWidth--sm) var(--pf-v5-global--BorderColor--100) solid;
+  border-left: var(--pf-t--global--border--width--regular) var(--pf-t--global--border--color--default) solid;
   position: relative;
 }
 
 .tp-plugin__panel-query-input {
-  margin: 0 var(--pf-v5-global--spacer--md) var(--pf-v5-global--spacer--sm) var(--pf-v5-global--spacer--md);
+  margin: 0 var(--pf-t--global--spacer--md) var(--pf-t--global--spacer--sm) var(--pf-t--global--spacer--md);
 }
 
 .tp-plugin__panel-topology-info {
