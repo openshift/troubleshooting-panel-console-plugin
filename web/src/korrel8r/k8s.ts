@@ -95,17 +95,22 @@ export class K8sDomain extends Domain {
     let namespace = selector.namespace;
     let name = selector.name;
     let events = '';
-    if (isEvent(model)) {
+    if (isEvent(model) && selector.fields) {
       // Special case for events, generate URL of involved object with '/events' modifier.
+      // Only apply this if fields are present (indicating an event about a specific object).
       const eventClass = this.modelClass(model);
       const about = eventAboutField(model);
-      const [group, version] = parseAPIVersion(selector.fields[`${about}.apiVersion`]);
+      const apiVersion = selector.fields[`${about}.apiVersion`];
       const kind = selector.fields[`${about}.kind`];
-      model = findGVK(group, version, kind);
-      if (!model) throw this.badQuery(query, `no resource matching ${eventClass}.${about}`);
-      namespace = selector.fields[`${about}.namespace`] || '';
-      name = selector.fields[`${about}.name`] || '';
-      events = '/events';
+      // Only treat as an involved object event if the required fields are present
+      if (apiVersion && kind) {
+        const [group, version] = parseAPIVersion(apiVersion);
+        model = findGVK(group, version, kind);
+        if (!model) throw this.badQuery(query, `no resource matching ${eventClass}.${about}`);
+        namespace = selector.fields[`${about}.namespace`] || '';
+        name = selector.fields[`${about}.name`] || '';
+        events = '/events';
+      }
     }
     // Prepare parts of the URL
     const nsPath = namespace ? `ns/${namespace}` : 'all-namespaces';
