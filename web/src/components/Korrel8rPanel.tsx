@@ -3,8 +3,6 @@ import {
   Divider,
   EmptyState,
   EmptyStateBody,
-  EmptyStateHeader,
-  EmptyStateIcon,
   EmptyStateVariant,
   ExpandableSection,
   ExpandableSectionToggle,
@@ -272,13 +270,12 @@ const Searching: React.FC = () => {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
   return (
     <div className="tp-plugin__panel-topology-info">
-      <EmptyState variant={EmptyStateVariant.sm}>
-        <EmptyStateHeader
-          titleText={t('Searching')}
-          headingLevel="h4"
-          icon={<EmptyStateIcon icon={Spinner} />}
-        />
-      </EmptyState>
+      <EmptyState
+        variant={EmptyStateVariant.sm}
+        titleText={t('Searching')}
+        headingLevel="h4"
+        icon={Spinner}
+      />
     </div>
   );
 };
@@ -292,17 +289,13 @@ interface TopologyInfoStateProps {
 const TopologyInfoState: React.FC<TopologyInfoStateProps> = ({ titleText, text, isError }) => {
   return (
     <div className="tp-plugin__panel-topology-info">
-      <EmptyState variant={EmptyStateVariant.sm}>
-        <EmptyStateHeader
-          titleText={titleText}
-          headingLevel="h4"
-          icon={
-            <EmptyStateIcon
-              icon={isError ? ExclamationCircleIcon : CubesIcon}
-              color={isError ? 'var(--pf-v5-global--danger-color--100)' : ''}
-            />
-          }
-        />
+      <EmptyState
+        variant={EmptyStateVariant.sm}
+        titleText={titleText}
+        headingLevel="h4"
+        icon={isError ? ExclamationCircleIcon : CubesIcon}
+        status={isError ? 'danger' : undefined}
+      >
         <EmptyStateBody>{text}</EmptyStateBody>
       </EmptyState>
     </div>
