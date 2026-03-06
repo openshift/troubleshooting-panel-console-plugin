@@ -21,6 +21,7 @@ export const DateTimePicker: React.FC<{
         <DatePicker
           value={isValidDate(date) ? yyyyMMddFormat(date) : ''}
           onChange={(_event, _inputDate, newDate) => onChange(copyTime(newDate, date))}
+          appendTo={() => document.body}
         />
       </InputGroupItem>
       <InputGroupItem>
@@ -30,6 +31,7 @@ export const DateTimePicker: React.FC<{
             if (isValid) onChange(setTime(date, hour, minute, second));
           }}
           is24Hour={true}
+          menuAppendTo={() => document.body}
           width="80px"
         />
       </InputGroupItem>

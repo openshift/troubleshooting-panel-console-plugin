@@ -130,7 +130,7 @@ export const AdvancedSearchForm: React.FC<AdvancedSearchFormProps> = ({
         label={t('Start Query')}
         labelInfo={t('Select starting data')}
         hasNoPaddingTop={true}
-        labelIcon={
+        labelHelp={
           <HelpPopover>
             <Trans t={t}>
               <p>Query to select the starting data for the search.</p>
@@ -177,7 +177,7 @@ export const AdvancedSearchForm: React.FC<AdvancedSearchFormProps> = ({
         label={t('Search Type')}
         labelInfo={t('Neighbours or Goal search')}
         hasNoPaddingTop={true}
-        labelIcon={
+        labelHelp={
           <HelpPopover>
             <Trans t={t}>
               <p>There are two types of correlation search:</p>
@@ -263,25 +263,27 @@ export const AdvancedSearchForm: React.FC<AdvancedSearchFormProps> = ({
       </FormGroup>
 
       <ActionGroup>
-        <Tooltip
-          content={
-            !isValid
-              ? t('Fix validation errors before searching')
-              : hasChanged
-              ? t('Update the correlation graph')
-              : t('Correlation graph already matches search')
-          }
-        >
-          <Button
-            type="submit"
-            variant="primary"
-            isAriaDisabled={!hasChanged || !isValid}
-            size="sm"
+        <div>
+          <Tooltip
+            content={
+              !isValid
+                ? t('Fix validation errors before searching')
+                : hasChanged
+                ? t('Update the correlation graph')
+                : t('Correlation graph already matches search')
+            }
           >
-            {t('Search')}
-          </Button>
-        </Tooltip>
-        <Button variant="secondary" onClick={onCancel}>
+            <Button
+              type="submit"
+              variant="primary"
+              isAriaDisabled={!hasChanged || !isValid}
+              size="sm"
+            >
+              {t('Search')}
+            </Button>
+          </Tooltip>
+        </div>
+        <Button variant="secondary" size="sm" onClick={onCancel}>
           {t('Cancel')}
         </Button>
       </ActionGroup>
