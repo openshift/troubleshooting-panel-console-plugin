@@ -9,6 +9,8 @@ export type State = {
   observe: TPState;
   plugins: {
     tp: TPState;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    mp: any;
   };
 };
 
