@@ -263,25 +263,27 @@ export const AdvancedSearchForm: React.FC<AdvancedSearchFormProps> = ({
       </FormGroup>
 
       <ActionGroup>
-        <Tooltip
-          content={
-            !isValid
-              ? t('Fix validation errors before searching')
-              : hasChanged
-              ? t('Update the correlation graph')
-              : t('Correlation graph already matches search')
-          }
-        >
-          <Button
-            type="submit"
-            variant="primary"
-            isAriaDisabled={!hasChanged || !isValid}
-            size="sm"
+        <div>
+          <Tooltip
+            content={
+              !isValid
+                ? t('Fix validation errors before searching')
+                : hasChanged
+                ? t('Update the correlation graph')
+                : t('Correlation graph already matches search')
+            }
           >
-            {t('Search')}
-          </Button>
-        </Tooltip>
-        <Button variant="secondary" onClick={onCancel}>
+            <Button
+              type="submit"
+              variant="primary"
+              isAriaDisabled={!hasChanged || !isValid}
+              size="sm"
+            >
+              {t('Search')}
+            </Button>
+          </Tooltip>
+        </div>
+        <Button variant="secondary" size="sm" onClick={onCancel}>
           {t('Cancel')}
         </Button>
       </ActionGroup>
