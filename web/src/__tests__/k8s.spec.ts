@@ -179,6 +179,15 @@ describe('K8sDomain.queryToLink', () => {
       url: `k8s/ns/x/rbac.authorization.k8s.io~v1~Role/y`,
     },
     { query: `k8s:Pod:{}`, url: 'k8s/all-namespaces/core~v1~Pod' },
+    // Event queries without fields (directly querying events by namespace)
+    {
+      query: 'k8s:Event.v1.events.k8s.io:{"namespace":"openshift-logging"}',
+      url: 'k8s/ns/openshift-logging/events.k8s.io~v1~Event',
+    },
+    {
+      query: 'k8s:Event.v1:{"namespace":"openshift-cluster-observability-operator"}',
+      url: 'k8s/ns/openshift-cluster-observability-operator/core~v1~Event',
+    },
   ])('converts $query to $url', ({ url, query }) => {
     expect(k8s.queryToLink(Query.parse(query)).toString()).toEqual(new URIRef(url).toString());
   });
