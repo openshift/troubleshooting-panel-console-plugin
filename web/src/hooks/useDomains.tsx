@@ -7,7 +7,9 @@ import { State } from '../redux-reducers';
 
 // The alert domain is dependent on alert Rules state , so we need a hook for domains
 export const useDomains = () => {
-  const alertRules = useSelector((state: State) => state.observe?.get('rules'));
+  const alertRules = useSelector(
+    (state: State) => state?.plugins?.mp?.alerting?.cmo?.['#ALL_NS#']?.rules,
+  );
 
   const alertIDs = React.useMemo(() => {
     if (!alertRules) return new Map<string, string>();
