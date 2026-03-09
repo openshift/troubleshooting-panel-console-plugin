@@ -53,43 +53,40 @@ export default function Korrel8rPanel() {
   // Showing advanced query
   const [showAdvanced, setShowAdvanced] = React.useState(false);
 
-  // Compute constraint from period for the API call and topology navigation.
+  // Compute constraint from search period.
   const constraint = React.useMemo((): korrel8r.Constraint | undefined => {
     if (!search.period) return undefined;
-    const [pStart, pEnd] = search.period.startEnd();
-    return new korrel8r.Constraint({ start: pStart, end: pEnd });
-  }, [search.period]);
+    const [start, end] = search.period.startEnd();
+    return new korrel8r.Constraint({ start, end });
+  }, [search?.period]);
 
-  // Call korrel8r service to get results for the current search.
+  // Dispatch a new search value, making a new reference (reducer clears result automatically).
+  const dispatchSearch = React.useCallback(
+    (search: Search) => dispatch(setSearch({ ...search })),
+    [dispatch],
+  );
+  // Dispatch a new result, no special actions.
+  const dispatchResult = React.useCallback(
+    (result: Result) => dispatch(setResult(result)),
+    [dispatch],
+  );
+
+  // Set up default locationQuery search on mount, when query is blank.
   React.useEffect(() => {
-    // If we already have a stored result, do nothing.
-    // Dispatching SetSearch sets result=null, triggering a new fetch.
-    if (result) return;
+    if (!search?.queryStr && locationQuery?.toString())
+      dispatchSearch({ ...defaultSearch, queryStr: locationQuery.toString() });
+  }, [locationQuery, dispatchSearch, search?.queryStr]);
 
-    let cancelled = false;
-    const onResult = (newResult: Result) => {
-      if (!cancelled) dispatch(setResult(newResult));
-    };
-
-    const queryStr = (search?.queryStr ?? '').trim();
-
+  // Fetch a new result from the korrel8r service when the search changes.
+  React.useEffect(() => {
+    const queryStr = search?.queryStr;
     if (!queryStr) {
-      // Default query or empty result
-      if (locationQuery?.toString()) {
-        dispatch(setSearch({ ...defaultSearch, queryStr: locationQuery?.toString() }));
-      } else {
-        dispatch(
-          setResult({
-            title: t('Empty Query'),
-            message: t('No starting point for correlation'),
-          }),
-        );
-      }
+      dispatchResult({ title: t('Empty Query'), message: t('No starting point for correlation') });
       return;
     }
-
+    let cancelled = false;
     const start: api.Start = {
-      queries: queryStr ? [queryStr] : undefined,
+      queries: [queryStr],
       constraint: constraint?.toAPI(),
     };
 
@@ -99,18 +96,17 @@ export default function Korrel8rPanel() {
         : getNeighborsGraph({ start, depth: search.depth });
     fetch
       .then((response: api.Graph) => {
-        if (Array.isArray(response?.nodes) && response.nodes.length > 0) {
-          onResult({ graph: new korrel8r.Graph(response) });
-        } else {
-          onResult({
-            title: t('Empty Result'),
-            message: t('No correlated data was found'),
-          });
-        }
+        if (cancelled) return;
+        dispatchResult(
+          Array.isArray(response?.nodes) && response.nodes.length > 0
+            ? { graph: new korrel8r.Graph(response) }
+            : { title: t('Empty Result'), message: t('No correlated data found') },
+        );
       })
       .catch((e: api.ApiError) => {
-        onResult({
-          title: e?.body?.error ? t('Korrel8r Error') : t('Request Failed'),
+        if (cancelled) return;
+        dispatchResult({
+          title: e?.body?.error ? t('Search Error') : t('Search Failed'),
           message: e?.body?.error || e.message || 'Unknown Error',
           isError: true,
         });
@@ -119,14 +115,10 @@ export default function Korrel8rPanel() {
       cancelled = true;
       fetch.cancel();
     };
-  }, [search, t, result, constraint, dispatch, locationQuery]);
+  }, [search, constraint, dispatchResult, t]);
 
   const advancedToggleID = 'query-toggle';
   const advancedContentID = 'query-content';
-
-  // Dispatch a new search.
-  // The SetSearch reducer clears result, triggering the fetch effect.
-  const doSearch = React.useCallback((s: Search) => dispatch(setSearch(s)), [dispatch]);
 
   return (
     <>
@@ -134,7 +126,7 @@ export default function Korrel8rPanel() {
         <Flex
           className="tp-plugin__panel-toolbar"
           direction={{ default: 'row' }}
-          flexWrap={{ default: 'nowrap' }}
+          flexWrap={{ default: 'wrap' }}
           alignItems={{ default: 'alignItemsCenter' }}
           spaceItems={{ default: 'spaceItemsXs' }}
         >
@@ -152,7 +144,7 @@ export default function Korrel8rPanel() {
               isAriaDisabled={!locationQuery || isFocused}
               size="sm"
               onClick={() => {
-                doSearch({
+                dispatchSearch({
                   ...defaultSearch,
                   queryStr: locationQuery?.toString(),
                   period: search?.period,
@@ -170,7 +162,7 @@ export default function Korrel8rPanel() {
               <TimeRangeDropdown
                 className="tp-plugin__compact-control"
                 period={search.period ?? defaultSearch.period}
-                onChange={(period: time.Period) => doSearch({ ...search, period })}
+                onChange={(period: time.Period) => dispatchSearch({ ...search, period })}
               />
             </Tooltip>
           </Flex>
@@ -196,7 +188,7 @@ export default function Korrel8rPanel() {
                 variant="link"
                 size="sm"
                 isAriaDisabled={!search?.queryStr}
-                onClick={() => doSearch(search)}
+                onClick={() => dispatchSearch(search)}
                 aria-label={t('Refresh')}
               >
                 <SyncIcon />
@@ -214,7 +206,7 @@ export default function Korrel8rPanel() {
         >
           <AdvancedSearchForm
             search={search}
-            onSearch={doSearch}
+            onSearch={dispatchSearch}
             onCancel={() => setShowAdvanced(false)}
           />
         </ExpandableSection>
