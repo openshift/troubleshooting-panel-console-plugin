@@ -1,11 +1,10 @@
 import { Badge, Title } from '@patternfly/react-core';
 import {
   action,
-  BadgeLocation,
-  BreadthFirstLayout,
   ComponentFactory,
   ContextMenuItem,
   createTopologyControlButtons,
+  DagreLayout,
   defaultControlButtonsOptions,
   DefaultEdge,
   DefaultGroup,
@@ -20,6 +19,7 @@ import {
   Node,
   NodeShape,
   SELECTION_EVENT,
+  TOP_TO_BOTTOM,
   TopologyControlBar,
   TopologyView,
   Visualization,
@@ -27,6 +27,8 @@ import {
   VisualizationSurface,
   withContextMenu,
   WithContextMenuProps,
+  withDragNode,
+  WithDragNodeProps,
   withPanZoom,
   withSelection,
   WithSelectionProps,
@@ -38,6 +40,13 @@ import * as korrel8r from '../../korrel8r/types';
 import { getIcon } from '../icons';
 import './korrel8rtopology.css';
 
+// DagreLayout with straight edges (no angular bendpoints).
+class StraightEdgeDagreLayout extends DagreLayout {
+  protected updateEdgeBendpoints(): void {
+    // no-op: skip bendpoints for straight edges between nodes.
+  }
+}
+
 const capitalize = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : '');
 
 const nodeLabel = (node: korrel8r.Node): string => {
@@ -47,20 +56,13 @@ const nodeLabel = (node: korrel8r.Node): string => {
   return capitalize(c.name);
 };
 
-const nodeBadge = (node: korrel8r.Node): string => {
-  const queries = nodeQueries(node);
-  return `${queries.length > 1 ? `${queries[0]?.count}/` : ''}${node?.count ?? '?'} `;
-};
-
-const nodeQueries = (node: korrel8r.Node) => node?.queries ?? [];
-
 interface Korrel8rTopologyNodeProps {
   element: Node;
 }
 
 const Korrel8rTopologyNode: React.FC<
-  Korrel8rTopologyNodeProps & WithContextMenuProps & WithSelectionProps
-> = ({ element, onSelect, selected, onContextMenu, contextMenuOpen }) => {
+  Korrel8rTopologyNodeProps & WithContextMenuProps & WithSelectionProps & WithDragNodeProps
+> = ({ element, onSelect, selected, onContextMenu, contextMenuOpen, dragNodeRef }) => {
   const node = element.getData();
   const topologyNode = (
     <DefaultNode
@@ -69,10 +71,12 @@ const Korrel8rTopologyNode: React.FC<
       selected={selected}
       onContextMenu={onContextMenu}
       contextMenuOpen={contextMenuOpen}
+      dragNodeRef={dragNodeRef}
       hover={false}
       label={nodeLabel(node)}
-      badge={nodeBadge(node)}
-      badgeLocation={BadgeLocation.below}
+      badge={node?.count?.toString() ?? '?'}
+      badgeClassName="tp-plugin__topology_node_badge"
+      hideContextMenuKebab={node?.queries?.length === 1}
     >
       <g transform={`translate(25, 25)`}>{getIcon(node.class)}</g>
     </DefaultNode>
@@ -159,7 +163,7 @@ export const Korrel8rTopology: React.FC<{
           <Title headingLevel="h4">{node.class.toString()}</Title>
         </ContextMenuItem>,
       ];
-      nodeQueries(node).forEach((qc) =>
+      node?.queries?.forEach((qc) =>
         menu.push(
           <ContextMenuItem
             key={qc.query.toString()}
@@ -186,7 +190,7 @@ export const Korrel8rTopology: React.FC<{
         case ModelKind.graph:
           return withPanZoom()(GraphComponent);
         case ModelKind.node:
-          return withContextMenu(nodeMenu)(withSelection()(Korrel8rTopologyNode));
+          return withDragNode()(withContextMenu(nodeMenu)(withSelection()(Korrel8rTopologyNode)));
         case ModelKind.edge:
           return DefaultEdge;
         default:
@@ -203,12 +207,19 @@ export const Korrel8rTopology: React.FC<{
       graph: {
         id: 'korrel8r_graph',
         type: 'graph',
-        layout: 'BreadthFirst',
+        layout: 'Dagre',
       },
     };
 
     const controller = new Visualization();
-    controller.registerLayoutFactory((_, graph: Graph) => new BreadthFirstLayout(graph));
+    controller.registerLayoutFactory(
+      (_, graph: Graph) =>
+        new StraightEdgeDagreLayout(graph, {
+          rankdir: TOP_TO_BOTTOM,
+          ranksep: 10,
+          nodeDistance: 15,
+        }),
+    );
     controller.fromModel(model, false);
     return controller;
   }, [nodes, edges]);
@@ -252,7 +263,9 @@ export const Korrel8rTopology: React.FC<{
               zoomOutCallback: action(() => {
                 controller.getGraph().scaleBy(0.75);
               }),
-              fitToScreen: false, // Same thing as resetView
+              fitToScreenCallback: action(() => {
+                controller.getGraph().fit(PADDING);
+              }),
               resetViewCallback: action(() => {
                 controller.getGraph().reset();
                 controller.getGraph().layout();

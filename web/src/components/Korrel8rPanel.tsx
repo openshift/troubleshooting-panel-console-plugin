@@ -138,6 +138,7 @@ export default function Korrel8rPanel() {
           spaceItems={{ default: 'spaceItemsXs' }}
         >
           <Tooltip
+            position="bottom-start"
             content={
               locationQuery
                 ? isFocused
@@ -165,19 +166,17 @@ export default function Korrel8rPanel() {
 
           {/* Time range drop-down */}
           <Flex align={{ default: 'alignRight' }} spaceItems={{ default: 'spaceItemsNone' }}>
-            <Tooltip content={t('Include data from this time range')}>
-              <TimeRangeDropdown
-                className="tp-plugin__compact-control"
-                period={search.period ?? defaultSearch.period}
-                onChange={(period: time.Period) => dispatchSearch({ ...search, period })}
-              />
-            </Tooltip>
+            <TimeRangeDropdown
+              className="tp-plugin__compact-control"
+              period={search.period ?? defaultSearch.period}
+              onChange={(period: time.Period) => dispatchSearch({ ...search, period })}
+            />
           </Flex>
 
           {/* Right aligned buttons */}
           <Flex align={{ default: 'alignRight' }} spaceItems={{ default: 'spaceItemsNone' }}>
             {/* Advanced search toggle */}
-            <Tooltip content={t('Advanced search parameters')}>
+            <Tooltip content={t('Advanced search parameters')} position="bottom-end">
               <ExpandableSectionToggle
                 contentId={advancedContentID}
                 toggleId={advancedToggleID}
