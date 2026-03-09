@@ -151,7 +151,8 @@ export default function Korrel8rPanel() {
       setResult({
         title: t('Cancelled'),
         message: t('Search was cancelled'),
-      }));
+      }),
+    );
   }, [dispatch, cancel, t]);
 
   return (
@@ -165,11 +166,12 @@ export default function Korrel8rPanel() {
           spaceItems={{ default: 'spaceItemsXs' }}
         >
           <Tooltip
+            position="bottom-start"
             content={
               locationQuery
                 ? isFocused
                   ? t('Correlation graph is already focused on the current view.')
-                  : t('Focus the correlation on the current view.')
+                  : t('Focus the correlation graph on the current view.')
                 : t('Current view does not provide a starting point for correlation')
             }
           >
@@ -192,19 +194,17 @@ export default function Korrel8rPanel() {
 
           {/* Time range drop-down */}
           <Flex align={{ default: 'alignRight' }} spaceItems={{ default: 'spaceItemsNone' }}>
-            <Tooltip content={t('Include data from this time range')}>
-              <TimeRangeDropdown
-                className="tp-plugin__compact-control"
-                period={search.period ?? defaultSearch.period}
-                onChange={(period: time.Period) => dispatchSearch({ ...search, period })}
-              />
-            </Tooltip>
+            <TimeRangeDropdown
+              className="tp-plugin__compact-control"
+              period={search.period ?? defaultSearch.period}
+              onChange={(period: time.Period) => dispatchSearch({ ...search, period })}
+            />
           </Flex>
 
           {/* Right aligned buttons */}
           <Flex align={{ default: 'alignRight' }} spaceItems={{ default: 'spaceItemsNone' }}>
             {/* Advanced search toggle */}
-            <Tooltip content={t('Advanced search parameters')}>
+            <Tooltip content={t('Advanced search parameters')} position="bottom-end">
               <ExpandableSectionToggle
                 contentId={advancedContentID}
                 toggleId={advancedToggleID}
@@ -218,28 +218,19 @@ export default function Korrel8rPanel() {
 
             {/* Refresh / Cancel button */}
             {cancel ? (
-              <Tooltip content={t('Cancel the current search')}>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleCancel}
-                  aria-label={t('Cancel')}
-                >
-                  {t('Cancel')}
-                </Button>
-              </Tooltip>
+              <Button variant="secondary" size="sm" onClick={handleCancel} aria-label={t('Cancel')}>
+                {t('Cancel')}
+              </Button>
             ) : (
-              <Tooltip content={t('Refresh the graph by re-running the current search.')}>
-                <Button
-                  variant="link"
-                  size="sm"
-                  isAriaDisabled={!search?.queryStr}
-                  onClick={() => dispatchSearch(search)}
-                  aria-label={t('Refresh')}
-                >
-                  <SyncIcon />
-                </Button>
-              </Tooltip>
+              <Button
+                variant="link"
+                size="sm"
+                isAriaDisabled={!search?.queryStr}
+                onClick={() => dispatchSearch(search)}
+                aria-label={t('Refresh')}
+              >
+                <SyncIcon />
+              </Button>
             )}
           </Flex>
         </Flex>
