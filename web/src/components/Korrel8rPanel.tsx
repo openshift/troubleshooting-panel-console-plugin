@@ -77,8 +77,15 @@ export default function Korrel8rPanel() {
       dispatchSearch({ ...defaultSearch, queryStr: locationQuery.toString() });
   }, [locationQuery, dispatchSearch, search?.queryStr]);
 
+  // Skip the first fetch if we already have a stored result.
+  const useStoredResult = React.useRef(result != null);
+
   // Fetch a new result from the korrel8r service when the search changes.
   React.useEffect(() => {
+    if (useStoredResult.current) {
+      useStoredResult.current = false; // Fetch a new result next time.
+      return;
+    }
     const queryStr = search?.queryStr;
     if (!queryStr) {
       dispatchResult({ title: t('Empty Query'), message: t('No starting point for correlation') });
