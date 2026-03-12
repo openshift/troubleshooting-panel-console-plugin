@@ -44,14 +44,17 @@ export default function Korrel8rPanel() {
   const search: Search = useSelector((state: State) => state.plugins?.tp?.get('search'));
   const result: Result | null = useSelector((state: State) => state.plugins?.tp?.get('result'));
 
-  // Is the search panel already in focus on the main view?
-  const isFocused = React.useMemo(
-    () => locationQuery?.toString() === search.queryStr,
-    [locationQuery, search.queryStr],
-  );
-
   // Showing advanced query
   const [showAdvanced, setShowAdvanced] = React.useState(false);
+
+  // Cancel holds a cancel function while fetch is running, null otherwise.
+  const [cancel, setCancel] = React.useState<(() => void) | null>(null);
+
+  // Focus button is disabled if search matches location and we have a graph or are fetching one.
+  const isFocused = React.useMemo(
+    () => locationQuery?.toString() === search.queryStr && !!(result?.graph || cancel),
+    [locationQuery, search.queryStr, result?.graph, cancel],
+  );
 
   // Compute constraint from search period.
   const constraint = React.useMemo((): korrel8r.Constraint | undefined => {
@@ -71,11 +74,18 @@ export default function Korrel8rPanel() {
     [dispatch],
   );
 
-  // Set up default locationQuery search on mount, when query is blank.
+  // Deal with empty queries - use location or set an "Empty" result.
   React.useEffect(() => {
-    if (!search?.queryStr && locationQuery?.toString())
-      dispatchSearch({ ...defaultSearch, queryStr: locationQuery.toString() });
-  }, [locationQuery, dispatchSearch, search?.queryStr]);
+    if (!search?.queryStr) {
+      if (locationQuery?.toString())
+        dispatchSearch({ ...search, queryStr: locationQuery.toString() });
+      else
+        dispatchResult({
+          title: t('Empty Query'),
+          message: t('No starting point for correlation'),
+        });
+    }
+  }, [locationQuery, dispatchSearch, dispatchResult, search, search?.queryStr, t]);
 
   // Skip the first fetch if we already have a stored result.
   const useStoredResult = React.useRef(result != null);
@@ -86,16 +96,22 @@ export default function Korrel8rPanel() {
       useStoredResult.current = false; // Fetch a new result next time.
       return;
     }
+
     const queryStr = search?.queryStr;
-    if (!queryStr) {
-      dispatchResult({ title: t('Empty Query'), message: t('No starting point for correlation') });
-      return;
-    }
+    if (!queryStr) return;
+
     let cancelled = false;
     const start: api.Start = {
       queries: [queryStr],
       constraint: constraint?.toAPI(),
     };
+
+    const doCancel = () => {
+      cancelled = true;
+      setCancel(null);
+      fetch.cancel();
+    };
+    setCancel(() => doCancel);
 
     const fetch =
       search.searchType === SearchType.Goal
@@ -117,15 +133,27 @@ export default function Korrel8rPanel() {
           message: e?.body?.error || e.message || 'Unknown Error',
           isError: true,
         });
+      })
+      .finally(() => {
+        setCancel(null);
       });
-    return () => {
-      cancelled = true;
-      fetch.cancel();
-    };
+
+    return doCancel;
   }, [search, constraint, dispatchResult, t]);
 
   const advancedToggleID = 'query-toggle';
   const advancedContentID = 'query-content';
+
+  const handleCancel = React.useCallback(() => {
+    if (!cancel) return;
+    cancel();
+    dispatch(
+      setResult({
+        title: t('Cancelled'),
+        message: t('Search was cancelled'),
+      }),
+    );
+  }, [dispatch, cancel, t]);
 
   return (
     <>
@@ -138,11 +166,12 @@ export default function Korrel8rPanel() {
           spaceItems={{ default: 'spaceItemsXs' }}
         >
           <Tooltip
+            position="bottom-start"
             content={
               locationQuery
                 ? isFocused
                   ? t('Correlation graph is already focused on the current view.')
-                  : t('Focus the correlation on the current view.')
+                  : t('Focus the correlation graph on the current view.')
                 : t('Current view does not provide a starting point for correlation')
             }
           >
@@ -152,9 +181,8 @@ export default function Korrel8rPanel() {
               size="sm"
               onClick={() => {
                 dispatchSearch({
-                  ...defaultSearch,
+                  ...search,
                   queryStr: locationQuery?.toString(),
-                  period: search?.period,
                 });
               }}
               icon={isFocused ? <LinkIcon /> : <UnlinkIcon />}
@@ -165,19 +193,17 @@ export default function Korrel8rPanel() {
 
           {/* Time range drop-down */}
           <Flex align={{ default: 'alignRight' }} spaceItems={{ default: 'spaceItemsNone' }}>
-            <Tooltip content={t('Include data from this time range')}>
-              <TimeRangeDropdown
-                className="tp-plugin__compact-control"
-                period={search.period ?? defaultSearch.period}
-                onChange={(period: time.Period) => dispatchSearch({ ...search, period })}
-              />
-            </Tooltip>
+            <TimeRangeDropdown
+              className="tp-plugin__compact-control"
+              period={search.period ?? defaultSearch.period}
+              onChange={(period: time.Period) => dispatchSearch({ ...search, period })}
+            />
           </Flex>
 
           {/* Right aligned buttons */}
           <Flex align={{ default: 'alignRight' }} spaceItems={{ default: 'spaceItemsNone' }}>
             {/* Advanced search toggle */}
-            <Tooltip content={t('Advanced search parameters')}>
+            <Tooltip content={t('Advanced search parameters')} position="bottom-end">
               <ExpandableSectionToggle
                 contentId={advancedContentID}
                 toggleId={advancedToggleID}
@@ -189,8 +215,12 @@ export default function Korrel8rPanel() {
               </ExpandableSectionToggle>
             </Tooltip>
 
-            {/* Refresh button */}
-            <Tooltip content={t('Refresh the graph by re-running the current search.')}>
+            {/* Refresh / Cancel button */}
+            {cancel ? (
+              <Button variant="secondary" size="sm" onClick={handleCancel} aria-label={t('Cancel')}>
+                {t('Cancel')}
+              </Button>
+            ) : (
               <Button
                 variant="link"
                 size="sm"
@@ -200,7 +230,7 @@ export default function Korrel8rPanel() {
               >
                 <SyncIcon />
               </Button>
-            </Tooltip>
+            )}
           </Flex>
         </Flex>
 
@@ -214,7 +244,7 @@ export default function Korrel8rPanel() {
           <AdvancedSearchForm
             search={search}
             onSearch={dispatchSearch}
-            onCancel={() => setShowAdvanced(false)}
+            onClose={() => setShowAdvanced(false)}
           />
         </ExpandableSection>
 

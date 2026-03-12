@@ -183,14 +183,19 @@ function findGVK(group: string, version: string, kind: string): Model {
 // Return a model for the resource, can be G~V~K or path. Return undefined if not found.
 function findResource(resource: string): Model {
   if (!resource) return;
-  // Try as a G~V~K string.
+  // Try as a G~V~K string or plain Kind
   const [g, v, k] = resource.split('~');
   if (k) return findGVK(g === 'core' ? '' : g, v, k);
   // Try as a resource path
   if (resource === 'projects') resource = 'namespaces'; // Alias
-  return getCachedResources()?.models?.find(
-    (m: Model) => m.path === resource && m.verbs.includes('watch'),
-  );
+  let found: Model;
+  for (const m of getCachedResources()?.models || []) {
+    if (m.path === resource && m.verbs.includes('watch')) {
+      if (!m.apiGroup) return m; // Prefer core models
+      found = found || m;
+    }
+  }
+  return found;
 }
 
 function parseAPIVersion(apiVersion: string): [group: string, version: string] | undefined {

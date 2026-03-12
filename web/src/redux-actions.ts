@@ -1,6 +1,6 @@
 import { action, ActionType as Action } from 'typesafe-actions';
 import { Graph } from './korrel8r/types';
-import { Duration, HOUR, Period } from './time';
+import { Duration, Period, Unit } from './time';
 
 export enum ActionType {
   CloseTroubleshootingPanel = 'closeTroubleshootingPanel',
@@ -36,7 +36,7 @@ export const defaultSearch: Search = {
   queryStr: '',
   searchType: SearchType.Depth,
   depth: 3,
-  period: new Duration(1, HOUR),
+  period: new Duration(1, Unit.HOUR),
 };
 
 export const closeTP = () => action(ActionType.CloseTroubleshootingPanel);

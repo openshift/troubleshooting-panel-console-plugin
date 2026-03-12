@@ -32,7 +32,6 @@ export const DateTimePicker: React.FC<{
           }}
           is24Hour={true}
           menuAppendTo={() => document.body}
-          width="80px"
         />
       </InputGroupItem>
     </InputGroup>
