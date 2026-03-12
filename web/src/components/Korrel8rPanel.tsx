@@ -78,14 +78,14 @@ export default function Korrel8rPanel() {
   React.useEffect(() => {
     if (!search?.queryStr) {
       if (locationQuery?.toString())
-        dispatchSearch({ ...defaultSearch, queryStr: locationQuery.toString() });
+        dispatchSearch({ ...search, queryStr: locationQuery.toString() });
       else
         dispatchResult({
           title: t('Empty Query'),
           message: t('No starting point for correlation'),
         });
     }
-  }, [locationQuery, dispatchSearch, dispatchResult, search?.queryStr, t]);
+  }, [locationQuery, dispatchSearch, dispatchResult, search, search?.queryStr, t]);
 
   // Skip the first fetch if we already have a stored result.
   const useStoredResult = React.useRef(result != null);
@@ -181,9 +181,8 @@ export default function Korrel8rPanel() {
               size="sm"
               onClick={() => {
                 dispatchSearch({
-                  ...defaultSearch,
+                  ...search,
                   queryStr: locationQuery?.toString(),
-                  period: search?.period,
                 });
               }}
               icon={isFocused ? <LinkIcon /> : <UnlinkIcon />}
