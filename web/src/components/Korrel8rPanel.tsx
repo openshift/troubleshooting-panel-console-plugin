@@ -71,11 +71,18 @@ export default function Korrel8rPanel() {
     [dispatch],
   );
 
-  // Set up default locationQuery search on mount, when query is blank.
+  // Deal with empty queries - use location or set an "Empty" result.
   React.useEffect(() => {
-    if (!search?.queryStr && locationQuery?.toString())
-      dispatchSearch({ ...defaultSearch, queryStr: locationQuery.toString() });
-  }, [locationQuery, dispatchSearch, search?.queryStr]);
+    if (!search?.queryStr) {
+      if (locationQuery?.toString())
+        dispatchSearch({ ...defaultSearch, queryStr: locationQuery.toString() });
+      else
+        dispatchResult({
+          title: t('Empty Query'),
+          message: t('No starting point for correlation'),
+        });
+    }
+  }, [locationQuery, dispatchSearch, dispatchResult, search?.queryStr, t]);
 
   // Skip the first fetch if we already have a stored result.
   const useStoredResult = React.useRef(result != null);
@@ -86,11 +93,10 @@ export default function Korrel8rPanel() {
       useStoredResult.current = false; // Fetch a new result next time.
       return;
     }
+
     const queryStr = search?.queryStr;
-    if (!queryStr) {
-      dispatchResult({ title: t('Empty Query'), message: t('No starting point for correlation') });
-      return;
-    }
+    if (!queryStr) return;
+
     let cancelled = false;
     const start: api.Start = {
       queries: [queryStr],
