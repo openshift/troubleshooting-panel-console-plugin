@@ -1,7 +1,11 @@
 import * as React from 'react';
 import { useSelector } from 'react-redux';
 import { AlertDomain } from '../korrel8r/alert';
-import { allDomains } from '../korrel8r/all-domains';
+import { K8sDomain } from '../korrel8r/k8s';
+import { LogDomain } from '../korrel8r/log';
+import { MetricDomain } from '../korrel8r/metric';
+import { NetflowDomain } from '../korrel8r/netflow';
+import { TraceDomain } from '../korrel8r/trace';
 import { Domains } from '../korrel8r/types';
 import { State } from '../redux-reducers';
 
@@ -16,11 +20,17 @@ export const useDomains = () => {
     return new Map<string, string>(alertRules.map(({ id, name }) => [id, name]));
   }, [alertRules]);
 
-  const domains = React.useMemo(() => {
-    // Alert domain with IDs loaded from state.
-    const alert = new AlertDomain(alertIDs);
-    // Replace the default alert domain.
-    return new Domains(...allDomains.filter((d) => d.name !== alert.name), alert);
-  }, [alertIDs]);
+  const domains = React.useMemo(
+    () =>
+      new Domains(
+        new AlertDomain(alertIDs),
+        new K8sDomain(),
+        new LogDomain(),
+        new MetricDomain(),
+        new NetflowDomain(),
+        new TraceDomain(),
+      ),
+    [alertIDs],
+  );
   return domains;
 };

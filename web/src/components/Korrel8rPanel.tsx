@@ -44,10 +44,11 @@ export default function Korrel8rPanel() {
   const search: Search = useSelector((state: State) => state.plugins?.tp?.get('search'));
   const result: Result | null = useSelector((state: State) => state.plugins?.tp?.get('result'));
 
-  // Is the search panel already in focus on the main view?
+  // Disable focus button if the panel is already focused on the current location,
+  // or the current result is an error.
   const isFocused = React.useMemo(
-    () => locationQuery?.toString() === search.queryStr,
-    [locationQuery, search.queryStr],
+    () => locationQuery?.toString() === search.queryStr && !result?.isError,
+    [locationQuery, search.queryStr, result?.isError],
   );
 
   // Showing advanced query
@@ -71,11 +72,22 @@ export default function Korrel8rPanel() {
     [dispatch],
   );
 
-  // Set up default locationQuery search on mount, when query is blank.
+  // Create the initial result on startup.
+  // Use the current location or an explicit "Empty" result.
+  const initialized = React.useRef(false);
   React.useEffect(() => {
-    if (!search?.queryStr && locationQuery?.toString())
-      dispatchSearch({ ...defaultSearch, queryStr: locationQuery.toString() });
-  }, [locationQuery, dispatchSearch, search?.queryStr]);
+    if (initialized.current) return;
+    initialized.current = true;
+    if (!search?.queryStr && !result) {
+      if (locationQuery?.toString())
+        dispatchSearch({ ...defaultSearch, queryStr: locationQuery.toString() });
+      else
+        dispatchResult({
+          title: t('Empty Query'),
+          message: t('No starting point for correlation'),
+        });
+    }
+  }, [locationQuery, dispatchSearch, dispatchResult, search?.queryStr, result, t]);
 
   // Skip the first fetch if we already have a stored result.
   const useStoredResult = React.useRef(result != null);
@@ -87,10 +99,8 @@ export default function Korrel8rPanel() {
       return;
     }
     const queryStr = search?.queryStr;
-    if (!queryStr) {
-      dispatchResult({ title: t('Empty Query'), message: t('No starting point for correlation') });
-      return;
-    }
+    if (!queryStr) return;
+
     let cancelled = false;
     const start: api.Start = {
       queries: [queryStr],
@@ -141,7 +151,7 @@ export default function Korrel8rPanel() {
             content={
               locationQuery
                 ? isFocused
-                  ? t('Correlation graph is already focused on the current view.')
+                  ? t('Correlation graph is focused on the current view.')
                   : t('Focus the correlation on the current view.')
                 : t('Current view does not provide a starting point for correlation')
             }
