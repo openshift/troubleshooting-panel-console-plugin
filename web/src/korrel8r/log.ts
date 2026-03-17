@@ -46,13 +46,16 @@ export class LogDomain extends Domain {
     if (!logClass) throw this.badQuery(query, 'unknown class');
     return new URIRef('monitoring/logs', {
       // Try to translate as a direct pod selector, otherwise use as logQL query
-      q: directToLogQL(query.selector) || query.selector,
+      q: addJSONFilter(directToLogQL(query.selector) || query.selector),
       tenant: logClass,
       start: unixMilliseconds(constraint?.start),
       end: unixMilliseconds(constraint?.end),
     });
   }
 }
+
+// Add a JSON filter if not already present.
+const addJSONFilter = (logQL: string) => (logQL.match(/\| *json/) ? logQL : logQL + '|json');
 
 /**
  * Converts a string to a legal Loki label name by replacing illegal characters with underscores.
@@ -85,8 +88,8 @@ const directToLogQL = (maybeDirect: string): string | undefined => {
     const pipeline =
       direct?.labels && typeof direct.labels === 'object'
         ? Object.entries(direct.labels)
-            .map(([k, v]) => `|kubernetes_labels_${cleanLokiLabel(k)}="${v}"`)
-            .join('')
+          .map(([k, v]) => `|kubernetes_labels_${cleanLokiLabel(k)}="${v}"`)
+          .join('')
         : '';
     return `{${streams}}${pipeline ? '|json' + pipeline : ''}`;
   } catch {
