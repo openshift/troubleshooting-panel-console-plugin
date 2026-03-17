@@ -2,10 +2,10 @@ import { Badge, Title } from '@patternfly/react-core';
 import {
   action,
   BadgeLocation,
-  BreadthFirstLayout,
   ComponentFactory,
   ContextMenuItem,
   createTopologyControlButtons,
+  DagreLayout,
   defaultControlButtonsOptions,
   DefaultEdge,
   DefaultGroup,
@@ -27,6 +27,8 @@ import {
   VisualizationSurface,
   withContextMenu,
   WithContextMenuProps,
+  withDragNode,
+  WithDragNodeProps,
   withPanZoom,
   withSelection,
   WithSelectionProps,
@@ -37,6 +39,13 @@ import { useNavigateToQuery } from '../../hooks/useNavigateToQuery';
 import * as korrel8r from '../../korrel8r/types';
 import { getIcon } from '../icons';
 import './korrel8rtopology.css';
+
+// DagreLayout with straight edges (no angular bendpoints).
+class StraightEdgeDagreLayout extends DagreLayout {
+  protected updateEdgeBendpoints(): void {
+    // no-op: skip bendpoints for straight edges between nodes.
+  }
+}
 
 const capitalize = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : '');
 
@@ -59,8 +68,8 @@ interface Korrel8rTopologyNodeProps {
 }
 
 const Korrel8rTopologyNode: React.FC<
-  Korrel8rTopologyNodeProps & WithContextMenuProps & WithSelectionProps
-> = ({ element, onSelect, selected, onContextMenu, contextMenuOpen }) => {
+  Korrel8rTopologyNodeProps & WithContextMenuProps & WithSelectionProps & WithDragNodeProps
+> = ({ element, onSelect, selected, onContextMenu, contextMenuOpen, dragNodeRef }) => {
   const node = element.getData();
   const topologyNode = (
     <DefaultNode
@@ -69,13 +78,17 @@ const Korrel8rTopologyNode: React.FC<
       selected={selected}
       onContextMenu={onContextMenu}
       contextMenuOpen={contextMenuOpen}
+      dragNodeRef={dragNodeRef}
       hover={false}
       label={nodeLabel(node)}
       badge={nodeBadge(node)}
+      badgeColor="var(--pf-t--global--background--color--secondary--default)"
+      badgeTextColor="var(--pf-t--global--text--color--regular)"
+      badgeBorderColor="var(--pf-t--global--border--color--default)"
       badgeLocation={BadgeLocation.below}
     >
       <g transform={`translate(25, 25)`}>{getIcon(node.class)}</g>
-    </DefaultNode>
+    </DefaultNode >
   );
   if (node.error) {
     // Gray out, add error tool tip
@@ -186,7 +199,7 @@ export const Korrel8rTopology: React.FC<{
         case ModelKind.graph:
           return withPanZoom()(GraphComponent);
         case ModelKind.node:
-          return withContextMenu(nodeMenu)(withSelection()(Korrel8rTopologyNode));
+          return withDragNode()(withContextMenu(nodeMenu)(withSelection()(Korrel8rTopologyNode)));
         case ModelKind.edge:
           return DefaultEdge;
         default:
@@ -203,12 +216,15 @@ export const Korrel8rTopology: React.FC<{
       graph: {
         id: 'korrel8r_graph',
         type: 'graph',
-        layout: 'BreadthFirst',
+        layout: 'Dagre',
       },
     };
 
     const controller = new Visualization();
-    controller.registerLayoutFactory((_, graph: Graph) => new BreadthFirstLayout(graph));
+    controller.registerLayoutFactory(
+      (_, graph: Graph) =>
+        new StraightEdgeDagreLayout(graph, { rankdir: 'TB', ranksep: 20, nodeDistance: 10 }),
+    );
     controller.fromModel(model, false);
     return controller;
   }, [nodes, edges]);
@@ -252,7 +268,9 @@ export const Korrel8rTopology: React.FC<{
               zoomOutCallback: action(() => {
                 controller.getGraph().scaleBy(0.75);
               }),
-              fitToScreen: false, // Same thing as resetView
+              fitToScreenCallback: action(() => {
+                controller.getGraph().fit(PADDING);
+              }),
               resetViewCallback: action(() => {
                 controller.getGraph().reset();
                 controller.getGraph().layout();

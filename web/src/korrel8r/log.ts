@@ -88,8 +88,8 @@ const directToLogQL = (maybeDirect: string): string | undefined => {
     const pipeline =
       direct?.labels && typeof direct.labels === 'object'
         ? Object.entries(direct.labels)
-          .map(([k, v]) => `|kubernetes_labels_${cleanLokiLabel(k)}="${v}"`)
-          .join('')
+            .map(([k, v]) => `|kubernetes_labels_${cleanLokiLabel(k)}="${v}"`)
+            .join('')
         : '';
     return `{${streams}}${pipeline ? '|json' + pipeline : ''}`;
   } catch {
