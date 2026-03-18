@@ -11,6 +11,7 @@
   "Custom": "Custom",
   "Custom duration": "Custom duration",
   "Custom time range": "Custom time range",
+  "days": "days",
   "Empty Query": "Empty Query",
   "Empty Result": "Empty Result",
   "End time must be after start time": "End time must be after start time",
@@ -19,9 +20,11 @@
   "Focus the correlation on the current view.": "Focus the correlation on the current view.",
   "From": "From",
   "Goals": "Goals",
+  "hours": "hours",
   "Include data from this time range": "Include data from this time range",
   "Last": "Last",
   "Logging Plugin Disabled": "Logging Plugin Disabled",
+  "minutes": "minutes",
   "Neighbours": "Neighbours",
   "Neighbours or Goal search": "Neighbours or Goal search",
   "Netflow Plugin Disabled": "Netflow Plugin Disabled",
@@ -39,6 +42,7 @@
   "Search Failed": "Search Failed",
   "Search Type": "Search Type",
   "Searching": "Searching",
+  "seconds": "seconds",
   "Select starting data": "Select starting data",
   "Start Query": "Start Query",
   "Start-end time range": "Start-end time range",
@@ -46,5 +50,6 @@
   "Troubleshooting": "Troubleshooting",
   "Troubleshooting Panel": "Troubleshooting Panel",
   "Unable to find Console Link": "Unable to find Console Link",
-  "Update the correlation graph": "Update the correlation graph"
+  "Update the correlation graph": "Update the correlation graph",
+  "weeks": "weeks"
 }

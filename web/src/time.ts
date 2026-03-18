@@ -11,7 +11,7 @@ export interface Period {
 export class Duration implements Period {
   constructor(public readonly count: number, public readonly unit: Unit) {}
   duration(): number {
-    return this.count * this.unit.value;
+    return this.count * this.unit;
   }
   startEnd(): [Date, Date] {
     const end = new Date();
@@ -27,25 +27,16 @@ export class Range implements Period {
   }
 }
 
-/** Named time unit: seconds, minutes, hours etc. */
-export class Unit {
-  constructor(public readonly name: string, public readonly value: number) {
-    Unit.byName[this.name] = this;
-  }
-  static byName = new Map<string, Unit>();
-  static all() {
-    return Object.values(Unit.byName).sort((a, b) => a.value - b.value);
-  }
-  static get(name: string): Unit {
-    return Unit.byName[name];
-  }
+export enum Unit {
+  SECOND = 1000,
+  MINUTE = 60 * SECOND,
+  HOUR = 60 * MINUTE,
+  DAY = 24 * HOUR,
+  WEEK = 7 * DAY,
 }
 
-export const SECOND = new Unit('seconds', 1000);
-export const MINUTE = new Unit('minutes', 60 * SECOND.value);
-export const HOUR = new Unit('hours', 60 * MINUTE.value);
-export const DAY = new Unit('days', 24 * HOUR.value);
-export const WEEK = new Unit('weeks', 7 * DAY.value);
+export const units: Unit[] = [Unit.SECOND, Unit.MINUTE, Unit.HOUR, Unit.DAY, Unit.WEEK];
+export const [SECOND, MINUTE, HOUR, DAY, WEEK] = units;
 
 /** Modify a Date by setting the time-of-day part only.
  *  @returns the modified date.
@@ -70,3 +61,12 @@ export const copyTime = (to: Date, from: Date): Date => {
 
 // NOTE: Define our own isValidDate - don't import react modules in a plain .ts file.
 export const isValidDate = (date?: Date) => Boolean(date && !isNaN(date.valueOf()));
+
+export const formatDate = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}`;
+};

@@ -18,6 +18,7 @@ import {
 } from '@patternfly/react-core';
 import * as React from 'react';
 import { TFunction, useTranslation } from 'react-i18next';
+import { useTimeUnitLabel } from '../hooks/useTimeUnitLabel';
 import * as time from '../time';
 import { DateTimePicker } from './DateTimePicker';
 import { TimeUnitPicker } from './TimeUnitPicker';
@@ -44,21 +45,6 @@ const keyFromPeriod = (period: time.Period): string => {
   return CUSTOM_RANGE_KEY;
 };
 
-const formatDate = (d: Date): string =>
-  d
-    .toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short', hour12: false })
-    .replace(/,/g, '');
-
-const labelFromPeriod = (period: time.Period, t: TFunction): string => {
-  if (period instanceof time.Duration) {
-    return `${t('Last')} ${period.count} ${t(period.unit.name)}`;
-  }
-  if (period instanceof time.Range) {
-    return `${formatDate(period.start)}–${formatDate(period.end)}`;
-  }
-  return t('Custom');
-};
-
 interface TimeRangeModalProps {
   initialRange: time.Range;
   onSave: (range: time.Range) => void;
@@ -69,7 +55,6 @@ const TimeRangeModal: React.FC<TimeRangeModalProps> = ({ initialRange, onSave, o
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
   const [start, setStart] = React.useState(initialRange.start);
   const [end, setEnd] = React.useState(initialRange.end);
-
   const isValid = start < end;
 
   return (
@@ -199,6 +184,20 @@ export const TimeRangeDropdown: React.FC<TimeRangeDropdownProps> = ({
   const initialDuration = React.useMemo(
     () => (period instanceof time.Duration ? period : new time.Duration(1, time.DAY)),
     [period],
+  );
+
+  const timeUnitLabel = useTimeUnitLabel();
+  const labelFromPeriod = React.useCallback(
+    (period: time.Period, t: TFunction): string => {
+      if (period instanceof time.Duration) {
+        return `${t('Last')} ${period.count} ${timeUnitLabel(period.unit)}`;
+      }
+      if (period instanceof time.Range) {
+        return `${time.formatDate(period.start)} – ${time.formatDate(period.end)}`;
+      }
+      return t('Custom');
+    },
+    [timeUnitLabel],
   );
 
   return (
