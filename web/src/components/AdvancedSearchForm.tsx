@@ -30,13 +30,13 @@ import { HelpPopover } from './HelpPopover';
 interface AdvancedSearchFormProps {
   search: Search;
   onSearch: (search: Search) => void;
-  onCancel: () => void;
+  onClose: () => void;
 }
 
 export const AdvancedSearchForm: React.FC<AdvancedSearchFormProps> = ({
   search,
   onSearch,
-  onCancel,
+  onClose,
 }) => {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
   const domains = useDomains();
@@ -283,8 +283,8 @@ export const AdvancedSearchForm: React.FC<AdvancedSearchFormProps> = ({
             </Button>
           </Tooltip>
         </div>
-        <Button variant="secondary" size="sm" onClick={onCancel}>
-          {t('Cancel')}
+        <Button variant="secondary" size="sm" onClick={onClose}>
+          {t('Close')}
         </Button>
       </ActionGroup>
     </Form>

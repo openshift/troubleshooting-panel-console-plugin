@@ -23,12 +23,14 @@ export type Search = {
   period?: Period;
 };
 
-// Result displayed in troubleshooting panel, graph or error.
+// Result displayed in troubleshooting panel, graph or message.
 export type Result = {
-  graph?: Graph;
-  message?: string;
-  title?: string;
+  graph?: Graph; // Successful result
+  // True means the call failed and can/should be re-tried.
+  // False means the call should not be re-tried, it is impossible or succeeded with empty results.
   isError?: boolean;
+  title?: string; // Title when there is no graph.
+  message?: string; // Message when there is no graph.
 };
 
 // Default search parameters do a neighbourhood search of depth 3.
