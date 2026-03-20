@@ -1,3 +1,12 @@
 .tp-plugin__topology_invalid_node {
   cursor: not-allowed;
 }
+
+.tp-plugin__topology_node_badge rect {
+  fill: var(--pf-t--global--color--brand--default);
+  stroke: var(--pf-t--global--color--brand--default);
+}
+
+.tp-plugin__topology_node_badge text {
+  fill: var(--pf-t--global--text--color--on-brand--default);
+}
