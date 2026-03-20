@@ -1,12 +1,14 @@
 import { action, ActionType as Action } from 'typesafe-actions';
 import { Graph } from './korrel8r/types';
 import { Duration, HOUR, Period } from './time';
+import { TraceContext } from './utils/traceStoreUtils';
 
 export enum ActionType {
   CloseTroubleshootingPanel = 'closeTroubleshootingPanel',
   OpenTroubleshootingPanel = 'openTroubleshootingPanel',
   SetSearch = 'setSearch',
   SetResult = 'setResult',
+  SetTraceContext = 'setTraceContext',
 }
 
 export enum SearchType {
@@ -43,12 +45,15 @@ export const closeTP = () => action(ActionType.CloseTroubleshootingPanel);
 export const openTP = () => action(ActionType.OpenTroubleshootingPanel);
 export const setSearch = (search: Search) => action(ActionType.SetSearch, search);
 export const setResult = (result: Result | null) => action(ActionType.SetResult, result);
+export const setTraceContext = (traceContext: TraceContext | null) =>
+  action(ActionType.SetTraceContext, traceContext);
 
 export const actions = {
   closeTP,
   openTP,
   setSearch,
   setResult,
+  setTraceContext,
 };
 
 export type TPAction = Action<typeof actions>;

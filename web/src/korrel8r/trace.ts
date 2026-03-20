@@ -6,8 +6,10 @@ import { Class, Constraint, Domain, Query, unixMilliseconds, URIRef } from './ty
 // Search for get selected spans
 //   observe/traces/?namespace=<tempoNamespace>&name=<tempoName>&tenant=<tempoTenant>&q=<traceQL>
 
-// TODO hard-coded tempo location, need to make this configurable between console & korrel8r.
-// Get from the console page environment (change from using URL as context?)
+// NOTE: Default tempo location for generating links.
+// When the troubleshooting panel opens, it reads the actual tenant from the URL
+// and updates korrel8r's trace store configuration via PUT /stores/trace.
+// These defaults are used when generating links back to the console.
 const [tempoNamespace, tempoName, tempoTenant] = ['openshift-tracing', 'platform', 'platform'];
 
 export class TraceDomain extends Domain {

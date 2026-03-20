@@ -25,11 +25,20 @@ import { TFunction, useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocationQuery } from '../hooks/useLocationQuery';
 import { usePluginAvailable } from '../hooks/usePluginAvailable';
-import { getGoalsGraph, getNeighborsGraph } from '../korrel8r-client';
+import { getGoalsGraph, getNeighborsGraph, replaceTraceStore } from '../korrel8r-client';
 import * as api from '../korrel8r/client';
 import * as korrel8r from '../korrel8r/types';
-import { defaultSearch, Result, Search, SearchType, setResult, setSearch } from '../redux-actions';
+import {
+  defaultSearch,
+  Result,
+  Search,
+  SearchType,
+  setResult,
+  setSearch,
+  setTraceContext,
+} from '../redux-actions';
 import { State } from '../redux-reducers';
+import { buildTraceStoreConfig, extractTraceContext, TraceContext } from '../utils/traceStoreUtils';
 import * as time from '../time';
 import { AdvancedSearchForm } from './AdvancedSearchForm';
 import './korrel8rpanel.css';
@@ -43,6 +52,9 @@ export default function Korrel8rPanel() {
 
   const search: Search = useSelector((state: State) => state.plugins?.tp?.get('search'));
   const result: Result | null = useSelector((state: State) => state.plugins?.tp?.get('result'));
+  const storedTraceContext: TraceContext | null = useSelector((state: State) =>
+    state.plugins?.tp?.get('traceContext'),
+  );
 
   // Disable focus button if the panel is already focused on the current location,
   // or the current result is an error.
@@ -92,6 +104,13 @@ export default function Korrel8rPanel() {
   // Skip the first fetch if we already have a stored result.
   const useStoredResult = React.useRef(result != null);
 
+  // Helper function to check if two TraceContexts are different
+  const traceContextsDiffer = (a: TraceContext | null, b: TraceContext | null): boolean => {
+    if (!a && !b) return false;
+    if (!a || !b) return true;
+    return a.namespace !== b.namespace || a.name !== b.name || a.tenant !== b.tenant;
+  };
+
   // Fetch a new result from the korrel8r service when the search changes.
   React.useEffect(() => {
     if (useStoredResult.current) {
@@ -102,37 +121,77 @@ export default function Korrel8rPanel() {
     if (!queryStr) return;
 
     let cancelled = false;
-    const start: api.Start = {
-      queries: [queryStr],
-      constraint: constraint?.toAPI(),
+
+    // Check if we need to update the trace store based on current URL
+    const currentTraceContext = extractTraceContext();
+    const needsTraceStoreUpdate = traceContextsDiffer(currentTraceContext, storedTraceContext);
+
+    // Helper to perform the korrel8r fetch
+    const performFetch = () => {
+      const start: api.Start = {
+        queries: [queryStr],
+        constraint: constraint?.toAPI(),
+      };
+
+      const fetch =
+        search.searchType === SearchType.Goal
+          ? getGoalsGraph({ start, goals: [search.goal] })
+          : getNeighborsGraph({ start, depth: search.depth });
+      fetch
+        .then((response: api.Graph) => {
+          if (cancelled) return;
+          dispatchResult(
+            Array.isArray(response?.nodes) && response.nodes.length > 0
+              ? { graph: new korrel8r.Graph(response) }
+              : { title: t('Empty Result'), message: t('No correlated data found') },
+          );
+        })
+        .catch((e: api.ApiError) => {
+          if (cancelled) return;
+          dispatchResult({
+            title: e?.body?.error ? t('Search Error') : t('Search Failed'),
+            message: e?.body?.error || e.message || 'Unknown Error',
+            isError: true,
+          });
+        });
+      return fetch;
     };
 
-    const fetch =
-      search.searchType === SearchType.Goal
-        ? getGoalsGraph({ start, goals: [search.goal] })
-        : getNeighborsGraph({ start, depth: search.depth });
-    fetch
-      .then((response: api.Graph) => {
-        if (cancelled) return;
-        dispatchResult(
-          Array.isArray(response?.nodes) && response.nodes.length > 0
-            ? { graph: new korrel8r.Graph(response) }
-            : { title: t('Empty Result'), message: t('No correlated data found') },
-        );
-      })
-      .catch((e: api.ApiError) => {
-        if (cancelled) return;
-        dispatchResult({
-          title: e?.body?.error ? t('Search Error') : t('Search Failed'),
-          message: e?.body?.error || e.message || 'Unknown Error',
-          isError: true,
+    // If trace context changed, update the backend trace store first
+    if (needsTraceStoreUpdate && currentTraceContext) {
+      const storeConfig = buildTraceStoreConfig(currentTraceContext);
+      const timeoutMs = 3000;
+
+      Promise.race([
+        replaceTraceStore(storeConfig),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Trace store update timed out')), timeoutMs),
+        ),
+      ])
+        .then(() => {
+          if (cancelled) return;
+          // eslint-disable-next-line no-console
+          console.log('Trace store updated for tenant:', currentTraceContext.tenant);
+          dispatch(setTraceContext(currentTraceContext));
+          performFetch();
+        })
+        .catch((error) => {
+          if (cancelled) return;
+          // Log error but continue with fetch - panel will work with other domains
+          // eslint-disable-next-line no-console
+          console.error('Failed to update trace store:', error);
+          dispatch(setTraceContext(currentTraceContext));
+          performFetch();
         });
-      });
+    } else {
+      // No trace context change, just perform the fetch
+      performFetch();
+    }
+
     return () => {
       cancelled = true;
-      fetch.cancel();
     };
-  }, [search, constraint, dispatchResult, t]);
+  }, [search, constraint, dispatchResult, dispatch, storedTraceContext, t]);
 
   const advancedToggleID = 'query-toggle';
   const advancedContentID = 'query-content';
