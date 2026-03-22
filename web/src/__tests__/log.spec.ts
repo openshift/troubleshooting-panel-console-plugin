@@ -74,13 +74,29 @@ describe('LogDomain.queryToLink', () => {
     {
       // LogQL query
       query: `log:infrastructure:{kubernetes_namespace_name="default",kubernetes_pod_name="foo"}`,
-      q: '{kubernetes_namespace_name="default",kubernetes_pod_name="foo"}',
+      q: '{kubernetes_namespace_name="default",kubernetes_pod_name="foo"}|json',
       tenant: 'infrastructure',
     },
     {
-      // k8s Pod query
+      // LogQL query already has |json - no duplication
+      query:
+        'log:infrastructure:' +
+        '{kubernetes_namespace_name="default",kubernetes_pod_name="foo"}|json',
+      q: '{kubernetes_namespace_name="default",kubernetes_pod_name="foo"}|json',
+      tenant: 'infrastructure',
+    },
+    {
+      // LogQL query with |json mid-pipeline - no duplication
+      query:
+        'log:infrastructure:' +
+        '{kubernetes_namespace_name="default"}|json|kubernetes_labels_app="foo"',
+      q: '{kubernetes_namespace_name="default"}|json|kubernetes_labels_app="foo"',
+      tenant: 'infrastructure',
+    },
+    {
+      // k8s Pod query - |json appended automatically
       query: 'log:infrastructure:{"namespace":"default","name":"foo"}',
-      q: '{kubernetes_namespace_name="default",kubernetes_pod_name="foo"}',
+      q: '{kubernetes_namespace_name="default",kubernetes_pod_name="foo"}|json',
       tenant: 'infrastructure',
     },
     {
@@ -92,7 +108,7 @@ describe('LogDomain.queryToLink', () => {
     {
       // k8s partial query
       query: 'log:infrastructure:{"namespace":"default","labels":{}}',
-      q: '{kubernetes_namespace_name="default"}',
+      q: '{kubernetes_namespace_name="default"}|json',
       tenant: 'infrastructure',
     },
     {
@@ -104,8 +120,9 @@ describe('LogDomain.queryToLink', () => {
     },
 
     {
+      // Empty query - |json appended automatically
       query: 'log:application:{}',
-      q: '{}',
+      q: '{}|json',
       tenant: 'application',
     },
   ])('$query', ({ query, q, tenant }) => {
