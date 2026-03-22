@@ -35,3 +35,26 @@ export const getGoalsGraph = (goals: Goals) => {
 
   return korrel8rClient.default.postGraphsGoals(goals);
 };
+
+export interface StoreConfig {
+  domain: string;
+  tempoStack?: string;
+  certificateAuthority?: string;
+  [key: string]: string | undefined;
+}
+
+export const replaceTraceStore = async (storeConfig: StoreConfig): Promise<void> => {
+  const response = await fetch(`${KORREL8R_ENDPOINT}/stores/trace`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCSRFToken(),
+    },
+    body: JSON.stringify(storeConfig),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to replace trace store: ${response.status} ${errorText}`);
+  }
+};
