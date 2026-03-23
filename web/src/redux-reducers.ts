@@ -20,6 +20,7 @@ const reducer = (state: TPState, action: TPAction): TPState => {
       isOpen: false,
       search: defaultSearch,
       result: null,
+      traceContext: null,
     });
   }
 
@@ -35,6 +36,9 @@ const reducer = (state: TPState, action: TPAction): TPState => {
 
     case ActionType.SetResult:
       return state.set('result', action.payload);
+
+    case ActionType.SetTraceContext:
+      return state.set('traceContext', action.payload);
 
     default:
       break;
