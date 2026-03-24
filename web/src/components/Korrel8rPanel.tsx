@@ -54,6 +54,9 @@ export default function Korrel8rPanel() {
   // Showing advanced query
   const [showAdvanced, setShowAdvanced] = React.useState(false);
 
+  const cancelRef = React.useRef<(() => void) | null>(null);
+  const [isLoading, setIsLoading] = React.useState(false);
+
   // Compute constraint from search period.
   const constraint = React.useMemo((): korrel8r.Constraint | undefined => {
     if (!search.period) return undefined;
@@ -94,14 +97,24 @@ export default function Korrel8rPanel() {
 
   // Fetch a new result from the korrel8r service when the search changes.
   React.useEffect(() => {
+    // Cancel previous
+    if (cancelRef.current) {
+      cancelRef.current();
+      cancelRef.current = null;
+      setIsLoading(false);
+    }
+
+    // Used the stored result on first open, if there is one.
     if (useStoredResult.current) {
       useStoredResult.current = false; // Fetch a new result next time.
       return;
     }
-    const queryStr = search?.queryStr;
-    if (!queryStr) return;
 
-    let cancelled = false;
+    const queryStr = search?.queryStr;
+    if (!queryStr) {
+      dispatchResult({ title: t('Empty Query'), message: t('No starting point for correlation') });
+      return;
+    }
     const start: api.Start = {
       queries: [queryStr],
       constraint: constraint?.toAPI(),
@@ -111,25 +124,43 @@ export default function Korrel8rPanel() {
       search.searchType === SearchType.Goal
         ? getGoalsGraph({ start, goals: [search.goal] })
         : getNeighborsGraph({ start, depth: search.depth });
+
+    setIsLoading(true);
+    const cancel = () => fetch.cancel();
+    cancelRef.current = cancel;
+    const anotherFetchIsRunning = () => cancelRef.current !== cancel;
     fetch
       .then((response: api.Graph) => {
-        if (cancelled) return;
+        if (anotherFetchIsRunning()) return;
         dispatchResult(
           Array.isArray(response?.nodes) && response.nodes.length > 0
             ? { graph: new korrel8r.Graph(response) }
             : { title: t('Empty Result'), message: t('No correlated data found') },
         );
       })
-      .catch((e: api.ApiError) => {
-        if (cancelled) return;
-        dispatchResult({
-          title: e?.body?.error ? t('Search Error') : t('Search Failed'),
-          message: e?.body?.error || e.message || 'Unknown Error',
-          isError: true,
-        });
+      .catch((e) => {
+        if (anotherFetchIsRunning()) return;
+        if (e instanceof api.CancelError) {
+          dispatchResult({
+            title: t('Canceled'),
+            message: t('Search was interrupted'),
+            isError: true,
+          });
+        } else {
+          dispatchResult({
+            title: e?.body?.error ? t('Search Error') : t('Search Failed'),
+            message: e?.body?.error || e.message || 'Unknown Error',
+            isError: true,
+          });
+        }
+      })
+      .finally(() => {
+        if (anotherFetchIsRunning()) return;
+        cancelRef.current = null;
+        setIsLoading(false);
       });
     return () => {
-      cancelled = true;
+      if (!anotherFetchIsRunning()) cancelRef.current = null;
       fetch.cancel();
     };
   }, [search, constraint, dispatchResult, t]);
@@ -198,18 +229,29 @@ export default function Korrel8rPanel() {
               </ExpandableSectionToggle>
             </Tooltip>
 
-            {/* Refresh button */}
-            <Tooltip content={t('Refresh the graph by re-running the current search.')}>
+            {/* Refresh / Cancel button */}
+            {isLoading ? (
               <Button
-                variant="link"
+                variant="secondary"
                 size="sm"
-                isAriaDisabled={!search?.queryStr}
-                onClick={() => dispatchSearch(search)}
-                aria-label={t('Refresh')}
+                onClick={() => cancelRef.current?.()}
+                aria-label={t('Cancel')}
               >
-                <SyncIcon />
+                {t('Cancel')}
               </Button>
-            </Tooltip>
+            ) : (
+              <Tooltip content={t('Refresh the graph by re-running the current search.')}>
+                <Button
+                  variant="link"
+                  size="sm"
+                  isAriaDisabled={!search?.queryStr}
+                  onClick={() => dispatchSearch(search)}
+                  aria-label={t('Refresh')}
+                >
+                  <SyncIcon />
+                </Button>
+              </Tooltip>
+            )}
           </Flex>
         </Flex>
 
@@ -223,14 +265,14 @@ export default function Korrel8rPanel() {
           <AdvancedSearchForm
             search={search}
             onSearch={dispatchSearch}
-            onCancel={() => setShowAdvanced(false)}
+            onClose={() => setShowAdvanced(false)}
           />
         </ExpandableSection>
 
         <Divider />
 
         <StackItem className="tp-plugin__panel-topology-container" isFilled={true}>
-          <Topology result={result} t={t} constraint={constraint} />
+          <Topology isLoading={isLoading} result={result} t={t} constraint={constraint} />
         </StackItem>
       </Stack>
     </>
@@ -238,16 +280,17 @@ export default function Korrel8rPanel() {
 }
 
 interface TopologyProps {
+  isLoading?: boolean;
   result?: Result;
   constraint?: korrel8r.Constraint;
   t: TFunction;
 }
 
-const Topology: React.FC<TopologyProps> = ({ result, t, constraint }) => {
+const Topology: React.FC<TopologyProps> = ({ isLoading, result, t, constraint }) => {
   const [loggingAvailable, loggingAvailableLoading] = usePluginAvailable('logging-view-plugin');
   const [netobserveAvailable, netobserveAvailableLoading] = usePluginAvailable('netobserv-plugin');
 
-  if (!result || loggingAvailableLoading || netobserveAvailableLoading) {
+  if (isLoading || loggingAvailableLoading || netobserveAvailableLoading) {
     // korrel8r query is loading or the plugin checks are loading
     return <Searching />;
   }
@@ -266,10 +309,10 @@ const Topology: React.FC<TopologyProps> = ({ result, t, constraint }) => {
 
   return (
     <TopologyInfoState
-      titleText={result.title || t('No Correlated Signals Found')}
+      titleText={result?.title || t('No Correlated Signals Found')}
       // Only display fisrt 400 characters of error to prevent repeating errors
-      text={result.message ? result.message.slice(0, 400) : t('Correlation result was empty.')}
-      isError={result.isError}
+      text={result?.message ? result?.message.slice(0, 400) : t('No results.')}
+      isError={result?.isError}
     />
   );
 };
