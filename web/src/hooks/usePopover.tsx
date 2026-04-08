@@ -1,16 +1,16 @@
 import { useModal } from '@openshift-console/dynamic-plugin-sdk';
-import * as React from 'react';
 
 import { useSelector } from 'react-redux';
 import Popover from '../components/Popover';
 import { State } from '../redux-reducers';
+import { useEffect } from 'react';
 
 const usePopover = () => {
   const isOpen = useSelector((state: State) => state.plugins?.tp?.get('isOpen'));
 
   const launchModal = useModal();
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (launchModal && isOpen) {
       launchModal?.(
         Popover,

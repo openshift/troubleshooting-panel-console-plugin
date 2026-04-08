@@ -146,7 +146,7 @@ systemctl reboot
 You can use the `useTranslation` hook with the `plugin__troubleshooting-panel-console-plugin` with this namespace as follows:
 
 ```tsx
-const Header: React.FC = () => {
+const Header: FC = () => {
   const { t } = useTranslation("plugin__troubleshooting-panel-console-plugin");
   return <h1>{t("Hello, World!")}</h1>;
 };

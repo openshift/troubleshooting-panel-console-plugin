@@ -2,14 +2,13 @@ import { Map as ImmutableMap } from 'immutable';
 
 import { ActionType, TPAction, defaultSearch } from './redux-actions';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type TPState = ImmutableMap<string, any>;
 
 export type State = {
   observe: TPState;
   plugins: {
     tp: TPState;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     mp: any;
   };
 };

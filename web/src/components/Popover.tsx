@@ -1,7 +1,6 @@
 import { useActivePerspective } from '@openshift-console/dynamic-plugin-sdk';
 import { Button, Flex, FlexItem, Stack, StackItem, Title } from '@patternfly/react-core';
 import { TimesCircleIcon } from '@patternfly/react-icons';
-import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { closeTP } from '../redux-actions';
@@ -9,6 +8,7 @@ import { State } from '../redux-reducers';
 import { HelpPopover } from './HelpPopover';
 import Korrel8rPanel from './Korrel8rPanel';
 import './popover.css';
+import { useCallback, useEffect } from 'react';
 
 export default function Popover() {
   const dispatch = useDispatch();
@@ -17,11 +17,11 @@ export default function Popover() {
 
   const isOpen = useSelector((state: State) => state.plugins?.tp?.get('isOpen'));
 
-  const close = React.useCallback(() => {
+  const close = useCallback(() => {
     dispatch(closeTP());
   }, [dispatch]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (activePerspective !== 'admin' && isOpen) {
       close();
     }

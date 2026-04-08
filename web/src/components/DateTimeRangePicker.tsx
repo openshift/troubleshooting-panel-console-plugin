@@ -1,4 +1,3 @@
-import * as React from 'react';
 import {
   Flex,
   FlexItem,
@@ -9,6 +8,7 @@ import {
   TimePicker,
   yyyyMMddFormat,
 } from '@patternfly/react-core';
+import { FC } from 'react';
 
 interface DateTimeRangePickerProps {
   from: Date | null;
@@ -16,7 +16,7 @@ interface DateTimeRangePickerProps {
   onDateChange: (type: 'start' | 'end', newDate: Date, hour?: number, minute?: number) => void;
 }
 
-const DateTimeRangePicker: React.FC<DateTimeRangePickerProps> = ({ from, to, onDateChange }) => {
+const DateTimeRangePicker: FC<DateTimeRangePickerProps> = ({ from, to, onDateChange }) => {
   const toValidator = (date: Date): string => {
     // Date comparison validation
     return isValidDate(from) && yyyyMMddFormat(date) >= yyyyMMddFormat(from)

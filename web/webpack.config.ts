@@ -1,10 +1,10 @@
 /* eslint-env node */
 
+import CopyWebpackPlugin from 'copy-webpack-plugin';
 import { Configuration as WebpackConfiguration } from 'webpack';
 import { Configuration as WebpackDevServerConfiguration } from 'webpack-dev-server';
 import * as path from 'path';
 import { ConsoleRemotePlugin } from '@openshift-console/dynamic-plugin-sdk-webpack';
-import CopyWebpackPlugin from 'copy-webpack-plugin';
 
 interface Configuration extends WebpackConfiguration {
   devServer?: WebpackDevServerConfiguration;
@@ -26,13 +26,23 @@ const config: Configuration = {
   module: {
     rules: [
       {
-        test: /\.(jsx?|tsx?)$/,
-        exclude: /node_modules/,
+        test: /\.scss$/,
+        exclude: /node_modules\/(?!(@patternfly|@openshift-console\/plugin-shared)\/).*/,
         use: [
+          { loader: 'style-loader' },
           {
-            loader: 'ts-loader',
+            loader: 'css-loader',
             options: {
-              configFile: path.resolve(__dirname, 'tsconfig.json'),
+              sourceMap: true,
+            },
+          },
+          {
+            loader: 'sass-loader',
+            options: {
+              sourceMap: true,
+              sassOptions: {
+                outputStyle: 'compressed',
+              },
             },
           },
         ],
@@ -58,7 +68,9 @@ const config: Configuration = {
   },
   devServer: {
     static: './dist',
-    port: 9002,
+    hot: false,
+    liveReload: true,
+    port: process.env.PORT || 9002,
     // Allow bridge running in a container to connect to the plugin dev server.
     allowedHosts: 'all',
     headers: {
@@ -93,19 +105,35 @@ const config: Configuration = {
     chunkIds: 'named',
     minimize: false,
   },
+  stats: {
+    errorDetails: true,
+  },
 };
 
 if (process.env.NODE_ENV === 'production') {
   config.mode = 'production';
-  if (config.output) {
-    config.output.filename = '[name]-bundle-[hash].min.js';
-    config.output.chunkFilename = '[name]-chunk-[chunkhash].min.js';
-  }
-  if (config.optimization) {
-    config.optimization.chunkIds = 'deterministic';
-    config.optimization.minimize = true;
-  }
+  config.output.filename = '[name]-bundle-[hash].min.js';
+  config.output.chunkFilename = '[name]-chunk-[chunkhash].min.js';
+  config.optimization.chunkIds = 'deterministic';
+  config.optimization.minimize = true;
   config.devtool = false;
+
+  // Use default esbuild-loader for prod
+  config.module.rules?.unshift({
+    test: /\.[jt]sx?$/,
+    loader: 'esbuild-loader',
+    options: {
+      target: 'es2021',
+    },
+  });
+} else {
+  config.module.rules?.unshift({
+    test: /\.(jsx?|tsx?)$/,
+    exclude: /node_modules/,
+    use: {
+      loader: 'swc-loader',
+    },
+  });
 }
 
 export default config;

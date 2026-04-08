@@ -20,8 +20,7 @@ import {
   SyncIcon,
   UnlinkIcon,
 } from '@patternfly/react-icons';
-import * as React from 'react';
-import { TFunction, useTranslation } from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocationQuery } from '../hooks/useLocationQuery';
 import { usePluginAvailable } from '../hooks/usePluginAvailable';
@@ -32,9 +31,10 @@ import { defaultSearch, Result, Search, SearchType, setResult, setSearch } from 
 import { State } from '../redux-reducers';
 import * as time from '../time';
 import { AdvancedSearchForm } from './AdvancedSearchForm';
-import './korrel8rpanel.css';
 import { TimeRangeDropdown } from './TimeRangeDropdown';
 import { Korrel8rTopology } from './topology/Korrel8rTopology';
+import './korrel8rpanel.css';
+import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export default function Korrel8rPanel() {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
@@ -46,39 +46,38 @@ export default function Korrel8rPanel() {
 
   // Disable focus button if the panel is already focused on the current location,
   // or the current result is an error.
-  const isFocused = React.useMemo(
+  const isFocused = useMemo(
     () => locationQuery?.toString() === search.queryStr && !result?.isError,
     [locationQuery, search.queryStr, result?.isError],
   );
 
   // Showing advanced query
-  const [showAdvanced, setShowAdvanced] = React.useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
-  const cancelRef = React.useRef<(() => void) | null>(null);
-  const [isLoading, setIsLoading] = React.useState(false);
+  const cancelRef = useRef<(() => void) | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Compute constraint from search period.
-  const constraint = React.useMemo((): korrel8r.Constraint | undefined => {
-    if (!search.period) return undefined;
+  const constraint = useMemo(() => {
+    if (!search.period) {
+      return undefined;
+    }
     const [start, end] = search.period.startEnd();
     return new korrel8r.Constraint({ start, end });
-  }, [search?.period]);
+  }, [search.period]);
 
   // Dispatch a new search value, making a new reference (reducer clears result automatically).
-  const dispatchSearch = React.useCallback(
+  const dispatchSearch = useCallback(
     (search: Search) => dispatch(setSearch({ ...search })),
     [dispatch],
   );
   // Dispatch a new result, no special actions.
-  const dispatchResult = React.useCallback(
-    (result: Result) => dispatch(setResult(result)),
-    [dispatch],
-  );
+  const dispatchResult = useCallback((result: Result) => dispatch(setResult(result)), [dispatch]);
 
   // Create the initial result on startup.
   // Use the current location or an explicit "Empty" result.
-  const initialized = React.useRef(false);
-  React.useEffect(() => {
+  const initialized = useRef(false);
+  useEffect(() => {
     if (initialized.current) return;
     initialized.current = true;
     if (!search?.queryStr && !result) {
@@ -93,10 +92,10 @@ export default function Korrel8rPanel() {
   }, [locationQuery, dispatchSearch, dispatchResult, search?.queryStr, result, t]);
 
   // Skip the first fetch if we already have a stored result.
-  const useStoredResult = React.useRef(result != null);
+  const useStoredResult = useRef(result != null);
 
   // Fetch a new result from the korrel8r service when the search changes.
-  React.useEffect(() => {
+  useEffect(() => {
     // Cancel previous
     if (cancelRef.current) {
       cancelRef.current();
@@ -272,7 +271,7 @@ export default function Korrel8rPanel() {
         <Divider />
 
         <StackItem className="tp-plugin__panel-topology-container" isFilled={true}>
-          <Topology isLoading={isLoading} result={result} t={t} constraint={constraint} />
+          <Topology isLoading={isLoading} result={result} constraint={constraint} />
         </StackItem>
       </Stack>
     </>
@@ -283,10 +282,10 @@ interface TopologyProps {
   isLoading?: boolean;
   result?: Result;
   constraint?: korrel8r.Constraint;
-  t: TFunction;
 }
 
-const Topology: React.FC<TopologyProps> = ({ isLoading, result, t, constraint }) => {
+const Topology: FC<TopologyProps> = ({ isLoading, result, constraint }) => {
+  const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
   const [loggingAvailable, loggingAvailableLoading] = usePluginAvailable('logging-view-plugin');
   const [netobserveAvailable, netobserveAvailableLoading] = usePluginAvailable('netobserv-plugin');
 
@@ -317,7 +316,7 @@ const Topology: React.FC<TopologyProps> = ({ isLoading, result, t, constraint })
   );
 };
 
-const Searching: React.FC = () => {
+const Searching: FC = () => {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
   return (
     <div className="tp-plugin__panel-topology-info">
@@ -337,7 +336,7 @@ interface TopologyInfoStateProps {
   isError?: boolean;
 }
 
-const TopologyInfoState: React.FC<TopologyInfoStateProps> = ({ titleText, text, isError }) => {
+const TopologyInfoState: FC<TopologyInfoStateProps> = ({ titleText, text, isError }) => {
   return (
     <div className="tp-plugin__panel-topology-info">
       <EmptyState

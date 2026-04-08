@@ -1,7 +1,7 @@
 /* generated using openapi-typescript-codegen -- do not edit */
 /* istanbul ignore file */
 /* tslint:disable */
-/* eslint-disable */
+
 export { Korrel8rClient } from './Korrel8rClient';
 
 export { ApiError } from './core/ApiError';

@@ -1,12 +1,12 @@
 import { mkdirSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { classIcons, domainIcons, fallbackIcon, IconMap } from '../components/icons';
+import { CSSProperties, FC } from 'react';
 
 describe('IconsPreview Component', () => {
-  const styles: { [key: string]: React.CSSProperties } = {
+  const styles: { [key: string]: CSSProperties } = {
     grid: {
       display: 'grid',
       gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
@@ -16,7 +16,7 @@ describe('IconsPreview Component', () => {
       overflowWrap: 'anywhere',
     },
   };
-  const IconsPreview: React.FC = () => {
+  const IconsPreview: FC = () => {
     const gallery = (iconMap: IconMap) => (
       <div style={styles.grid}>
         {Object.entries(iconMap).map(([name, icon]) => (

@@ -5,7 +5,7 @@ export const getCachedResources = () => {
 
   if (resourcesJSON) {
     const resources = JSON.parse(resourcesJSON);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const windowWithFlags = window as any;
     const { consoleVersion: currentVersion } = windowWithFlags.SERVER_FLAGS;
     const { consoleVersion: cachedVersion } = resources;

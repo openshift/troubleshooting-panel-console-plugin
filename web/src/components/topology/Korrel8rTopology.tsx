@@ -33,12 +33,12 @@ import {
   withSelection,
   WithSelectionProps,
 } from '@patternfly/react-topology';
-import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigateToQuery } from '../../hooks/useNavigateToQuery';
 import * as korrel8r from '../../korrel8r/types';
 import { getIcon } from '../icons';
 import './korrel8rtopology.css';
+import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 // DagreLayout with straight edges (no angular bendpoints).
 class StraightEdgeDagreLayout extends DagreLayout {
@@ -60,7 +60,7 @@ interface Korrel8rTopologyNodeProps {
   element: Node;
 }
 
-const Korrel8rTopologyNode: React.FC<
+const Korrel8rTopologyNode: FC<
   Korrel8rTopologyNodeProps & WithContextMenuProps & WithSelectionProps & WithDragNodeProps
 > = ({ element, onSelect, selected, onContextMenu, contextMenuOpen, dragNodeRef }) => {
   const node = element.getData();
@@ -96,7 +96,7 @@ const NODE_SHAPE = NodeShape.ellipse;
 const NODE_DIAMETER = 75;
 const PADDING = 30;
 
-export const Korrel8rTopology: React.FC<{
+export const Korrel8rTopology: FC<{
   graph: korrel8r.Graph;
   loggingAvailable: boolean;
   netobserveAvailable: boolean;
@@ -104,19 +104,19 @@ export const Korrel8rTopology: React.FC<{
 }> = ({ graph, loggingAvailable, netobserveAvailable, constraint }) => {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
   const navigateToQuery = useNavigateToQuery();
-  const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  const nodes = React.useMemo(
+  const nodes = useMemo(
     () =>
       graph.nodes.map((node: korrel8r.Node) => {
         if (node.error) {
           // eslint-disable-next-line no-console
           console.warn(`korrel8r node: ${node.error}`);
-          node.error = t('Unable to find Console Link');
+          node.error = Error(t('Unable to find Console Link'));
         } else if (node.class.domain === 'log' && !loggingAvailable) {
-          node.error = t('Logging Plugin Disabled');
+          node.error = Error(t('Logging Plugin Disabled'));
         } else if (node.class.domain === 'netflow' && !netobserveAvailable) {
-          node.error = t('Netflow Plugin Disabled');
+          node.error = Error(t('Netflow Plugin Disabled'));
         }
         return {
           id: node.id,
@@ -130,7 +130,7 @@ export const Korrel8rTopology: React.FC<{
     [graph, loggingAvailable, netobserveAvailable, t],
   );
 
-  const edges = React.useMemo(
+  const edges = useMemo(
     () =>
       graph.edges.map((edge: korrel8r.Edge) => {
         return {
@@ -144,7 +144,7 @@ export const Korrel8rTopology: React.FC<{
     [graph],
   );
 
-  const selectionAction = React.useCallback(
+  const selectionAction = useCallback(
     (selected: Array<string>) => {
       const id = selected?.[0]; // Select only one at a time.
       setSelectedIds([id]);
@@ -155,7 +155,7 @@ export const Korrel8rTopology: React.FC<{
     [graph, navigateToQuery, setSelectedIds, constraint],
   );
 
-  const nodeMenu = React.useCallback(
+  const nodeMenu = useCallback(
     (e: GraphElement<ElementModel, korrel8r.Node>): React.ReactElement[] => {
       const node = e.getData();
       const menu = [
@@ -183,7 +183,7 @@ export const Korrel8rTopology: React.FC<{
     [navigateToQuery, setSelectedIds, constraint],
   );
 
-  const componentFactory: ComponentFactory = React.useCallback(
+  const componentFactory: ComponentFactory = useCallback(
     (kind: ModelKind, type: string) => {
       if (type === 'group') return DefaultGroup;
       switch (kind) {
@@ -200,7 +200,7 @@ export const Korrel8rTopology: React.FC<{
     [nodeMenu],
   );
 
-  const controller = React.useMemo(() => {
+  const controller = useMemo(() => {
     const model: Model = {
       nodes,
       edges,
@@ -227,15 +227,15 @@ export const Korrel8rTopology: React.FC<{
   // NOTE: For some reason, the controller function above cannot depend on memoized functions
   // like selectionAction or componentfactory. Using a separate memo works. Strange.
   // The Visualization below must depend on controller 2.
-  const controller2 = React.useMemo(() => {
+  const controller2 = useMemo(() => {
     controller.addEventListener(SELECTION_EVENT, selectionAction);
     controller.registerComponentFactory(componentFactory);
     controller.setFitToScreenOnLayout(true, PADDING);
     return controller;
   }, [controller, selectionAction, componentFactory]);
 
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  React.useEffect(() => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
     const element = containerRef.current;
     if (!element) return;
     let timer: ReturnType<typeof setTimeout>;

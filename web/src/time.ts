@@ -9,7 +9,10 @@ export interface Period {
 
 /** Duration is a count of some time unit (hours, days etc.) */
 export class Duration implements Period {
-  constructor(public readonly count: number, public readonly unit: Unit) {}
+  constructor(
+    public readonly count: number,
+    public readonly unit: Unit,
+  ) {}
   duration(): number {
     return this.count * this.unit;
   }
@@ -21,7 +24,10 @@ export class Duration implements Period {
 
 /** Range is an explicit pair of start/end time points */
 export class Range implements Period {
-  constructor(public readonly start: Date, public readonly end: Date) {}
+  constructor(
+    public readonly start: Date,
+    public readonly end: Date,
+  ) {}
   startEnd(): [Date, Date] {
     return [this.start, this.end];
   }

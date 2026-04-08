@@ -1,4 +1,3 @@
-import * as React from 'react';
 import { useSelector } from 'react-redux';
 import { AlertDomain } from '../korrel8r/alert';
 import { K8sDomain } from '../korrel8r/k8s';
@@ -8,6 +7,7 @@ import { NetflowDomain } from '../korrel8r/netflow';
 import { TraceDomain } from '../korrel8r/trace';
 import { Domains } from '../korrel8r/types';
 import { State } from '../redux-reducers';
+import { useMemo } from 'react';
 
 // The alert domain is dependent on alert Rules state , so we need a hook for domains
 export const useDomains = () => {
@@ -15,12 +15,12 @@ export const useDomains = () => {
     (state: State) => state?.plugins?.mp?.alerting?.cmo?.['#ALL_NS#']?.rules,
   );
 
-  const alertIDs = React.useMemo(() => {
+  const alertIDs = useMemo(() => {
     if (!alertRules) return new Map<string, string>();
     return new Map<string, string>(alertRules.map(({ id, name }) => [id, name]));
   }, [alertRules]);
 
-  const domains = React.useMemo(
+  const domains = useMemo(
     () =>
       new Domains(
         new AlertDomain(alertIDs),

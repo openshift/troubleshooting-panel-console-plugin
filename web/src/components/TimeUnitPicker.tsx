@@ -6,9 +6,9 @@ import {
   SelectOption,
 } from '@patternfly/react-core';
 
-import * as React from 'react';
 import { useTimeUnitLabel } from '../hooks/useTimeUnitLabel';
 import * as time from '../time';
+import { FC, Ref, useState, MouseEvent as ReactMouseEvent } from 'react';
 
 interface TimeUnitPickerProps {
   unit: time.Unit;
@@ -16,11 +16,11 @@ interface TimeUnitPickerProps {
 }
 
 /** Pick a time unit (hours, days etc) */
-export const TimeUnitPicker: React.FC<TimeUnitPickerProps> = ({ unit, onChange }) => {
-  const [isOpen, setIsOpen] = React.useState(false);
+export const TimeUnitPicker: FC<TimeUnitPickerProps> = ({ unit, onChange }) => {
+  const [isOpen, setIsOpen] = useState(false);
   const timeUnitLabel = useTimeUnitLabel();
 
-  const toggle = (toggleRef: React.Ref<MenuToggleElement>) => (
+  const toggle = (toggleRef: Ref<MenuToggleElement>) => (
     <MenuToggle ref={toggleRef} onClick={() => setIsOpen(!isOpen)} isExpanded={isOpen}>
       {timeUnitLabel(unit)}
     </MenuToggle>
@@ -31,7 +31,7 @@ export const TimeUnitPicker: React.FC<TimeUnitPickerProps> = ({ unit, onChange }
       id={'unit-select'}
       selected={unit}
       isOpen={isOpen}
-      onSelect={(_: React.MouseEvent, value: string | number) => {
+      onSelect={(_: ReactMouseEvent<Element, MouseEvent>, value: string | number) => {
         onChange(value as time.Unit);
         setIsOpen(false);
       }}

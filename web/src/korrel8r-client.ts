@@ -1,4 +1,4 @@
-import { getCSRFToken } from '@openshift-console/dynamic-plugin-sdk/lib/utils/fetch/console-fetch-utils';
+// import { getCSRFToken } from '@openshift-console/dynamic-plugin-sdk/lib/utils/fetch/console-fetch-utils';
 import { Goals, Korrel8rClient, Neighbours } from './korrel8r/client';
 
 const KORREL8R_ENDPOINT =
@@ -16,7 +16,7 @@ export const getNeighborsGraph = (neighbours: Neighbours) => {
   const korrel8rClient = new Korrel8rClient({
     HEADERS: {
       Accept: 'application/json',
-      'X-CSRFToken': getCSRFToken(),
+      // 'X-CSRFToken': getCSRFToken(),
     },
     BASE: KORREL8R_ENDPOINT,
   });
@@ -28,7 +28,7 @@ export const getGoalsGraph = (goals: Goals) => {
   const korrel8rClient = new Korrel8rClient({
     HEADERS: {
       Accept: 'application/json',
-      'X-CSRFToken': getCSRFToken(),
+      // 'X-CSRFToken': getCSRFToken(),
     },
     BASE: KORREL8R_ENDPOINT,
   });
