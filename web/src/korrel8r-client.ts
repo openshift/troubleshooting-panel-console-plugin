@@ -1,37 +1,45 @@
-// import { getCSRFToken } from '@openshift-console/dynamic-plugin-sdk/lib/utils/fetch/console-fetch-utils';
-import { Goals, Korrel8rClient, Neighbours } from './korrel8r/client';
+import {
+  getDomains,
+  Goals,
+  Neighbours,
+  postGraphsGoals,
+  postGraphsNeighbours,
+} from './korrel8r/client';
+import { createClient } from './korrel8r/client/client';
+import { consoleFetch } from '@openshift-console/dynamic-plugin-sdk';
 
 const KORREL8R_ENDPOINT =
   '/api/proxy/plugin/troubleshooting-panel-console-plugin/korrel8r/api/v1alpha1';
 
 export const listDomains = () => {
-  const korrel8rClient = new Korrel8rClient({
-    BASE: KORREL8R_ENDPOINT,
+  const korrel8rClient = createClient({
+    baseUrl: KORREL8R_ENDPOINT,
+    fetch: consoleFetch,
   });
 
-  return korrel8rClient.default.getDomains();
+  return getDomains({ client: korrel8rClient });
 };
 
 export const getNeighborsGraph = (neighbours: Neighbours) => {
-  const korrel8rClient = new Korrel8rClient({
-    HEADERS: {
+  const korrel8rClient = createClient({
+    headers: {
       Accept: 'application/json',
-      // 'X-CSRFToken': getCSRFToken(),
     },
-    BASE: KORREL8R_ENDPOINT,
+    baseUrl: KORREL8R_ENDPOINT,
+    fetch: consoleFetch,
   });
 
-  return korrel8rClient.default.postGraphsNeighbours(neighbours);
+  return postGraphsNeighbours({ client: korrel8rClient, body: neighbours });
 };
 
 export const getGoalsGraph = (goals: Goals) => {
-  const korrel8rClient = new Korrel8rClient({
-    HEADERS: {
+  const korrel8rClient = createClient({
+    headers: {
       Accept: 'application/json',
-      // 'X-CSRFToken': getCSRFToken(),
     },
-    BASE: KORREL8R_ENDPOINT,
+    baseUrl: KORREL8R_ENDPOINT,
+    fetch: consoleFetch,
   });
 
-  return korrel8rClient.default.postGraphsGoals(goals);
+  return postGraphsGoals({ client: korrel8rClient, body: goals });
 };

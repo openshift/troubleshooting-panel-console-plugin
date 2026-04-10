@@ -80,13 +80,9 @@ deploy:	test-frontend		## Build and push image, reinstall on cluster using helm.
 start-devspace-backend:
 	/opt/app-root/plugin-backend -port=9443 -cert=/var/serving-cert/tls.crt -key=/var/serving-cert/tls.key -plugin-config-path=/etc/plugin/config.yaml -static-path=/opt/app-root/web/dist -config-path=/opt/app-root/web/dist
 
-## Code generation
-gen-client: web/src/korrel8r/client
-
-# NOTE: copied from https://github.com/korrel8r/korrel8r/blob/main/pkg/rest/docs/swagger.json
-web/src/korrel8r/client: korrel8r/swagger.json
-	cd web && npx openapi-typescript-codegen --indent 2 --input ../$< --output ../$@ --name Korrel8rClient
-	@touch $@
+# NOTE: copied from https://github.com/korrel8r/korrel8r/blob/main/doc/korrel8r-openapi.yaml
+generate-client:
+	cd web && npm run generate-client
 
 .PHONY: podman-cross-build
 podman-cross-build:
