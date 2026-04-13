@@ -36,6 +36,7 @@
     "@patternfly/react-topology": "^6.3.0",
     "@swc/core": "^1.15.24",
     "@swc/helpers": "^0.5.21",
+    "@tanstack/react-query": "^5.97.0",
     "@types/jest": "^29.5.12",
     "@types/node": "^22.19.15",
     "@types/react": "^18.3.1",

@@ -18,7 +18,6 @@ const reducer = (state: TPState, action: TPAction): TPState => {
     return ImmutableMap({
       isOpen: false,
       search: defaultSearch,
-      result: null,
     });
   }
 
@@ -30,10 +29,7 @@ const reducer = (state: TPState, action: TPAction): TPState => {
       return state.set('isOpen', true);
 
     case ActionType.SetSearch:
-      return state.set('search', action.payload).set('result', null);
-
-    case ActionType.SetResult:
-      return state.set('result', action.payload);
+      return state.set('search', action.payload);
 
     default:
       break;
