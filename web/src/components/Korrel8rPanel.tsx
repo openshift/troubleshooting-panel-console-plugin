@@ -246,7 +246,7 @@ const Topology: FC<TopologyProps> = ({ isLoading, result, constraint, error, isC
 
   if (error) {
     const titleText = error?.message ? t('Search Error') : t('Search Failed');
-    const text = error?.message || error?.name || 'Unknown Error';
+    const text = error?.message || error?.name || t('Unknown Error');
 
     return (
       <TopologyInfoState
