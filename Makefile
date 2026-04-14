@@ -81,6 +81,7 @@ start-devspace-backend:
 	/opt/app-root/plugin-backend -port=9443 -cert=/var/serving-cert/tls.crt -key=/var/serving-cert/tls.key -plugin-config-path=/etc/plugin/config.yaml -static-path=/opt/app-root/web/dist -config-path=/opt/app-root/web/dist
 
 # NOTE: copied from https://github.com/korrel8r/korrel8r/blob/main/doc/korrel8r-openapi.yaml
+.PHONY: generate-client
 generate-client:
 	cd web && npm run generate-client
 
