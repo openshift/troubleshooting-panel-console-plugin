@@ -12,25 +12,11 @@ import { createClient } from './korrel8r/client/client';
 import { consoleFetch } from '@openshift-console/dynamic-plugin-sdk';
 import * as korrel8r from './korrel8r/types';
 
-import { Period } from './time';
 import { useTranslation } from 'react-i18next';
+import { Search, SearchType } from './redux-actions';
 
 const KORREL8R_ENDPOINT =
   '/api/proxy/plugin/troubleshooting-panel-console-plugin/korrel8r/api/v1alpha1';
-
-enum SearchType {
-  Depth = 'depth',
-  Goal = 'goal',
-}
-
-// Search parameters from panel widgets for korrel8r request.
-export type Search = {
-  queryStr: string;
-  searchType: SearchType;
-  depth?: number;
-  goal?: string;
-  period?: Period;
-};
 
 // Result displayed in troubleshooting panel, graph or message.
 export type GraphResult = {
