@@ -109,22 +109,23 @@ export const Korrel8rTopology: FC<{
   const nodes = useMemo(
     () =>
       graph.nodes.map((node: korrel8r.Node) => {
-        if (node.error) {
+        const newNode = { ...node };
+        if (newNode.error) {
           // eslint-disable-next-line no-console
-          console.warn(`korrel8r node: ${node.error}`);
-          node.error = Error(t('Unable to find Console Link'));
-        } else if (node.class.domain === 'log' && !loggingAvailable) {
-          node.error = Error(t('Logging Plugin Disabled'));
-        } else if (node.class.domain === 'netflow' && !netobserveAvailable) {
-          node.error = Error(t('Netflow Plugin Disabled'));
+          console.warn(`korrel8r node: ${newNode.error}`);
+          newNode.error = Error(t('Unable to find Console Link'));
+        } else if (newNode.class.domain === 'log' && !loggingAvailable) {
+          newNode.error = Error(t('Logging Plugin Disabled'));
+        } else if (newNode.class.domain === 'netflow' && !netobserveAvailable) {
+          newNode.error = Error(t('Netflow Plugin Disabled'));
         }
         return {
-          id: node.id,
+          id: newNode.id,
           type: 'node',
           width: NODE_DIAMETER,
           height: NODE_DIAMETER,
           shape: NODE_SHAPE,
-          data: node,
+          data: newNode,
         };
       }),
     [graph, loggingAvailable, netobserveAvailable, t],
