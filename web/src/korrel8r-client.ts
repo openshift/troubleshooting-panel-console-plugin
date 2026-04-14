@@ -91,8 +91,18 @@ export const useKorrel8rGraph = ({
           : { title: t('Empty Result'), message: t('No correlated data found') };
       });
     },
-    enabled: !!queryStr,
+    enabled: validRequest(search),
   });
+};
+
+const validRequest = (search: Search) => {
+  if (!search?.queryStr) {
+    return false;
+  }
+  if (search.searchType === SearchType.Goal) {
+    return !!search.goal;
+  }
+  return !!search.depth;
 };
 
 const requestWrapper = async (req: Request) => {
