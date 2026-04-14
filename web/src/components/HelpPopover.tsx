@@ -9,7 +9,7 @@ interface HelpPopoverProps {
 
 export const HelpPopover: FC<HelpPopoverProps> = ({ header, children }) => {
   return (
-    <Popover headerContent=<>{header}</> bodyContent={children}>
+    <Popover headerContent={header} bodyContent={children}>
       <Button variant="plain" isInline>
         <Icon isInline size="sm">
           <OutlinedQuestionCircleIcon />
