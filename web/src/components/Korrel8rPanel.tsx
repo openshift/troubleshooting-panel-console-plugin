@@ -261,7 +261,7 @@ const Topology: FC<TopologyProps> = ({ isLoading, result, constraint, error, isC
   return (
     <TopologyInfoState
       titleText={result?.title || t('No Correlated Signals Found')}
-      // Only display fisrt 400 characters of error to prevent repeating errors
+      // Only display first 400 characters of error to prevent repeating errors
       text={result?.message ? result?.message.slice(0, 400) : t('No results.')}
     />
   );
