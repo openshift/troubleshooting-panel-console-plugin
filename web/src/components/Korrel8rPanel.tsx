@@ -248,12 +248,14 @@ const Topology: FC<TopologyProps> = ({ isLoading, result, constraint, error, isC
     const titleText = error?.message ? t('Search Error') : t('Search Failed');
     const text = error?.message || error?.name || 'Unknown Error';
 
-    <TopologyInfoState
-      titleText={titleText}
-      // Only display first 400 characters of error to prevent repeating errors
-      text={text.slice(0, 400)}
-      isError
-    />;
+    return (
+      <TopologyInfoState
+        titleText={titleText}
+        // Only display first 400 characters of error to prevent repeating errors
+        text={text.slice(0, 400)}
+        isError
+      />
+    );
   }
 
   return (
