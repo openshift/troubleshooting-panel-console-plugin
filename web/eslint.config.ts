@@ -80,4 +80,10 @@ export default defineConfig([
       '@typescript-eslint/no-explicit-any': 'off',
     },
   },
+  {
+    files: ['**/*.gen.*'],
+    rules: {
+      'max-len': 'off',
+    },
+  },
 ]);
