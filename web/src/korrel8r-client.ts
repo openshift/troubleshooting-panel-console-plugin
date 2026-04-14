@@ -79,7 +79,7 @@ export const useKorrel8rGraph = ({
   };
 
   return useQuery({
-    queryKey: ['korrel8r', 'graph', search, constraint],
+    queryKey: ['korrel8r', 'graph', search, start],
     queryFn: async ({ signal }) => {
       const fetch =
         search.searchType === SearchType.Goal
