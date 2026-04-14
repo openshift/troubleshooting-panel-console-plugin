@@ -3,24 +3,34 @@
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
 import type {
-  GetDomainsData,
-  GetDomainsErrors,
-  GetDomainsResponses,
-  GetObjectsData,
-  GetObjectsErrors,
-  GetObjectsResponses,
-  PostGraphsGoalsData,
-  PostGraphsGoalsErrors,
-  PostGraphsGoalsResponses,
-  PostGraphsNeighboursData,
-  PostGraphsNeighboursErrors,
-  PostGraphsNeighboursResponses,
-  PostListsGoalsData,
-  PostListsGoalsErrors,
-  PostListsGoalsResponses,
-  PutConfigData,
-  PutConfigErrors,
-  PutConfigResponses,
+  ConsoleEventsData,
+  ConsoleEventsResponses,
+  GraphGoalsData,
+  GraphGoalsErrors,
+  GraphGoalsResponses,
+  GraphNeighborsData,
+  GraphNeighborsErrors,
+  GraphNeighborsResponses,
+  GraphNeighboursData,
+  GraphNeighboursErrors,
+  GraphNeighboursResponses,
+  ListDomainClassesData,
+  ListDomainClassesErrors,
+  ListDomainClassesResponses,
+  ListDomainsData,
+  ListDomainsErrors,
+  ListDomainsResponses,
+  ListGoalsData,
+  ListGoalsErrors,
+  ListGoalsResponses,
+  ObjectsData,
+  ObjectsErrors,
+  ObjectsResponses,
+  SetConfigData,
+  SetConfigResponses,
+  SetConsoleData,
+  SetConsoleErrors,
+  SetConsoleResponses,
 } from './types.gen';
 
 export type Options<
@@ -42,34 +52,57 @@ export type Options<
 };
 
 /**
- * Change key configuration settings at runtime.
+ * Change configuration settings at runtime.
+ *
+ * Modify selected configuration settings (e.g. log verbosity) on a running service.
+ *
  */
-export const putConfig = <ThrowOnError extends boolean = false>(
-  options?: Options<PutConfigData, ThrowOnError>,
+export const setConfig = <ThrowOnError extends boolean = false>(
+  options?: Options<SetConfigData, ThrowOnError>,
 ) =>
-  (options?.client ?? client).put<PutConfigResponses, PutConfigErrors, ThrowOnError>({
+  (options?.client ?? client).put<SetConfigResponses, unknown, ThrowOnError>({
     url: '/config',
     ...options,
   });
 
 /**
- * Get name, configuration and status for each domain.
+ * Get the list of correlation domains.
+ *
+ * Returns a list of Korrel8r domains and the stores configured for each domain.
+ *
  */
-export const getDomains = <ThrowOnError extends boolean = false>(
-  options?: Options<GetDomainsData, ThrowOnError>,
+export const listDomains = <ThrowOnError extends boolean = false>(
+  options?: Options<ListDomainsData, ThrowOnError>,
 ) =>
-  (options?.client ?? client).get<GetDomainsResponses, GetDomainsErrors, ThrowOnError>({
+  (options?.client ?? client).get<ListDomainsResponses, ListDomainsErrors, ThrowOnError>({
     url: '/domains',
     ...options,
   });
 
 /**
- * Create a correlation graph from start objects to goal queries.
+ * Get the list of classes for a domain.
+ *
+ * Returns a list of class names for the specified domain.
+ *
  */
-export const postGraphsGoals = <ThrowOnError extends boolean = false>(
-  options: Options<PostGraphsGoalsData, ThrowOnError>,
+export const listDomainClasses = <ThrowOnError extends boolean = false>(
+  options: Options<ListDomainClassesData, ThrowOnError>,
 ) =>
-  (options.client ?? client).post<PostGraphsGoalsResponses, PostGraphsGoalsErrors, ThrowOnError>({
+  (options.client ?? client).get<ListDomainClassesResponses, ListDomainClassesErrors, ThrowOnError>(
+    { url: '/domain/{domain}/classes', ...options },
+  );
+
+/**
+ * Create a correlation graph from start objects to goal queries.
+ *
+ * Specify a set of start objects, as queries or serialized objects, and a goal class. Returns a graph containing all paths leading from a start object to a goal object.
+ *
+ */
+export const graphGoals = <ThrowOnError extends boolean = false>(
+  options: Options<GraphGoalsData, ThrowOnError>,
+) =>
+  (options.client ?? client).post<GraphGoalsResponses, GraphGoalsErrors, ThrowOnError>({
+    querySerializer: { parameters: { options: { object: { style: 'form' } } } },
     url: '/graphs/goals',
     ...options,
     headers: {
@@ -79,16 +112,35 @@ export const postGraphsGoals = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * Create a neighbourhood graph around a start object to a given depth.
+ * Create a neighborhood graph around a start object to a given depth.
+ *
+ * Specify a set of start objects, as queries or serialized objects, and a depth for the neighborhood search. Returns a graph of all paths with depth or less edges leading from start objects.
+ *
  */
-export const postGraphsNeighbours = <ThrowOnError extends boolean = false>(
-  options: Options<PostGraphsNeighboursData, ThrowOnError>,
+export const graphNeighbors = <ThrowOnError extends boolean = false>(
+  options: Options<GraphNeighborsData, ThrowOnError>,
 ) =>
-  (options.client ?? client).post<
-    PostGraphsNeighboursResponses,
-    PostGraphsNeighboursErrors,
-    ThrowOnError
-  >({
+  (options.client ?? client).post<GraphNeighborsResponses, GraphNeighborsErrors, ThrowOnError>({
+    querySerializer: { parameters: { options: { object: { style: 'form' } } } },
+    url: '/graphs/neighbors',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Create a neighborhood graph around a start object to a given depth.
+ *
+ * Specify a set of start objects, as queries or serialized objects, and a depth for the neighborhood search. Returns a graph of all paths with depth or less edges leading from start objects.
+ *
+ */
+export const graphNeighbours = <ThrowOnError extends boolean = false>(
+  options: Options<GraphNeighboursData, ThrowOnError>,
+) =>
+  (options.client ?? client).post<GraphNeighboursResponses, GraphNeighboursErrors, ThrowOnError>({
+    querySerializer: { parameters: { options: { object: { style: 'form' } } } },
     url: '/graphs/neighbours',
     ...options,
     headers: {
@@ -99,11 +151,14 @@ export const postGraphsNeighbours = <ThrowOnError extends boolean = false>(
 
 /**
  * Create a list of goal nodes related to a starting point.
+ *
+ * Specify a set of start objects, as queries or serialized objects, and a goal class. Returns a list of all objects of the goal class that can be reached from a start object.
+ *
  */
-export const postListsGoals = <ThrowOnError extends boolean = false>(
-  options: Options<PostListsGoalsData, ThrowOnError>,
+export const listGoals = <ThrowOnError extends boolean = false>(
+  options: Options<ListGoalsData, ThrowOnError>,
 ) =>
-  (options.client ?? client).post<PostListsGoalsResponses, PostListsGoalsErrors, ThrowOnError>({
+  (options.client ?? client).post<ListGoalsResponses, ListGoalsErrors, ThrowOnError>({
     url: '/lists/goals',
     ...options,
     headers: {
@@ -114,11 +169,47 @@ export const postListsGoals = <ThrowOnError extends boolean = false>(
 
 /**
  * Execute a query, returns a list of JSON objects.
+ *
+ * Execute a single Korrel8r 'query' and return the list of serialized objects found. Does not perform any correlation actions.
+ *
  */
-export const getObjects = <ThrowOnError extends boolean = false>(
-  options: Options<GetObjectsData, ThrowOnError>,
+export const objects = <ThrowOnError extends boolean = false>(
+  options: Options<ObjectsData, ThrowOnError>,
 ) =>
-  (options.client ?? client).get<GetObjectsResponses, GetObjectsErrors, ThrowOnError>({
+  (options.client ?? client).get<ObjectsResponses, ObjectsErrors, ThrowOnError>({
     url: '/objects',
+    ...options,
+  });
+
+/**
+ * Make console state available to an agent.
+ *
+ * Put the current state of the console so it can be retrieved by an agent via the MCP API.
+ *
+ */
+export const setConsole = <ThrowOnError extends boolean = false>(
+  options: Options<SetConsoleData, ThrowOnError>,
+) =>
+  (options.client ?? client).put<SetConsoleResponses, SetConsoleErrors, ThrowOnError>({
+    bodySerializer: null,
+    url: '/console',
+    ...options,
+    headers: {
+      'Content-Type': 'text/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * SSE event stream of console display updates from an agent.
+ *
+ * Server-sent event (SSE) stream delivering console display updates. Events are triggered by an agent using the MCP API to update the console.
+ *
+ */
+export const consoleEvents = <ThrowOnError extends boolean = false>(
+  options?: Options<ConsoleEventsData, ThrowOnError, unknown>,
+) =>
+  (options?.client ?? client).sse.get<ConsoleEventsResponses, unknown, ThrowOnError>({
+    url: '/console/events',
     ...options,
   });
