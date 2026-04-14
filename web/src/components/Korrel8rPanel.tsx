@@ -157,9 +157,7 @@ export default function Korrel8rPanel() {
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() =>
-                  queryClient.cancelQueries({ queryKey: ['korrel8r', 'graph', search, constraint] })
-                }
+                onClick={() => queryClient.cancelQueries({ queryKey: ['korrel8r', 'graph'] })}
                 aria-label={t('Cancel')}
               >
                 {t('Cancel')}
