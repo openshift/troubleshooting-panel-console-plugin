@@ -52,7 +52,7 @@ export default function Korrel8rPanel() {
     return new korrel8r.Constraint({ start, end });
   }, [search.period]);
 
-  const { data, isError, error, isFetching, isPending, fetchStatus } = useKorrel8rGraph({
+  const { data, isError, error, isFetching, isPending, fetchStatus, refetch } = useKorrel8rGraph({
     search,
     constraint,
   });
@@ -168,7 +168,7 @@ export default function Korrel8rPanel() {
                   variant="link"
                   size="sm"
                   isAriaDisabled={!search?.queryStr}
-                  onClick={() => dispatchSearch(search)}
+                  onClick={() => refetch()}
                   aria-label={t('Refresh')}
                 >
                   <SyncIcon />
