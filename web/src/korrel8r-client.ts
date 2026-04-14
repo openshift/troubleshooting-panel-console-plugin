@@ -1,12 +1,12 @@
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
 import {
-  getDomains,
   Goals,
   Graph,
-  Neighbours,
-  postGraphsGoals,
-  postGraphsNeighbours,
+  listDomains as clientListDomains,
+  Neighbors,
   Start,
+  graphNeighbours,
+  graphGoals,
 } from './korrel8r/client';
 import { createClient } from './korrel8r/client/client';
 import { consoleFetch } from '@openshift-console/dynamic-plugin-sdk';
@@ -32,10 +32,10 @@ export const listDomains = () => {
     throwOnError: true,
   });
 
-  return getDomains({ client: korrel8rClient });
+  return clientListDomains({ client: korrel8rClient });
 };
 
-const getNeighborsGraph = (neighbours: Neighbours, signal: AbortSignal) => {
+const getNeighborsGraph = (neighbours: Neighbors, signal: AbortSignal) => {
   const korrel8rClient = createClient({
     headers: {
       Accept: 'application/json',
@@ -46,7 +46,7 @@ const getNeighborsGraph = (neighbours: Neighbours, signal: AbortSignal) => {
     throwOnError: true,
   });
 
-  return postGraphsNeighbours({ client: korrel8rClient, body: neighbours });
+  return graphNeighbours({ client: korrel8rClient, body: neighbours });
 };
 
 const getGoalsGraph = (goals: Goals, signal: AbortSignal) => {
@@ -60,7 +60,7 @@ const getGoalsGraph = (goals: Goals, signal: AbortSignal) => {
     throwOnError: true,
   });
 
-  return postGraphsGoals({ client: korrel8rClient, body: goals });
+  return graphGoals({ client: korrel8rClient, body: goals });
 };
 
 export const useKorrel8rGraph = ({
