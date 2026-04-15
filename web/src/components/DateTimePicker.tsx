@@ -32,7 +32,7 @@ export const DateTimePicker: FC<{
           }}
           is24Hour={true}
           menuAppendTo={() => document.body}
-          width="80px"
+          style={{ width: '150px' }}
         />
       </InputGroupItem>
     </InputGroup>
