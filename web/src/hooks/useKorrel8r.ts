@@ -1,9 +1,8 @@
-import * as React from 'react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { listDomains } from '../korrel8r-client';
 
 export const useKorrel8r = () => {
-  const [isKorrel8rReachable, setIsKorrel8rReachable] = React.useState<boolean>(false);
+  const [isKorrel8rReachable, setIsKorrel8rReachable] = useState<boolean>(false);
 
   useEffect(() => {
     listDomains()

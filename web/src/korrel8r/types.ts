@@ -2,7 +2,10 @@
 import * as api from './client';
 
 export class Class {
-  constructor(public domain: string, public name: string) {}
+  constructor(
+    public domain: string,
+    public name: string,
+  ) {}
 
   query(selector: string) {
     return new Query(this, selector);
@@ -279,7 +282,11 @@ export class Node {
 }
 
 export class Edge {
-  constructor(public start: Node, public goal: Node, public rules: Rule[] = []) {}
+  constructor(
+    public start: Node,
+    public goal: Node,
+    public rules: Rule[] = [],
+  ) {}
 }
 
 export class QueryCount {

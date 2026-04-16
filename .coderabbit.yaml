@@ -1,0 +1,5 @@
+inheritance: true
+reviews:
+  review_status: false
+  path_filters:
+    - "!**/*.gen.*"

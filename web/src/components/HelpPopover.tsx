@@ -1,15 +1,15 @@
 import { Button, Icon, Popover } from '@patternfly/react-core';
 import { OutlinedQuestionCircleIcon } from '@patternfly/react-icons';
-import * as React from 'react';
+import { FC, ReactNode } from 'react';
 
 interface HelpPopoverProps {
   header?: string;
-  children?: React.ReactNode;
+  children?: ReactNode;
 }
 
-export const HelpPopover: React.FC<HelpPopoverProps> = ({ header, children }) => {
+export const HelpPopover: FC<HelpPopoverProps> = ({ header, children }) => {
   return (
-    <Popover headerContent=<>{header}</> bodyContent={children}>
+    <Popover headerContent={header} bodyContent={children}>
       <Button variant="plain" isInline>
         <Icon isInline size="sm">
           <OutlinedQuestionCircleIcon />

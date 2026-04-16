@@ -1,17 +1,17 @@
-import * as React from 'react';
+import { useEffect } from 'react';
 import { useBoolean } from './useBoolean';
 
 export const usePluginAvailable = (pluginName: string): [boolean, boolean] => {
   const [isPluginAvailable, togglePluginAvailable] = useBoolean(false);
-  const [loading, toggleLoading] = useBoolean(true);
+  const [loading, , , setCompleted] = useBoolean(true);
 
-  React.useEffect(() => {
+  useEffect(() => {
     fetch(`/api/plugins/${pluginName}/plugin-manifest.json`)
       .then((response) => {
         return response.status === 200 && togglePluginAvailable();
       })
-      .finally(toggleLoading);
-  }, [togglePluginAvailable, pluginName, toggleLoading]);
+      .finally(setCompleted);
+  }, [togglePluginAvailable, pluginName, setCompleted]);
 
   return [isPluginAvailable, loading];
 };

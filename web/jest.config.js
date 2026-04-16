@@ -8,4 +8,5 @@ module.exports = {
   },
   transformIgnorePatterns: ['<rootDir>/node_modules/(?!(@openshift-console|@patternfly))'],
   coverageDirectory: '<rootDir>/coverage/cov-jest',
+  setupFiles: [`<rootDir>/src/encoder-shim.ts`],
 };

@@ -16,12 +16,12 @@ import {
   ModalVariant,
   NumberInput,
 } from '@patternfly/react-core';
-import * as React from 'react';
-import { TFunction, useTranslation } from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 import { useTimeUnitLabel } from '../hooks/useTimeUnitLabel';
 import * as time from '../time';
 import { DateTimePicker } from './DateTimePicker';
 import { TimeUnitPicker } from './TimeUnitPicker';
+import { FC, Ref, useCallback, useMemo, useState } from 'react';
 
 const CUSTOM_RANGE_KEY = 'CUSTOM_RANGE';
 const CUSTOM_DURATION_KEY = 'CUSTOM_DURATION';
@@ -51,10 +51,10 @@ interface TimeRangeModalProps {
   onClose: () => void;
 }
 
-const TimeRangeModal: React.FC<TimeRangeModalProps> = ({ initialRange, onSave, onClose }) => {
+const TimeRangeModal: FC<TimeRangeModalProps> = ({ initialRange, onSave, onClose }) => {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
-  const [start, setStart] = React.useState(initialRange.start);
-  const [end, setEnd] = React.useState(initialRange.end);
+  const [start, setStart] = useState(initialRange.start);
+  const [end, setEnd] = useState(initialRange.end);
   const isValid = start < end;
 
   return (
@@ -103,10 +103,10 @@ interface DurationModalProps {
   onClose: () => void;
 }
 
-const DurationModal: React.FC<DurationModalProps> = ({ initialDuration, onSave, onClose }) => {
+const DurationModal: FC<DurationModalProps> = ({ initialDuration, onSave, onClose }) => {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
-  const [count, setCount] = React.useState(initialDuration.count);
-  const [unit, setUnit] = React.useState(initialDuration.unit);
+  const [count, setCount] = useState(initialDuration.count);
+  const [unit, setUnit] = useState(initialDuration.unit);
 
   const onChangeCount = (n: number) => setCount(Math.max(1, n || 1));
 
@@ -154,15 +154,11 @@ interface TimeRangeDropdownProps {
   className?: string;
 }
 
-export const TimeRangeDropdown: React.FC<TimeRangeDropdownProps> = ({
-  period,
-  onChange,
-  className,
-}) => {
+export const TimeRangeDropdown: FC<TimeRangeDropdownProps> = ({ period, onChange, className }) => {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
-  const [isOpen, setIsOpen] = React.useState(false);
-  const [rangeModalOpen, setRangeModalOpen] = React.useState(false);
-  const [durationModalOpen, setDurationModalOpen] = React.useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [rangeModalOpen, setRangeModalOpen] = useState(false);
+  const [durationModalOpen, setDurationModalOpen] = useState(false);
 
   const selectedKey = keyFromPeriod(period);
 
@@ -176,19 +172,19 @@ export const TimeRangeDropdown: React.FC<TimeRangeDropdownProps> = ({
     setDurationModalOpen(true);
   };
 
-  const initialRange = React.useMemo(() => {
+  const initialRange = useMemo(() => {
     const [start, end] = period.startEnd();
     return new time.Range(start, end);
   }, [period]);
 
-  const initialDuration = React.useMemo(
+  const initialDuration = useMemo(
     () => (period instanceof time.Duration ? period : new time.Duration(1, time.DAY)),
     [period],
   );
 
   const timeUnitLabel = useTimeUnitLabel();
-  const labelFromPeriod = React.useCallback(
-    (period: time.Period, t: TFunction): string => {
+  const labelFromPeriod = useCallback(
+    (period: time.Period): string => {
       if (period instanceof time.Duration) {
         return `${t('Last')} ${period.count} ${timeUnitLabel(period.unit)}`;
       }
@@ -197,7 +193,7 @@ export const TimeRangeDropdown: React.FC<TimeRangeDropdownProps> = ({
       }
       return t('Custom');
     },
-    [timeUnitLabel],
+    [timeUnitLabel, t],
   );
 
   return (
@@ -206,14 +202,14 @@ export const TimeRangeDropdown: React.FC<TimeRangeDropdownProps> = ({
         isOpen={isOpen}
         onSelect={() => setIsOpen(false)}
         onOpenChange={setIsOpen}
-        toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+        toggle={(toggleRef: Ref<MenuToggleElement>) => (
           <MenuToggle
             ref={toggleRef}
             onClick={() => setIsOpen(!isOpen)}
             isExpanded={isOpen}
             className={className}
           >
-            {labelFromPeriod(period, t)}
+            {labelFromPeriod(period)}
           </MenuToggle>
         )}
       >
@@ -224,7 +220,7 @@ export const TimeRangeDropdown: React.FC<TimeRangeDropdownProps> = ({
               isSelected={key === selectedKey}
               onClick={() => onChange(optPeriod)}
             >
-              {labelFromPeriod(optPeriod, t)}
+              {labelFromPeriod(optPeriod)}
             </DropdownItem>
           ))}
           <Divider />

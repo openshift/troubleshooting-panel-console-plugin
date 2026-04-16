@@ -6,11 +6,11 @@ import {
   TimePicker,
   yyyyMMddFormat,
 } from '@patternfly/react-core';
-import * as React from 'react';
 import { copyTime, setTime } from '../time';
+import { FC } from 'react';
 
 /** Combine date and time pickers, return the result as a Date */
-export const DateTimePicker: React.FC<{
+export const DateTimePicker: FC<{
   date: Date;
   onChange: (date: Date) => void;
 }> = ({ date, onChange }) => {
@@ -32,7 +32,7 @@ export const DateTimePicker: React.FC<{
           }}
           is24Hour={true}
           menuAppendTo={() => document.body}
-          width="80px"
+          style={{ width: '150px' }}
         />
       </InputGroupItem>
     </InputGroup>

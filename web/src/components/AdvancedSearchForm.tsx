@@ -20,12 +20,12 @@ import {
   ValidatedOptions,
 } from '@patternfly/react-core';
 import { ExclamationCircleIcon } from '@patternfly/react-icons';
-import * as React from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { useDomains } from '../hooks/useDomains';
 import { Query } from '../korrel8r/types';
 import { defaultSearch, Search, SearchType } from '../redux-actions';
 import { HelpPopover } from './HelpPopover';
+import { FC, Ref, useEffect, useMemo, useState } from 'react';
 
 interface AdvancedSearchFormProps {
   search: Search;
@@ -33,25 +33,23 @@ interface AdvancedSearchFormProps {
   onClose: () => void;
 }
 
-export const AdvancedSearchForm: React.FC<AdvancedSearchFormProps> = ({
-  search,
-  onSearch,
-  onClose,
-}) => {
+export const AdvancedSearchForm: FC<AdvancedSearchFormProps> = ({ search, onSearch, onClose }) => {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
   const domains = useDomains();
 
-  const [queryStr, setQueryStr] = React.useState(search.queryStr);
-  const [searchType, setSearchType] = React.useState(search.searchType);
-  const [depth, setDepth] = React.useState(search.depth ?? defaultSearch.depth);
-  const [goal, setGoal] = React.useState(search.goal ?? '');
+  const [queryStr, setQueryStr] = useState(search.queryStr);
+  const [searchType, setSearchType] = useState(search.searchType);
+  const [depth, setDepth] = useState(search.depth ?? defaultSearch.depth);
+  const [goal, setGoal] = useState(search.goal ?? '');
 
   // Track whether fields have been edited by the user.
-  const [queryTouched, setQueryTouched] = React.useState(false);
-  const [goalTouched, setGoalTouched] = React.useState(false);
+  const [queryTouched, setQueryTouched] = useState(false);
+  const [goalTouched, setGoalTouched] = useState(false);
+  const onDepthChange = (depth: number) =>
+    setDepth(Math.max(1, Math.min(10, depth ?? defaultSearch.depth)));
 
   // Update state if search changes (e.g. Focus button pressed externally).
-  React.useEffect(() => {
+  useEffect(() => {
     setQueryStr(search.queryStr);
     setSearchType(search.searchType);
     onDepthChange(search.depth);
@@ -60,7 +58,7 @@ export const AdvancedSearchForm: React.FC<AdvancedSearchFormProps> = ({
     setGoalTouched(false);
   }, [search.queryStr, search.searchType, search.depth, search.goal]);
 
-  const queryError = React.useMemo((): Error | null => {
+  const queryError = useMemo((): Error | null => {
     try {
       domains.queryToLink(Query.parse(queryStr?.trim()));
       return null;
@@ -69,7 +67,7 @@ export const AdvancedSearchForm: React.FC<AdvancedSearchFormProps> = ({
     }
   }, [queryStr, domains]);
 
-  const classError = React.useMemo((): Error | null => {
+  const classError = useMemo((): Error | null => {
     if (searchType !== SearchType.Goal) return null;
     try {
       domains.class(goal?.trim());
@@ -85,11 +83,8 @@ export const AdvancedSearchForm: React.FC<AdvancedSearchFormProps> = ({
     return err ? ValidatedOptions.error : ValidatedOptions.success;
   };
 
-  const onDepthChange = (depth: number) =>
-    setDepth(Math.max(1, Math.min(10, depth ?? defaultSearch.depth)));
-
-  const isValid = React.useMemo(() => !queryError && !classError, [queryError, classError]);
-  const hasChanged = React.useMemo(
+  const isValid = useMemo(() => !queryError && !classError, [queryError, classError]);
+  const hasChanged = useMemo(
     () =>
       search.searchType !== searchType ||
       search.queryStr !== queryStr ||
@@ -107,7 +102,7 @@ export const AdvancedSearchForm: React.FC<AdvancedSearchFormProps> = ({
     ],
   );
 
-  const [searchTypeSelectOpen, setSearchTypeSelectOpen] = React.useState(false);
+  const [searchTypeSelectOpen, setSearchTypeSelectOpen] = useState(false);
   const handleSubmit = () => {
     if (isValid && hasChanged) onSearch({ ...search, queryStr, searchType, depth, goal });
   };
@@ -209,7 +204,7 @@ export const AdvancedSearchForm: React.FC<AdvancedSearchFormProps> = ({
               setSearchTypeSelectOpen(false);
             }}
             onOpenChange={setSearchTypeSelectOpen}
-            toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+            toggle={(toggleRef: Ref<MenuToggleElement>) => (
               <MenuToggle
                 ref={toggleRef}
                 onClick={() => setSearchTypeSelectOpen(!searchTypeSelectOpen)}
@@ -269,8 +264,8 @@ export const AdvancedSearchForm: React.FC<AdvancedSearchFormProps> = ({
               !isValid
                 ? t('Fix validation errors before searching')
                 : hasChanged
-                ? t('Update the correlation graph')
-                : t('Correlation graph already matches search')
+                  ? t('Update the correlation graph')
+                  : t('Correlation graph already matches search')
             }
           >
             <Button

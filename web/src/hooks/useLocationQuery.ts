@@ -1,4 +1,4 @@
-import * as React from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Query, URIRef } from '../korrel8r/types';
 import { useDomains } from './useDomains';
 
@@ -19,10 +19,10 @@ const getLocation = () => ({
  * rendered via useModal(), because the modal may not receive router context updates.
  */
 const useBrowserLocation = () => {
-  const [location, setLocation] = React.useState(getLocation);
-  const lastHref = React.useRef(window.location.href);
+  const [location, setLocation] = useState(getLocation);
+  const lastHref = useRef(window.location.href);
 
-  React.useEffect(() => {
+  useEffect(() => {
     let rafId: number;
     const check = () => {
       const href = window.location.href;

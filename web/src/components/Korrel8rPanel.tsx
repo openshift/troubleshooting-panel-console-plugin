@@ -20,21 +20,21 @@ import {
   SyncIcon,
   UnlinkIcon,
 } from '@patternfly/react-icons';
-import * as React from 'react';
-import { TFunction, useTranslation } from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocationQuery } from '../hooks/useLocationQuery';
 import { usePluginAvailable } from '../hooks/usePluginAvailable';
-import { getGoalsGraph, getNeighborsGraph } from '../korrel8r-client';
-import * as api from '../korrel8r/client';
 import * as korrel8r from '../korrel8r/types';
-import { defaultSearch, Result, Search, SearchType, setResult, setSearch } from '../redux-actions';
+import { defaultSearch, Search, setSearch } from '../redux-actions';
 import { State } from '../redux-reducers';
 import * as time from '../time';
 import { AdvancedSearchForm } from './AdvancedSearchForm';
-import './korrel8rpanel.css';
 import { TimeRangeDropdown } from './TimeRangeDropdown';
 import { Korrel8rTopology } from './topology/Korrel8rTopology';
+import './korrel8rpanel.css';
+import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { GraphResult, useKorrel8rGraph } from '../korrel8r-client';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function Korrel8rPanel() {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
@@ -42,128 +42,51 @@ export default function Korrel8rPanel() {
   const locationQuery = useLocationQuery();
 
   const search: Search = useSelector((state: State) => state.plugins?.tp?.get('search'));
-  const result: Result | null = useSelector((state: State) => state.plugins?.tp?.get('result'));
+
+  // Compute constraint from search period.
+  const constraint = useMemo(() => {
+    if (!search.period) {
+      return undefined;
+    }
+    const [start, end] = search.period.startEnd();
+    return new korrel8r.Constraint({ start, end });
+  }, [search.period]);
+
+  const { data, isError, error, isFetching, isPending, fetchStatus, refetch } = useKorrel8rGraph({
+    search,
+    constraint,
+  });
+  const isCancelled = !!search?.queryStr && isPending && fetchStatus === 'idle';
+  const queryClient = useQueryClient();
 
   // Disable focus button if the panel is already focused on the current location,
   // or the current result is an error.
-  const isFocused = React.useMemo(
-    () => locationQuery?.toString() === search.queryStr && !result?.isError,
-    [locationQuery, search.queryStr, result?.isError],
+  const isFocused = useMemo(
+    () => locationQuery?.toString() === search.queryStr && !isError,
+    [locationQuery, search.queryStr, isError],
   );
 
   // Showing advanced query
-  const [showAdvanced, setShowAdvanced] = React.useState(false);
-
-  const cancelRef = React.useRef<(() => void) | null>(null);
-  const [isLoading, setIsLoading] = React.useState(false);
-
-  // Compute constraint from search period.
-  const constraint = React.useMemo((): korrel8r.Constraint | undefined => {
-    if (!search.period) return undefined;
-    const [start, end] = search.period.startEnd();
-    return new korrel8r.Constraint({ start, end });
-  }, [search?.period]);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Dispatch a new search value, making a new reference (reducer clears result automatically).
-  const dispatchSearch = React.useCallback(
+  const dispatchSearch = useCallback(
     (search: Search) => dispatch(setSearch({ ...search })),
-    [dispatch],
-  );
-  // Dispatch a new result, no special actions.
-  const dispatchResult = React.useCallback(
-    (result: Result) => dispatch(setResult(result)),
     [dispatch],
   );
 
   // Create the initial result on startup.
   // Use the current location or an explicit "Empty" result.
-  const initialized = React.useRef(false);
-  React.useEffect(() => {
+  const initialized = useRef(false);
+  useEffect(() => {
     if (initialized.current) return;
     initialized.current = true;
-    if (!search?.queryStr && !result) {
-      if (locationQuery?.toString())
+    if (!search?.queryStr && !data) {
+      if (locationQuery?.toString()) {
         dispatchSearch({ ...defaultSearch, queryStr: locationQuery.toString() });
-      else
-        dispatchResult({
-          title: t('Empty Query'),
-          message: t('No starting point for correlation'),
-        });
+      }
     }
-  }, [locationQuery, dispatchSearch, dispatchResult, search?.queryStr, result, t]);
-
-  // Skip the first fetch if we already have a stored result.
-  const useStoredResult = React.useRef(result != null);
-
-  // Fetch a new result from the korrel8r service when the search changes.
-  React.useEffect(() => {
-    // Cancel previous
-    if (cancelRef.current) {
-      cancelRef.current();
-      cancelRef.current = null;
-      setIsLoading(false);
-    }
-
-    // Used the stored result on first open, if there is one.
-    if (useStoredResult.current) {
-      useStoredResult.current = false; // Fetch a new result next time.
-      return;
-    }
-
-    const queryStr = search?.queryStr;
-    if (!queryStr) {
-      dispatchResult({ title: t('Empty Query'), message: t('No starting point for correlation') });
-      return;
-    }
-    const start: api.Start = {
-      queries: [queryStr],
-      constraint: constraint?.toAPI(),
-    };
-
-    const fetch =
-      search.searchType === SearchType.Goal
-        ? getGoalsGraph({ start, goals: [search.goal] })
-        : getNeighborsGraph({ start, depth: search.depth });
-
-    setIsLoading(true);
-    const cancel = () => fetch.cancel();
-    cancelRef.current = cancel;
-    const anotherFetchIsRunning = () => cancelRef.current !== cancel;
-    fetch
-      .then((response: api.Graph) => {
-        if (anotherFetchIsRunning()) return;
-        dispatchResult(
-          Array.isArray(response?.nodes) && response.nodes.length > 0
-            ? { graph: new korrel8r.Graph(response) }
-            : { title: t('Empty Result'), message: t('No correlated data found') },
-        );
-      })
-      .catch((e) => {
-        if (anotherFetchIsRunning()) return;
-        if (e instanceof api.CancelError) {
-          dispatchResult({
-            title: t('Canceled'),
-            message: t('Search was interrupted'),
-            isError: true,
-          });
-        } else {
-          dispatchResult({
-            title: e?.body?.error ? t('Search Error') : t('Search Failed'),
-            message: e?.body?.error || e.message || 'Unknown Error',
-            isError: true,
-          });
-        }
-      })
-      .finally(() => {
-        if (anotherFetchIsRunning()) return;
-        cancelRef.current = null;
-        setIsLoading(false);
-      });
-    return () => {
-      if (!anotherFetchIsRunning()) cancelRef.current = null;
-      fetch.cancel();
-    };
-  }, [search, constraint, dispatchResult, t]);
+  }, [locationQuery, dispatchSearch, search?.queryStr, data, t]);
 
   const advancedToggleID = 'query-toggle';
   const advancedContentID = 'query-content';
@@ -230,11 +153,11 @@ export default function Korrel8rPanel() {
             </Tooltip>
 
             {/* Refresh / Cancel button */}
-            {isLoading ? (
+            {isFetching ? (
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => cancelRef.current?.()}
+                onClick={() => queryClient.cancelQueries({ queryKey: ['korrel8r', 'graph'] })}
                 aria-label={t('Cancel')}
               >
                 {t('Cancel')}
@@ -245,7 +168,7 @@ export default function Korrel8rPanel() {
                   variant="link"
                   size="sm"
                   isAriaDisabled={!search?.queryStr}
-                  onClick={() => dispatchSearch(search)}
+                  onClick={() => refetch()}
                   aria-label={t('Refresh')}
                 >
                   <SyncIcon />
@@ -272,7 +195,13 @@ export default function Korrel8rPanel() {
         <Divider />
 
         <StackItem className="tp-plugin__panel-topology-container" isFilled={true}>
-          <Topology isLoading={isLoading} result={result} t={t} constraint={constraint} />
+          <Topology
+            isLoading={isFetching}
+            result={data}
+            constraint={constraint}
+            error={error}
+            isCancelled={isCancelled}
+          />
         </StackItem>
       </Stack>
     </>
@@ -281,18 +210,26 @@ export default function Korrel8rPanel() {
 
 interface TopologyProps {
   isLoading?: boolean;
-  result?: Result;
+  isCancelled?: boolean;
+  result?: GraphResult;
+  error?: Error;
   constraint?: korrel8r.Constraint;
-  t: TFunction;
 }
 
-const Topology: React.FC<TopologyProps> = ({ isLoading, result, t, constraint }) => {
+const Topology: FC<TopologyProps> = ({ isLoading, result, constraint, error, isCancelled }) => {
+  const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
   const [loggingAvailable, loggingAvailableLoading] = usePluginAvailable('logging-view-plugin');
   const [netobserveAvailable, netobserveAvailableLoading] = usePluginAvailable('netobserv-plugin');
 
   if (isLoading || loggingAvailableLoading || netobserveAvailableLoading) {
     // korrel8r query is loading or the plugin checks are loading
     return <Searching />;
+  }
+
+  if (isCancelled) {
+    return (
+      <TopologyInfoState titleText={t('Canceled')} text={t('Search was interrupted')} isError />
+    );
   }
 
   if (result?.graph?.nodes) {
@@ -307,17 +244,30 @@ const Topology: React.FC<TopologyProps> = ({ isLoading, result, t, constraint })
     );
   }
 
+  if (error) {
+    const titleText = error?.message ? t('Search Error') : t('Search Failed');
+    const text = error?.message || error?.name || t('Unknown Error');
+
+    return (
+      <TopologyInfoState
+        titleText={titleText}
+        // Only display first 400 characters of error to prevent repeating errors
+        text={text.slice(0, 400)}
+        isError
+      />
+    );
+  }
+
   return (
     <TopologyInfoState
       titleText={result?.title || t('No Correlated Signals Found')}
-      // Only display fisrt 400 characters of error to prevent repeating errors
+      // Only display first 400 characters of error to prevent repeating errors
       text={result?.message ? result?.message.slice(0, 400) : t('No results.')}
-      isError={result?.isError}
     />
   );
 };
 
-const Searching: React.FC = () => {
+const Searching: FC = () => {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
   return (
     <div className="tp-plugin__panel-topology-info">
@@ -337,7 +287,7 @@ interface TopologyInfoStateProps {
   isError?: boolean;
 }
 
-const TopologyInfoState: React.FC<TopologyInfoStateProps> = ({ titleText, text, isError }) => {
+const TopologyInfoState: FC<TopologyInfoStateProps> = ({ titleText, text, isError }) => {
   return (
     <div className="tp-plugin__panel-topology-info">
       <EmptyState

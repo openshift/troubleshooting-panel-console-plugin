@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useNavigate } from 'react-router-dom-v5-compat';
+import { useNavigate } from 'react-router';
 import * as korrel8r from '../korrel8r/types';
 import { useDomains } from './useDomains';
 

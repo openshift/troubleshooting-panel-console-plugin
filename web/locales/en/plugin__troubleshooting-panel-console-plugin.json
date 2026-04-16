@@ -4,7 +4,6 @@
   "Advanced Search": "Advanced Search",
   "Advanced search parameters": "Advanced search parameters",
   "Cancel": "Cancel",
-  "Cancel the current search": "Cancel the current search",
   "Canceled": "Canceled",
   "Close": "Close",
   "Correlation graph already matches search": "Correlation graph already matches search",
@@ -14,7 +13,6 @@
   "Custom duration": "Custom duration",
   "Custom time range": "Custom time range",
   "days": "days",
-  "Empty Query": "Empty Query",
   "Empty Result": "Empty Result",
   "End time must be after start time": "End time must be after start time",
   "Fix validation errors before searching": "Fix validation errors before searching",
@@ -32,7 +30,6 @@
   "No correlated data found": "No correlated data found",
   "No Correlated Signals Found": "No Correlated Signals Found",
   "No results.": "No results.",
-  "No starting point for correlation": "No starting point for correlation",
   "Open the Troubleshooting Panel": "Open the Troubleshooting Panel",
   "Other duration": "Other duration",
   "Quickly diagnose and resolve issues by exploring correlated observability signals for resources.": "Quickly diagnose and resolve issues by exploring correlated observability signals for resources.",
@@ -53,6 +50,7 @@
   "Troubleshooting": "Troubleshooting",
   "Troubleshooting Panel": "Troubleshooting Panel",
   "Unable to find Console Link": "Unable to find Console Link",
+  "Unknown Error": "Unknown Error",
   "Update the correlation graph": "Update the correlation graph",
   "weeks": "weeks"
 }

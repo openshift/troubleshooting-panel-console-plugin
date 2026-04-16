@@ -1,5 +1,5 @@
-import * as React from 'react';
+import { createContext } from 'react';
 
-const NullContext = React.createContext(null);
+const NullContext = createContext(null);
 
 export default NullContext.Provider;

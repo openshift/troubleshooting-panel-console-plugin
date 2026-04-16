@@ -1,14 +1,24 @@
 import { useActivePerspective } from '@openshift-console/dynamic-plugin-sdk';
 import { Button, Flex, FlexItem, Stack, StackItem, Title } from '@patternfly/react-core';
 import { TimesCircleIcon } from '@patternfly/react-icons';
-import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { closeTP } from '../redux-actions';
 import { State } from '../redux-reducers';
 import { HelpPopover } from './HelpPopover';
 import Korrel8rPanel from './Korrel8rPanel';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import './popover.css';
+import { useCallback, useEffect } from 'react';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 export default function Popover() {
   const dispatch = useDispatch();
@@ -17,11 +27,11 @@ export default function Popover() {
 
   const isOpen = useSelector((state: State) => state.plugins?.tp?.get('isOpen'));
 
-  const close = React.useCallback(() => {
+  const close = useCallback(() => {
     dispatch(closeTP());
   }, [dispatch]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (activePerspective !== 'admin' && isOpen) {
       close();
     }
@@ -33,28 +43,30 @@ export default function Popover() {
 
   return (
     <>
-      <Stack className="tp-plugin__popover">
-        <Flex className="tp-plugin__popover-title-bar" gap={{ default: 'gapNone' }}>
-          <FlexItem grow={{ default: 'grow' }}>
-            <Title headingLevel="h1">
-              {t('Troubleshooting')}
-              <HelpPopover
-                header={t(
-                  'Quickly diagnose and resolve issues by exploring correlated observability signals for resources.',
-                )}
-              ></HelpPopover>
-            </Title>
-          </FlexItem>
-          <FlexItem>
-            <Button variant="plain" aria-label="Close" onClick={close}>
-              <TimesCircleIcon className="tp-plugin__popover-close" />
-            </Button>
-          </FlexItem>
-        </Flex>
-        <StackItem className="tp-plugin__popover-content" isFilled={true}>
-          <Korrel8rPanel />
-        </StackItem>
-      </Stack>
+      <QueryClientProvider client={queryClient}>
+        <Stack className="tp-plugin__popover">
+          <Flex className="tp-plugin__popover-title-bar" gap={{ default: 'gapNone' }}>
+            <FlexItem grow={{ default: 'grow' }}>
+              <Title headingLevel="h1">
+                {t('Troubleshooting')}
+                <HelpPopover
+                  header={t(
+                    'Quickly diagnose and resolve issues by exploring correlated observability signals for resources.',
+                  )}
+                ></HelpPopover>
+              </Title>
+            </FlexItem>
+            <FlexItem>
+              <Button variant="plain" aria-label="Close" onClick={close}>
+                <TimesCircleIcon className="tp-plugin__popover-close" />
+              </Button>
+            </FlexItem>
+          </Flex>
+          <StackItem className="tp-plugin__popover-content" isFilled={true}>
+            <Korrel8rPanel />
+          </StackItem>
+        </Stack>
+      </QueryClientProvider>
     </>
   );
 }
