@@ -1,13 +1,11 @@
 import { Action, ExtensionHook, useActivePerspective } from '@openshift-console/dynamic-plugin-sdk';
 import { InfrastructureIcon } from '@patternfly/react-icons';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { openTP } from '../redux-actions';
-import { useKorrel8r } from './useKorrel8r';
-import { useCallback, useEffect, useState } from 'react';
 
 const useTroubleshootingPanel: ExtensionHook<Array<Action>> = () => {
-  const { isKorrel8rReachable } = useKorrel8r();
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
   const [perspective] = useActivePerspective();
   const dispatch = useDispatch();
@@ -16,7 +14,7 @@ const useTroubleshootingPanel: ExtensionHook<Array<Action>> = () => {
   }, [dispatch]);
 
   const getActions = useCallback(() => {
-    if (!isKorrel8rReachable || perspective === 'dev') {
+    if (perspective === 'dev') {
       return [];
     }
     const actions = [
@@ -34,7 +32,7 @@ const useTroubleshootingPanel: ExtensionHook<Array<Action>> = () => {
       },
     ];
     return actions;
-  }, [open, t, isKorrel8rReachable, perspective]);
+  }, [open, t, perspective]);
 
   const [actions, setActions] = useState<Array<Action>>(getActions());
 

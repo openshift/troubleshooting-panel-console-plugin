@@ -16,25 +16,27 @@ import {
   CubesIcon,
   ExclamationCircleIcon,
   LinkIcon,
+  PluggedIcon,
   SlidersHIcon,
   SyncIcon,
   UnlinkIcon,
+  UnpluggedIcon,
 } from '@patternfly/react-icons';
+import { useQueryClient } from '@tanstack/react-query';
+import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocationQuery } from '../hooks/useLocationQuery';
 import { usePluginAvailable } from '../hooks/usePluginAvailable';
+import { GraphResult, useKorrel8rGraph } from '../korrel8r-client';
 import * as korrel8r from '../korrel8r/types';
 import { defaultSearch, Search, setSearch } from '../redux-actions';
 import { State } from '../redux-reducers';
 import * as time from '../time';
 import { AdvancedSearchForm } from './AdvancedSearchForm';
+import './korrel8rpanel.css';
 import { TimeRangeDropdown } from './TimeRangeDropdown';
 import { Korrel8rTopology } from './topology/Korrel8rTopology';
-import './korrel8rpanel.css';
-import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { GraphResult, useKorrel8rGraph } from '../korrel8r-client';
-import { useQueryClient } from '@tanstack/react-query';
 
 export default function Korrel8rPanel() {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
@@ -58,6 +60,7 @@ export default function Korrel8rPanel() {
   });
   const isCancelled = !!search?.queryStr && isPending && fetchStatus === 'idle';
   const queryClient = useQueryClient();
+  const agentError: string = useSelector((state: State) => state.plugins?.tp?.get('agentError'));
 
   // Disable focus button if the panel is already focused on the current location,
   // or the current result is an error.
@@ -163,18 +166,34 @@ export default function Korrel8rPanel() {
                 {t('Cancel')}
               </Button>
             ) : (
-              <Tooltip content={t('Refresh the graph by re-running the current search.')}>
-                <Button
-                  variant="link"
-                  size="sm"
-                  isAriaDisabled={!search?.queryStr}
-                  onClick={() => refetch()}
-                  aria-label={t('Refresh')}
-                >
-                  <SyncIcon />
-                </Button>
-              </Tooltip>
+              <Button
+                variant="link"
+                size="sm"
+                isAriaDisabled={!search?.queryStr}
+                onClick={() => refetch()}
+                aria-label={t('Refresh')}
+              >
+                <SyncIcon />
+              </Button>
             )}
+
+            {/* Korrel8r connection status */}
+            <Tooltip
+              position="bottom-end"
+              content={
+                agentError
+                  ? t('Correlation service error: ') + agentError
+                  : t('Correlation service is active.')
+              }
+            >
+              <Button variant="plain" size="sm" isAriaDisabled aria-label={t('Agent status')}>
+                {!agentError ? (
+                  <PluggedIcon color="var(--pf-t--global--color--status--success--default)" />
+                ) : (
+                  <UnpluggedIcon color="var(--pf-t--global--color--status--danger--default)" />
+                )}
+              </Button>
+            </Tooltip>
           </Flex>
         </Flex>
 
