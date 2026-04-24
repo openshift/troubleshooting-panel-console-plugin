@@ -31,6 +31,9 @@ const reducer = (state: TPState, action: TPAction): TPState => {
     case ActionType.SetSearch:
       return state.set('search', action.payload);
 
+    case ActionType.SetAgentError:
+      return state.set('agentError', action.payload);
+
     default:
       break;
   }

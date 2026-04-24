@@ -1,15 +1,18 @@
+import { consoleFetch } from '@openshift-console/dynamic-plugin-sdk';
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
 import {
+  listDomains as clientListDomains,
+  Console,
   Goals,
   Graph,
-  listDomains as clientListDomains,
-  Neighbors,
-  Start,
-  graphNeighbours,
   graphGoals,
+  graphNeighbors,
+  Neighbors,
+  consoleEvents as sdkConsoleEvents,
+  setConsole as sdkSetConsole,
+  Start,
 } from './korrel8r/client';
 import { createClient } from './korrel8r/client/client';
-import { consoleFetch } from '@openshift-console/dynamic-plugin-sdk';
 import * as korrel8r from './korrel8r/types';
 
 import { useTranslation } from 'react-i18next';
@@ -46,7 +49,7 @@ const getNeighborsGraph = (neighbours: Neighbors, signal: AbortSignal) => {
     throwOnError: true,
   });
 
-  return graphNeighbours({ client: korrel8rClient, body: neighbours });
+  return graphNeighbors({ client: korrel8rClient, body: neighbours });
 };
 
 const getGoalsGraph = (goals: Goals, signal: AbortSignal) => {
@@ -141,4 +144,84 @@ const initRequest = async (req: Request): Promise<RequestInit> => {
     init['body'] = body;
   }
   return init;
+};
+
+interface CancellablePromise<T> extends Promise<T> {
+  cancel: () => void;
+}
+
+export const setConsole = (body: Console): CancellablePromise<void> => {
+  const controller = new AbortController();
+  const korrel8rClient = createClient({
+    baseUrl: KORREL8R_ENDPOINT,
+    fetch: requestWrapper,
+    signal: controller.signal,
+    throwOnError: true,
+  });
+  const promise = sdkSetConsole({ client: korrel8rClient, body }).then(() => undefined);
+  (promise as CancellablePromise<void>).cancel = () => controller.abort();
+  return promise as CancellablePromise<void>;
+};
+
+export const consoleEvents = (
+  onEvent: (event: Console) => void,
+  onError: (err: unknown) => void,
+  onConnect: () => void,
+  { minDelay = 1000, maxDelay = 30000 }: { minDelay?: number; maxDelay?: number } = {},
+): (() => void) => {
+  const controller = new AbortController();
+
+  const run = async () => {
+    let delay = minDelay;
+    while (!controller.signal.aborted) {
+      try {
+        const korrel8rClient = createClient({
+          baseUrl: KORREL8R_ENDPOINT,
+          fetch: requestWrapper,
+          signal: controller.signal,
+        });
+        const result = await sdkConsoleEvents({ client: korrel8rClient });
+        onConnect();
+        delay = minDelay;
+        for await (const event of result.stream) {
+          if (controller.signal.aborted) break;
+          onEvent(event as Console);
+        }
+      } catch (err) {
+        if (controller.signal.aborted) break;
+        onError(err);
+        await new Promise((r) => setTimeout(r, delay));
+        delay = Math.min(delay * 2, maxDelay);
+      }
+    }
+  };
+  run();
+
+  return () => controller.abort();
+};
+
+export const retryWithBackoff = (
+  operation: (signal: AbortSignal) => Promise<void>,
+  onError: (err: any) => void,
+  { minDelay = 1000, maxDelay = 30000 }: { minDelay?: number; maxDelay?: number } = {},
+): (() => void) => {
+  const controller = new AbortController();
+
+  const run = async () => {
+    let delay = minDelay;
+    while (!controller.signal.aborted) {
+      try {
+        await operation(controller.signal);
+        return;
+      } catch (err) {
+        onError(err); // Set error even if canceled, we are still disconnected
+        if (controller.signal.aborted) break;
+        await new Promise((r) => setTimeout(r, delay));
+        delay = Math.min(delay * 2, maxDelay);
+      }
+    }
+  };
+  run();
+
+  return () => controller.abort();
 };
