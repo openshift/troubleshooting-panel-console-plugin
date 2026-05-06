@@ -20,12 +20,12 @@ import {
   ValidatedOptions,
 } from '@patternfly/react-core';
 import { ExclamationCircleIcon } from '@patternfly/react-icons';
+import { FC, Ref, useEffect, useMemo, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { useDomains } from '../hooks/useDomains';
 import { Query } from '../korrel8r/types';
 import { defaultSearch, Search, SearchType } from '../redux-actions';
 import { HelpPopover } from './HelpPopover';
-import { FC, Ref, useEffect, useMemo, useState } from 'react';
 
 interface AdvancedSearchFormProps {
   search: Search;

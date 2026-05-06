@@ -1,22 +1,23 @@
+import { consoleFetch } from '@openshift-console/dynamic-plugin-sdk';
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
 import {
+  listDomains as clientListDomains,
+  Console,
+  consoleEvents,
   Goals,
   Graph,
-  listDomains as clientListDomains,
-  Neighbors,
-  Start,
-  graphNeighbours,
   graphGoals,
+  graphNeighbors,
+  Neighbors,
+  setConsole,
+  Start,
 } from './korrel8r/client';
-import { createClient } from './korrel8r/client/client';
-import { consoleFetch } from '@openshift-console/dynamic-plugin-sdk';
+import { Config, createClient } from './korrel8r/client/client';
 import * as korrel8r from './korrel8r/types';
 
 import { useTranslation } from 'react-i18next';
 import { Search, SearchType } from './redux-actions';
-
-const KORREL8R_ENDPOINT =
-  '/api/proxy/plugin/troubleshooting-panel-console-plugin/korrel8r/api/v1alpha1';
+import { sleep } from './sleep';
 
 // Result displayed in troubleshooting panel, graph or message.
 export type GraphResult = {
@@ -25,42 +26,33 @@ export type GraphResult = {
   message?: string; // Message when there is no graph.
 };
 
-export const listDomains = () => {
-  const korrel8rClient = createClient({
-    baseUrl: KORREL8R_ENDPOINT,
-    fetch: requestWrapper,
-    throwOnError: true,
-  });
-
-  return clientListDomains({ client: korrel8rClient });
+export const listDomains = (signal: AbortSignal) => {
+  return clientListDomains({ client: korrel8rClient({ signal }) });
 };
 
 const getNeighborsGraph = (neighbours: Neighbors, signal: AbortSignal) => {
-  const korrel8rClient = createClient({
-    headers: {
-      Accept: 'application/json',
-    },
-    baseUrl: KORREL8R_ENDPOINT,
-    fetch: requestWrapper,
-    signal,
-    throwOnError: true,
-  });
-
-  return graphNeighbours({ client: korrel8rClient, body: neighbours });
+  return graphNeighbors({ client: korrel8rClient({ signal }), body: neighbours });
 };
 
 const getGoalsGraph = (goals: Goals, signal: AbortSignal) => {
-  const korrel8rClient = createClient({
-    headers: {
-      Accept: 'application/json',
-    },
-    baseUrl: KORREL8R_ENDPOINT,
-    fetch: requestWrapper,
-    signal,
-    throwOnError: true,
-  });
+  return graphGoals({ client: korrel8rClient({ signal }), body: goals });
+};
 
-  return graphGoals({ client: korrel8rClient, body: goals });
+export const sendConsoleUpdate = (body: Console, signal: AbortSignal) => {
+  return setConsole({ client: korrel8rClient({ signal }), body });
+};
+
+export const getConsoleUpdates = (
+  signal: AbortSignal,
+  { minDelay, maxDelay }: { minDelay: number; maxDelay: number },
+) => {
+  // Cast: sseSleepFn is supported by the SSE runtime but not exposed in the generated Options type.
+  return consoleEvents({
+    client: korrel8rClient({ signal }),
+    sseDefaultRetryDelay: minDelay,
+    sseMaxRetryDelay: maxDelay,
+    sseSleepFn: (ms: number) => sleep(ms, signal),
+  } as Parameters<typeof consoleEvents>[0]);
 };
 
 export const useKorrel8rGraph = ({
@@ -142,3 +134,12 @@ const initRequest = async (req: Request): Promise<RequestInit> => {
   }
   return init;
 };
+
+const defaultConfig = {
+  baseUrl: '/api/proxy/plugin/troubleshooting-panel-console-plugin/korrel8r/api/v1alpha1',
+  headers: { Accept: 'application/json' },
+  fetch: requestWrapper,
+  throwOnError: true,
+};
+
+const korrel8rClient = (config: Config) => createClient({ ...defaultConfig, ...config });

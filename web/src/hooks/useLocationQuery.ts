@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Query, URIRef } from '../korrel8r/types';
 import { useDomains } from './useDomains';
 
@@ -39,16 +39,27 @@ const useBrowserLocation = () => {
   return location;
 };
 
-/** Returns the Korrel8r query for the current browser location or undefined */
+/** Returns the Korrel8r query for the current browser location or undefined. */
 export const useLocationQuery = (): Query | undefined => {
   const domains = useDomains();
   const location = useBrowserLocation();
-  try {
-    const link = new URIRef(location.pathname + location.search);
-    const q = domains.linkToQuery(link);
-    return q;
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.warn(`korrel8r useLocationQuery: ${e}`);
-  }
+  const lastLoggedError = useRef('');
+
+  const { query, error } = useMemo(() => {
+    try {
+      return { query: domains.linkToQuery(new URIRef(location.pathname + location.search)) };
+    } catch (err) {
+      return { error: String(err) };
+    }
+  }, [domains, location.pathname, location.search]);
+
+  useEffect(() => {
+    if (error && error !== lastLoggedError.current) {
+      // eslint-disable-next-line no-console
+      console.warn(`korrel8r useLocationQuery: ${error}`);
+    }
+    lastLoggedError.current = error ?? '';
+  }, [error]);
+
+  return query;
 };

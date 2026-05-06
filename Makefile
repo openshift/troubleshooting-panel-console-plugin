@@ -57,7 +57,7 @@ build-backend:
 
 .PHONY: start-backend
 start-backend:
-	go run ./cmd/plugin-backend.go -port='9002' -config-path='./web/dist' -static-path='./web/dist' -plugin-config-path='ct.yaml'
+	TROUBLESHOOTING_PANEL_CONSOLE_PLUGIN_FEATURES='agent-navigation' go run ./cmd/plugin-backend.go -port='9002' -config-path='./web/dist' -static-path='./web/dist' -plugin-config-path='ct.yaml'
 
 .PHONY: install
 install: install-frontend install-backend
@@ -80,7 +80,9 @@ deploy:	test-frontend		## Build and push image, reinstall on cluster using helm.
 start-devspace-backend:
 	/opt/app-root/plugin-backend -port=9443 -cert=/var/serving-cert/tls.crt -key=/var/serving-cert/tls.key -plugin-config-path=/etc/plugin/config.yaml -static-path=/opt/app-root/web/dist -config-path=/opt/app-root/web/dist
 
-# NOTE: copied from https://github.com/korrel8r/korrel8r/blob/main/doc/korrel8r-openapi.yaml
+.PHONY: generate
+generate: generate-client
+
 .PHONY: generate-client
 generate-client:
 	cd web && npm run generate-client

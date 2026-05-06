@@ -5,13 +5,13 @@ export type ClientOptions = {
 };
 
 /**
- * Represents a request to retrieve data for a particular Class. It has 3 colon-separated parts: DOMAIN:CLASS:SELECTOR. DOMAIN: name of a domain (e.g. k8s, log, metric, alert, trace, netflow). CLASS: name of a class in the domain (e.g. Pod, application, metric, alert, span, network). SELECTOR: domain-specific query string, syntax varies by domain: k8s uses JSON (e.g. {"namespace":"default","name":"my-pod"}), log uses LogQL or JSON (e.g. {"namespace":"default"}), metric uses PromQL (e.g. kube_pod_info{namespace="default"}), alert uses JSON labels (e.g. {"alertname":"KubePodCrashLooping"}), trace uses TraceQL (e.g. {resource.k8s.namespace.name="default"}), netflow uses LogQL labels (e.g. {SrcK8S_Namespace="default"}).
+ * Query for data objects, format is DOMAIN:CLASS:SELECTOR. DOMAIN: name of a domain (e.g. k8s, log, metric, alert, trace, netflow). CLASS: name of a class in the domain (e.g. Pod, application, metric, alert, span, network). SELECTOR: domain-specific query string.
  *
  */
 export type Query = string;
 
 /**
- * Full name of a class of objects: DOMAIN:CLASS. DOMAIN: name of a domain (e.g. k8s, log, metric, alert, trace, netflow). CLASS: name within the domain. Examples: k8s:Pod, k8s:Deployment.apps, log:application, metric:metric, alert:alert, trace:span, netflow:network.
+ * Full name of a class of data, format is DOMAIN:CLASS. DOMAIN: name of a domain (e.g. k8s, log, metric, alert, trace, netflow). CLASS: name within the domain.
  *
  */
 export type Class = string;
@@ -32,17 +32,7 @@ export type Constraint = {
    * Limit total number of objects per query.
    */
   limit?: number;
-  /**
-   * DEPRECATED store calls are cancelled with the request.
-   */
-  timeout?: Duration;
 };
-
-/**
- * The duration string is a sequence of decimal numbers, each with optional fraction and a unit suffix. Valid time units are: ns, us (or µs), ms, s, m, h.
- *
- */
-export type Duration = string;
 
 /**
  * Domain configuration information.
@@ -91,17 +81,17 @@ export type Error = {
 };
 
 /**
- * Parameters for a goal-directed correlation search. Finds paths from start objects to the specified goal classes.
+ * Parameters for a goal-directed correlation search. Finds paths from start objects to goal classes.
  *
  */
 export type Goals = {
   /**
-   * Goal classes for correlation in "domain:class" format. The search follows all paths from start to these classes. Example: ["log:application"] or ["alert:alert", "metric:metric"].
+   * Goal classes in DOMAIN:CLASS format, e.g. log:application, alert:alert
    *
    */
   goals: Array<Class>;
   /**
-   * Starting point for the correlation search.
+   * Starting point for the search.
    */
   start: Start;
 };
@@ -121,17 +111,17 @@ export type Graph = {
 };
 
 /**
- * Parameters for a neighborhood correlation search. Finds all correlated objects reachable within the specified depth from start objects.
+ * Parameters for a neighborhood correlation search. Finds all objects reachable from the start by following correlation rules up to the maximum depth.
  *
  */
 export type Neighbors = {
   /**
-   * Maximum number of correlation steps to follow from the start. Depth 1 returns only direct correlations, depth 2 includes correlations of correlations, etc.
+   * Maximum number of correlation steps to follow from the start. Depth 1 returns direct correlations only.
    *
    */
   depth: number;
   /**
-   * Starting point for the correlation search.
+   * Starting point for the search.
    */
   start: Start;
 };
@@ -141,7 +131,7 @@ export type Neighbors = {
  */
 export type Node = {
   /**
-   * Full class name
+   * Full class name.
    */
   class: string;
   /**
@@ -194,18 +184,17 @@ export type Object = {
 };
 
 /**
- * Identifies the starting point for a correlation search. Provide either 'queries' (most common) or 'class' + 'objects'.
+ * Starting point for a correlation search. It usually specifies queries to get the starting objects, but can include serialized objects as well as/instead of queries.
  *
  */
 export type Start = {
   /**
-   * Class of starting objects. Required when using 'objects' to specify the class of the serialized objects. Optional with 'queries' since the class is embedded in each query string.
+   * Class of starting objects. Required when using 'objects' to provide serialized objects. If queries are included, they must all be of this class.
    *
    */
   class?: Class;
   /**
-   * Optional time and count constraints on the objects returned by queries.
-   *
+   * Constrains the objects that will be included in search results.
    */
   constraint?: Constraint;
   /**
@@ -214,7 +203,7 @@ export type Start = {
    */
   objects?: Array<Object>;
   /**
-   * Queries for starting objects in "domain:class:selector" format. This is the most common way to specify a starting point. Example: ["k8s:Pod:{\"namespace\":\"default\",\"name\":\"my-pod\"}"]
+   * Queries for starting objects in "domain:class:selector" format. This is the most common way to specify a starting point.
    *
    */
   queries?: Array<Query>;
@@ -228,31 +217,31 @@ export type Store = {
 };
 
 /**
- * State of the user's graphical console display (e.g. OpenShift web console). The query field indicates what data the console is showing. The search field optionally specifies a correlation search for the troubleshooting panel.
+ * State of the user's graphical console display (e.g. OpenShift web console).
  *
  */
 export type Console = {
   /**
-   * Query the console is displaying.
+   * The main console view displays the results of this query.
    */
-  query?: Query;
+  view?: Query;
   /**
-   * Optional correlation search for the troubleshooting panel.
+   * The troubleshooting panel displays the results of this correlation search.
    */
   search?: Search;
 };
 
 /**
- * Correlation search parameters for the console troubleshooting panel. Set exactly one of 'goals' (targeted search to specific classes) or 'neighbors' (open-ended exploration to a depth).
+ * Correlation search parameters. Set exactly one of 'goals' (targeted search to specific classes) or 'neighbors' (open-ended exploration to a depth).
  *
  */
 export type Search = {
   /**
-   * Goal-directed search parameters (mutually exclusive with neighbors).
+   * Parameters for a goal-directed correlation search.
    */
   goals?: Goals;
   /**
-   * Neighborhood search parameters (mutually exclusive with goals).
+   * Parameters for a neighborhood correlation search.
    */
   neighbors?: Neighbors;
 };
@@ -270,7 +259,7 @@ export type GraphOptions = {
    */
   results?: boolean;
   /**
-   * if true include non-fatal error messages.
+   * If true include non-fatal error messages.
    */
   errors?: boolean;
 };
@@ -291,8 +280,12 @@ export type SetConfigResponses = {
   /**
    * OK
    */
-  200: unknown;
+  200: {
+    [key: string]: unknown;
+  };
 };
+
+export type SetConfigResponse = SetConfigResponses[keyof SetConfigResponses];
 
 export type ListDomainsData = {
   body?: never;
@@ -378,7 +371,7 @@ export type GraphGoalsData = {
        */
       results?: boolean;
       /**
-       * if true include non-fatal error messages.
+       * If true include non-fatal error messages.
        */
       errors?: boolean;
     };
@@ -428,7 +421,7 @@ export type GraphNeighborsData = {
        */
       results?: boolean;
       /**
-       * if true include non-fatal error messages.
+       * If true include non-fatal error messages.
        */
       errors?: boolean;
     };
@@ -478,7 +471,7 @@ export type GraphNeighboursData = {
        */
       results?: boolean;
       /**
-       * if true include non-fatal error messages.
+       * If true include non-fatal error messages.
        */
       errors?: boolean;
     };
@@ -510,7 +503,7 @@ export type GraphNeighboursResponse = GraphNeighboursResponses[keyof GraphNeighb
 
 export type ListGoalsData = {
   /**
-   * search from start to goal classes
+   * Search from start to goal classes.
    */
   body: Goals;
   path?: never;
@@ -599,8 +592,12 @@ export type SetConsoleResponses = {
   /**
    * Console display updated successfully
    */
-  200: unknown;
+  200: {
+    [key: string]: unknown;
+  };
 };
+
+export type SetConsoleResponse = SetConsoleResponses[keyof SetConsoleResponses];
 
 export type ConsoleEventsData = {
   body?: never;
@@ -611,7 +608,10 @@ export type ConsoleEventsData = {
 
 export type ConsoleEventsResponses = {
   /**
-   * Stream of console display updates.
+   * SSE stream where each event's data field contains a JSON-encoded Console object.
+   *
    */
-  200: unknown;
+  200: Console;
 };
+
+export type ConsoleEventsResponse = ConsoleEventsResponses[keyof ConsoleEventsResponses];

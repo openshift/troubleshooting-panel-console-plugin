@@ -5,6 +5,8 @@ export enum ActionType {
   CloseTroubleshootingPanel = 'closeTroubleshootingPanel',
   OpenTroubleshootingPanel = 'openTroubleshootingPanel',
   SetSearch = 'setSearch',
+  SetAgentError = 'setAgentError',
+  SetAgentEnabled = 'setAgentEnabled',
 }
 
 export enum SearchType {
@@ -32,11 +34,15 @@ export const defaultSearch: Search = {
 export const closeTP = () => action(ActionType.CloseTroubleshootingPanel);
 export const openTP = () => action(ActionType.OpenTroubleshootingPanel);
 export const setSearch = (search: Search) => action(ActionType.SetSearch, search);
+export const setAgentError = (message: string) => action(ActionType.SetAgentError, message);
+export const setAgentEnabled = (enabled: boolean) => action(ActionType.SetAgentEnabled, enabled);
 
 export const actions = {
   closeTP,
   openTP,
   setSearch,
+  setAgentError,
+  setAgentEnabled,
 };
 
 export type TPAction = Action<typeof actions>;
