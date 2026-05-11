@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi8/nodejs-22:latest AS web-builder
+FROM registry.access.redhat.com/ubi9/nodejs-22:latest AS web-builder
 
 WORKDIR /opt/app-root
 
@@ -11,7 +11,7 @@ RUN make install-frontend
 COPY web/ web/
 RUN make build-frontend
 
-FROM registry.ci.openshift.org/ocp/builder:rhel-8-golang-1.24-openshift-4.20 as go-builder
+FROM registry.access.redhat.com/ubi9/go-toolset:1.26 AS go-builder
 
 WORKDIR /opt/app-root
 
@@ -29,7 +29,7 @@ ENV CGO_ENABLED=1
 
 RUN make build-backend BUILD_OPTS="-tags strictfipsruntime"
 
-FROM registry.access.redhat.com/ubi8/ubi
+FROM registry.access.redhat.com/ubi9/ubi-minimal
 
 COPY --from=web-builder /opt/app-root/web/dist /opt/app-root/web/dist
 COPY --from=go-builder /opt/app-root/plugin-backend /opt/app-root
