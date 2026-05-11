@@ -12,6 +12,7 @@ import (
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	oscrypto "github.com/openshift/library-go/pkg/crypto"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 	v1 "k8s.io/api/core/v1"
@@ -26,6 +27,8 @@ type Config struct {
 	Port             int
 	CertFile         string
 	PrivateKeyFile   string
+	TLSMinVersion    uint16
+	TLSCipherSuites  []uint16
 	Features         map[string]bool
 	StaticPath       string
 	ConfigPath       string
@@ -51,8 +54,19 @@ func Start(cfg *Config) {
 	router, pluginConfig := setupRoutes(cfg)
 	router.Use(corsHeaderMiddleware())
 
-	tlsConfig := &tls.Config{
-		MinVersion: tls.VersionTLS12,
+	tlsConfig := oscrypto.SecureTLSConfig(&tls.Config{})
+
+	if cfg.TLSMinVersion != 0 {
+		tlsConfig.MinVersion = cfg.TLSMinVersion
+	}
+	// Note: CipherSuites only applies to TLS 1.0-1.2. TLS 1.3 cipher suites are
+	// non-configurable in Go's crypto/tls package and will use secure defaults.
+	if len(cfg.TLSCipherSuites) > 0 {
+		tlsConfig.CipherSuites = cfg.TLSCipherSuites
+		// Warn if cipher suites are configured with TLS 1.3 minimum, as they won't apply
+		if cfg.TLSMinVersion >= tls.VersionTLS13 {
+			log.Warn("TLS cipher suites are configured but will be ignored with TLS 1.3; TLS 1.3 uses non-configurable cipher suites")
+		}
 	}
 
 	timeout := 30 * time.Second
