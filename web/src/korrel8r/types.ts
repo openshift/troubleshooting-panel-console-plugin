@@ -53,41 +53,30 @@ const parseDate = (s: string): Date | undefined => {
   return d?.valueOf() ? d : undefined;
 };
 
-// Parse a number, return undefined if invalid, rather than NaN.
-const parseNumber = (s: string): number | undefined => (s && Number(s)) || undefined;
-
 export class Constraint {
   public start?: Date;
   public end?: Date;
   public limit?: number;
-  /** NOTE timeout is in nanoseconds */
-  public timeoutNS?: number;
 
   constructor(args: Partial<Constraint> = {}) {
     Object.assign(this, args);
   }
 
-  static fromAPI(ac: api.Constraint): Constraint {
+  static fromAPI(constraint: api.Constraint): Constraint | undefined {
+    if (!constraint) return undefined;
     return new Constraint({
-      start: parseDate(ac?.start),
-      end: parseDate(ac?.end),
-      limit: ac?.limit || undefined,
-      timeoutNS: parseNumber(ac?.timeout),
+      start: parseDate(constraint.start),
+      end: parseDate(constraint.end),
+      limit: constraint?.limit,
     });
   }
 
   toAPI(): api.Constraint {
     return {
-      start: this?.start?.toISOString() || undefined,
-      end: this?.end?.toISOString() || undefined,
-      limit: this?.limit || undefined,
-      timeout: this?.timeoutNS?.toString() || undefined,
+      start: this?.start?.toISOString(),
+      end: this?.end?.toISOString(),
+      limit: this?.limit,
     };
-  }
-
-  /** Return the timeout in seconds, with a fractional part */
-  timeout(): number {
-    return this.timeoutNS / (1000 * 1000) || undefined;
   }
 }
 
