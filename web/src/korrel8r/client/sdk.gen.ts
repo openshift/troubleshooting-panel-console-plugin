@@ -4,6 +4,7 @@ import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
 import type {
   ConsoleEventsData,
+  ConsoleEventsResponse,
   ConsoleEventsResponses,
   GraphGoalsData,
   GraphGoalsErrors,
@@ -135,6 +136,8 @@ export const graphNeighbors = <ThrowOnError extends boolean = false>(
  *
  * Specify a set of start objects, as queries or serialized objects, and a depth for the neighborhood search. Returns a graph of all paths with depth or less edges leading from start objects.
  *
+ *
+ * @deprecated
  */
 export const graphNeighbours = <ThrowOnError extends boolean = false>(
   options: Options<GraphNeighboursData, ThrowOnError>,
@@ -184,18 +187,17 @@ export const objects = <ThrowOnError extends boolean = false>(
 /**
  * Make console state available to an agent.
  *
- * Put the current state of the console so it can be retrieved by an agent via the MCP API.
+ * Store console state so an agent can read it via MCP tool get_console. The MCP client must have the same session (Authorization header) as the REST client.
  *
  */
 export const setConsole = <ThrowOnError extends boolean = false>(
   options: Options<SetConsoleData, ThrowOnError>,
 ) =>
   (options.client ?? client).put<SetConsoleResponses, SetConsoleErrors, ThrowOnError>({
-    bodySerializer: null,
     url: '/console',
     ...options,
     headers: {
-      'Content-Type': 'text/json',
+      'Content-Type': 'application/json',
       ...options.headers,
     },
   });
@@ -203,11 +205,11 @@ export const setConsole = <ThrowOnError extends boolean = false>(
 /**
  * SSE event stream of console display updates from an agent.
  *
- * Server-sent event (SSE) stream delivering console display updates. Events are triggered by an agent using the MCP API to update the console.
+ * Updates are triggered by update requests from MCP tool show_in_console. The MCP client must have the same session (Authorization header) as the REST client.
  *
  */
 export const consoleEvents = <ThrowOnError extends boolean = false>(
-  options?: Options<ConsoleEventsData, ThrowOnError, unknown>,
+  options?: Options<ConsoleEventsData, ThrowOnError, ConsoleEventsResponse>,
 ) =>
   (options?.client ?? client).sse.get<ConsoleEventsResponses, unknown, ThrowOnError>({
     url: '/console/events',

@@ -28,7 +28,7 @@
     "@eslint/compat": "^2.0.5",
     "@eslint/eslintrc": "^3.3.5",
     "@eslint/js": "^9.39.4",
-    "@hey-api/openapi-ts": "^0.95.0",
+    "@hey-api/openapi-ts": "^0.97.1",
     "@openshift-console/dynamic-plugin-sdk": "^4.22.0-prerelease.2",
     "@openshift-console/dynamic-plugin-sdk-webpack": "^4.22.0-prerelease.2",
     "@patternfly/react-core": "^6.4.1",

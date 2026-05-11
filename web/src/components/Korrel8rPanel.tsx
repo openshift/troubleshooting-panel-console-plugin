@@ -20,26 +20,29 @@ import {
   SyncIcon,
   UnlinkIcon,
 } from '@patternfly/react-icons';
+import { useQueryClient } from '@tanstack/react-query';
+import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
+import { useFeature } from '../hooks/useFeatures';
 import { useLocationQuery } from '../hooks/useLocationQuery';
 import { usePluginAvailable } from '../hooks/usePluginAvailable';
+import { GraphResult, useKorrel8rGraph } from '../korrel8r-client';
 import * as korrel8r from '../korrel8r/types';
 import { defaultSearch, Search, setSearch } from '../redux-actions';
 import { State } from '../redux-reducers';
 import * as time from '../time';
 import { AdvancedSearchForm } from './AdvancedSearchForm';
+import AgentMenu from './AgentMenu';
+import './korrel8rpanel.css';
 import { TimeRangeDropdown } from './TimeRangeDropdown';
 import { Korrel8rTopology } from './topology/Korrel8rTopology';
-import './korrel8rpanel.css';
-import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { GraphResult, useKorrel8rGraph } from '../korrel8r-client';
-import { useQueryClient } from '@tanstack/react-query';
 
 export default function Korrel8rPanel() {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
   const dispatch = useDispatch();
   const locationQuery = useLocationQuery();
+  const featureEnabled = useFeature('agent-navigation');
 
   const search: Search = useSelector((state: State) => state.plugins?.tp?.get('search'));
 
@@ -139,6 +142,8 @@ export default function Korrel8rPanel() {
 
           {/* Right aligned buttons */}
           <Flex align={{ default: 'alignRight' }} spaceItems={{ default: 'spaceItemsNone' }}>
+            {/* AI Agent menu */}
+            {featureEnabled && <AgentMenu />}
             {/* Advanced search toggle */}
             <Tooltip content={t('Advanced search parameters')} position="bottom-end">
               <ExpandableSectionToggle
@@ -163,17 +168,15 @@ export default function Korrel8rPanel() {
                 {t('Cancel')}
               </Button>
             ) : (
-              <Tooltip content={t('Refresh the graph by re-running the current search.')}>
-                <Button
-                  variant="link"
-                  size="sm"
-                  isAriaDisabled={!search?.queryStr}
-                  onClick={() => refetch()}
-                  aria-label={t('Refresh')}
-                >
-                  <SyncIcon />
-                </Button>
-              </Tooltip>
+              <Button
+                variant="link"
+                size="sm"
+                isAriaDisabled={!search?.queryStr}
+                onClick={() => refetch()}
+                aria-label={t('Refresh')}
+              >
+                <SyncIcon />
+              </Button>
             )}
           </Flex>
         </Flex>

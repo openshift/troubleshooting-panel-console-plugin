@@ -52,7 +52,7 @@ describe('Constraint', () => {
   it.each([
     { clientC: {}, typesC: {} },
     { clientC: { start: start.toISOString(), end: end.toISOString() }, typesC: { start, end } },
-    { clientC: { limit: 50, timeout: '1111111111' }, typesC: { limit: 50, timeoutNS: 1111111111 } },
+    { clientC: { limit: 50 }, typesC: { limit: 50 } },
   ] as Array<{ clientC: api.Constraint; typesC: Partial<Constraint> }>)(
     'from/toAPI %s',
     ({ clientC, typesC }) => {

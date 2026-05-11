@@ -32,6 +32,9 @@ dev:
       - path: ./web/dist:/opt/app-root/web/dist
         startContainer: true
         printLogs: true
+    env:
+      - name: TROUBLESHOOTING_PANEL_CONSOLE_PLUGIN_FEATURES
+        value: agent-navigation
     command: ["make"]
     args: ["start-devspace-backend"]
     # Inject a lightweight SSH server into the container (so your IDE can connect to the remote dev env)
