@@ -1,4 +1,4 @@
-import * as React from 'react';
+import { useEffect, useRef } from 'react';
 import { shallowEqual, useDispatch, useSelector } from 'react-redux';
 import { getConsoleUpdates, sendConsoleUpdate } from '../korrel8r-client';
 import * as api from '../korrel8r/client';
@@ -27,13 +27,13 @@ const useAgentNavigation = ({
   const dispatch = useDispatch();
   const navigateToQuery = useNavigateToQuery();
 
-  const navigateToQueryRef = React.useRef(navigateToQuery);
-  React.useEffect(() => {
+  const navigateToQueryRef = useRef(navigateToQuery);
+  useEffect(() => {
     navigateToQueryRef.current = navigateToQuery;
   });
 
   // Handle console update events via an SSE request.
-  React.useEffect(() => {
+  useEffect(() => {
     if (!agentEnabled) {
       dispatch(setAgentError(''));
       return;
@@ -68,7 +68,7 @@ const useAgentNavigation = ({
   }, [agentEnabled, minDelay, maxDelay, dispatch]);
 
   // Send console updates when view or search changes.
-  React.useEffect(() => {
+  useEffect(() => {
     if (!agentEnabled) return;
     const body = {
       view,
