@@ -38,7 +38,7 @@ import { useNavigateToQuery } from '../../hooks/useNavigateToQuery';
 import * as korrel8r from '../../korrel8r/types';
 import { getIcon } from '../icons';
 import './korrel8rtopology.css';
-import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FC, ReactElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 // DagreLayout with straight edges (no angular bendpoints).
 class StraightEdgeDagreLayout extends DagreLayout {
@@ -157,7 +157,7 @@ export const Korrel8rTopology: FC<{
   );
 
   const nodeMenu = useCallback(
-    (e: GraphElement<ElementModel, korrel8r.Node>): React.ReactElement[] => {
+    (e: GraphElement<ElementModel, korrel8r.Node>): ReactElement[] => {
       const node = e.getData();
       const menu = [
         <ContextMenuItem isDisabled={true} key={node.class.toString()}>
