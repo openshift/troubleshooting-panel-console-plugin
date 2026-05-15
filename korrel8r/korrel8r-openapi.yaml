@@ -17,6 +17,7 @@ info:
     name: Apache 2.0
     url: https://github.com/korrel8r/korrel8r/blob/main/LICENSE
   version: v1alpha1
+  x-korrel8r-version: "0.10.1-dev"
 externalDocs:
   url: https://korrel8r.github.io/korrel8r/
   description: Korrel8r User Guide
@@ -294,6 +295,13 @@ paths:
           required: true
           schema:
             $ref: "#/components/schemas/Query"
+        - name: constraint
+          description: Constrains the objects that will be included in results.
+          in: query
+          style: form
+          explode: true
+          schema:
+            $ref: "#/components/schemas/Constraint"
       responses:
         "200":
           description: OK
@@ -399,7 +407,6 @@ components:
     Constraint:
       description: Constrains the objects that will be included in search results.
       type: object
-      x-go-type: korrel8r.Constraint
       properties:
         start:
           type: string
@@ -553,18 +560,24 @@ components:
           x-oapi-codegen-extra-tags:
             jsonschema: "Full class name in DOMAIN:CLASS format."
         queries:
-          type: array
-          x-go-type-skip-optional-pointer: true
           description: Queries yielding results for this class.
+          type: array
           items:
             $ref: "#/components/schemas/QueryCount"
+          x-go-type-skip-optional-pointer: true
           x-oapi-codegen-extra-tags:
             jsonschema: "Queries yielding results for this class."
         count:
-          type: integer
           description: Number of results for this class, after de-duplication.
+          type: integer
           x-oapi-codegen-extra-tags:
             jsonschema: "Number of results for this class, after de-duplication."
+        markers:
+          description: Markers found on data objects for this node.
+          type: array
+          items:
+            $ref: "#/components/schemas/MarkerCount"
+          x-go-type-skip-optional-pointer: true
         result:
           description: Serialized result contents, may be large.
           type: array
@@ -590,6 +603,18 @@ components:
             - $ref: "#/components/schemas/Query"
           x-oapi-codegen-extra-tags:
             jsonschema: "Query for correlation data in DOMAIN:CLASS:SELECTOR format."
+
+    MarkerCount:
+      description: Marker with number of instances found.
+      type: object
+      required: [marker]
+      properties:
+        marker:
+          description: Marker for correlation data.
+          type: string
+        count:
+          description: Number of markers found, omitted if none.
+          type: integer
 
     Rule:
       type: object

@@ -143,6 +143,10 @@ export type Node = {
    */
   count?: number;
   /**
+   * Markers found on data objects for this node.
+   */
+  markers?: Array<MarkerCount>;
+  /**
    * Serialized result contents, may be large.
    */
   result?: Array<Object>;
@@ -160,6 +164,20 @@ export type QueryCount = {
    * Query for correlation data.
    */
   query: Query;
+};
+
+/**
+ * Marker with number of instances found.
+ */
+export type MarkerCount = {
+  /**
+   * Marker for correlation data.
+   */
+  marker: string;
+  /**
+   * Number of markers found, omitted if none.
+   */
+  count?: number;
 };
 
 /**
@@ -541,6 +559,10 @@ export type ObjectsData = {
      * Query string.
      */
     query: Query;
+    /**
+     * Constrains the objects that will be included in results.
+     */
+    constraint?: Constraint;
   };
   url: '/objects';
 };

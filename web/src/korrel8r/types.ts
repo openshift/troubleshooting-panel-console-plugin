@@ -248,15 +248,18 @@ export const unixSeconds = (d: Date | undefined): number | undefined => {
   return Math.floor(unixMilliseconds(d) / 1000) || undefined;
 };
 
+export type MarkerCount = api.MarkerCount;
+
 export class Node {
   id: string;
   count: number;
   class: Class;
   queries: Array<QueryCount>;
-  error: Error;
+  markers: Array<MarkerCount>;
+  disabled: string;
 
   /** Construct a type-safe node from an API node.
-   *  Does not throw, sets the `error` field on error.
+   *  Does not throw, sets the `disabled` field if there is an error.
    */
   constructor(node: api.Node) {
     this.id = node.class;
@@ -264,9 +267,14 @@ export class Node {
     try {
       this.class = Class.parse(node.class);
     } catch (e) {
-      this.error = e;
+      this.disabled = e?.message ?? e.toString();
     }
     this.queries = QueryCount.array(node.queries ?? []);
+    this.markers = node.markers;
+  }
+
+  get hasMarkers(): boolean {
+    return this.markers?.length > 0;
   }
 }
 
@@ -342,6 +350,6 @@ export class Graph {
   }
 
   node(id: string): Node {
-    return this.nodeByClass[id];
+    return this.nodeByClass?.[id];
   }
 }

@@ -57,6 +57,7 @@ export type {
   ListGoalsErrors,
   ListGoalsResponse,
   ListGoalsResponses,
+  MarkerCount,
   Neighbors,
   Node,
   Object,

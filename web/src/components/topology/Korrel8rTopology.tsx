@@ -1,4 +1,4 @@
-import { Badge, Title } from '@patternfly/react-core';
+import { Badge, Label, LabelGroup, Title } from '@patternfly/react-core';
 import {
   action,
   ComponentFactory,
@@ -17,7 +17,9 @@ import {
   Model,
   ModelKind,
   Node,
+  NodeModel,
   NodeShape,
+  NodeStatus,
   SELECTION_EVENT,
   TOP_TO_BOTTOM,
   TopologyControlBar,
@@ -33,12 +35,13 @@ import {
   withSelection,
   WithSelectionProps,
 } from '@patternfly/react-topology';
+import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocationQuery } from '../../hooks/useLocationQuery';
 import { useNavigateToQuery } from '../../hooks/useNavigateToQuery';
 import * as korrel8r from '../../korrel8r/types';
 import { getIcon } from '../icons';
 import './korrel8rtopology.css';
-import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 // DagreLayout with straight edges (no angular bendpoints).
 class StraightEdgeDagreLayout extends DagreLayout {
@@ -56,14 +59,45 @@ const nodeLabel = (node: korrel8r.Node): string => {
   return capitalize(c.name);
 };
 
+const nodeStatusProps = (
+  node: korrel8r.Node,
+): {
+  nodeStatus?: NodeStatus;
+  showStatusDecorator?: boolean;
+  statusDecoratorTooltip?: React.ReactNode;
+} => {
+  if (node.disabled) {
+    return {
+      showStatusDecorator: true,
+      statusDecoratorTooltip: node.disabled,
+    };
+  }
+  if (node.hasMarkers) {
+    return {
+      nodeStatus: NodeStatus.warning,
+      showStatusDecorator: true,
+      statusDecoratorTooltip: (
+        <LabelGroup>
+          {node.markers.map(({ marker, count }) => (
+            <Label key={marker}>
+              {marker} <Badge className="tp-plugin__topology_marker_badge">{count}</Badge>
+            </Label>
+          ))}
+        </LabelGroup>
+      ),
+    };
+  }
+  return {};
+};
+
 interface Korrel8rTopologyNodeProps {
-  element: Node;
+  element: Node<NodeModel, korrel8r.Node>;
 }
 
 const Korrel8rTopologyNode: FC<
   Korrel8rTopologyNodeProps & WithContextMenuProps & WithSelectionProps & WithDragNodeProps
 > = ({ element, onSelect, selected, onContextMenu, contextMenuOpen, dragNodeRef }) => {
-  const node = element.getData();
+  const node: korrel8r.Node = element.getData();
   const topologyNode = (
     <DefaultNode
       element={element}
@@ -73,19 +107,22 @@ const Korrel8rTopologyNode: FC<
       contextMenuOpen={contextMenuOpen}
       dragNodeRef={dragNodeRef}
       hover={false}
+      className={node.disabled ? 'tp-plugin__topology_node--disabled' : undefined}
       label={nodeLabel(node)}
       badge={node?.count?.toString() ?? '?'}
       badgeClassName="tp-plugin__topology_node_badge"
       hideContextMenuKebab={node?.queries?.length === 1}
+      onStatusDecoratorClick={(e) => onSelect(e)}
+      {...nodeStatusProps(node)}
     >
-      <g transform={`translate(25, 25)`}>{getIcon(node.class)}</g>
+      <g transform={`translate(25, 25)`}>{getIcon(node?.class)}</g>
     </DefaultNode>
   );
-  if (node.error) {
-    // Gray out, add error tool tip
+  if (node.disabled) {
+    // Wrapper to make node gray with error tool tip.
     return (
       <g opacity="0.7" className="tp-plugin__topology_invalid_node">
-        <title>{node.error}</title>){topologyNode}
+        <title>{node.disabled}</title>){topologyNode}
       </g>
     );
   }
@@ -104,28 +141,34 @@ export const Korrel8rTopology: FC<{
 }> = ({ graph, loggingAvailable, netobserveAvailable, constraint }) => {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
   const navigateToQuery = useNavigateToQuery();
+  const locationQuery = useLocationQuery();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  const nodes = useMemo(
-    () =>
+  useEffect(() => {
+    if (!locationQuery) return;
+    const id = locationQuery.class.toString();
+    setSelectedIds(graph.node(id) ? [id] : []);
+  }, [graph, locationQuery]);
+
+  const nodes: NodeModel[] = useMemo(
+    (): NodeModel[] =>
       graph.nodes.map((node: korrel8r.Node) => {
-        const newNode = { ...node };
-        if (newNode.error) {
+        if (node.disabled) {
           // eslint-disable-next-line no-console
-          console.warn(`korrel8r node: ${newNode.error}`);
-          newNode.error = Error(t('Unable to find Console Link'));
-        } else if (newNode.class.domain === 'log' && !loggingAvailable) {
-          newNode.error = Error(t('Logging Plugin Disabled'));
-        } else if (newNode.class.domain === 'netflow' && !netobserveAvailable) {
-          newNode.error = Error(t('Netflow Plugin Disabled'));
+          console.warn(`korrel8r node: ${node.disabled}`);
+          node.disabled = t('Unable to find Console Link');
+        } else if (node.class.domain === 'log' && !loggingAvailable) {
+          node.disabled = t('Logging Plugin Disabled');
+        } else if (node.class.domain === 'netflow' && !netobserveAvailable) {
+          node.disabled = t('Netflow Plugin Disabled');
         }
         return {
-          id: newNode.id,
+          id: node.id,
           type: 'node',
           width: NODE_DIAMETER,
           height: NODE_DIAMETER,
           shape: NODE_SHAPE,
-          data: newNode,
+          data: node,
         };
       }),
     [graph, loggingAvailable, netobserveAvailable, t],
@@ -150,7 +193,7 @@ export const Korrel8rTopology: FC<{
       const id = selected?.[0]; // Select only one at a time.
       setSelectedIds([id]);
       const node = graph.node(id);
-      if (!node || node.error) return;
+      if (!node || node.disabled) return;
       navigateToQuery(node.queries?.[0]?.query, constraint);
     },
     [graph, navigateToQuery, setSelectedIds, constraint],
@@ -158,7 +201,7 @@ export const Korrel8rTopology: FC<{
 
   const nodeMenu = useCallback(
     (e: GraphElement<ElementModel, korrel8r.Node>): React.ReactElement[] => {
-      const node = e.getData();
+      const node: korrel8r.Node = e.getData();
       const menu = [
         <ContextMenuItem isDisabled={true} key={node.class.toString()}>
           <Title headingLevel="h4">{node.class.toString()}</Title>
@@ -173,9 +216,8 @@ export const Korrel8rTopology: FC<{
               setSelectedIds([node.id]);
               navigator.clipboard.writeText(qc.query.toString());
             }}
-            icon={<Badge>{`${qc.count} `}</Badge>}
           >
-            {`${qc.query.selector} `}
+            {qc.query.selector} <Badge>{`${qc.count}`}</Badge>
           </ContextMenuItem>,
         ),
       );
