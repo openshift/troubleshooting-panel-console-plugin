@@ -1,26 +1,33 @@
-import { Badge, Title } from '@patternfly/react-core';
+import { Badge, Label, LabelGroup, Title, Tooltip, TooltipPosition } from '@patternfly/react-core';
+import InfoCircleIcon from '@patternfly/react-icons/dist/dynamic/icons/info-circle-icon';
 import {
   action,
   ComponentFactory,
   ContextMenuItem,
   createTopologyControlButtons,
   DagreLayout,
+  Decorator,
+  DEFAULT_DECORATOR_RADIUS,
   defaultControlButtonsOptions,
   DefaultEdge,
   DefaultGroup,
   DefaultNode,
   EdgeStyle,
   ElementModel,
+  getDefaultShapeDecoratorCenter,
   Graph,
   GraphComponent,
   GraphElement,
   Model,
   ModelKind,
   Node,
+  NodeModel,
   NodeShape,
+  NodeStatus,
   SELECTION_EVENT,
   TOP_TO_BOTTOM,
   TopologyControlBar,
+  TopologyQuadrant,
   TopologyView,
   Visualization,
   VisualizationProvider,
@@ -33,12 +40,14 @@ import {
   withSelection,
   WithSelectionProps,
 } from '@patternfly/react-topology';
+import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocationQuery } from '../../hooks/useLocationQuery';
 import { useNavigateToQuery } from '../../hooks/useNavigateToQuery';
 import * as korrel8r from '../../korrel8r/types';
 import { getIcon } from '../icons';
 import './korrel8rtopology.css';
-import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { mergeStatusCounts, statusForNode, statusName, toStatus } from './status';
 
 // DagreLayout with straight edges (no angular bendpoints).
 class StraightEdgeDagreLayout extends DagreLayout {
@@ -56,14 +65,62 @@ const nodeLabel = (node: korrel8r.Node): string => {
   return capitalize(c.name);
 };
 
+const nodeBadge = (node: korrel8r.Node): string => {
+  if (node.queries?.length > 1) {
+    return `${node.queries[0].count}/${node.count}`;
+  }
+  return `${node?.count ?? ''}`;
+};
+
+const statusTooltip = (statusCounts: korrel8r.StatusCount[]): React.ReactNode => {
+  if (statusCounts.length === 0) return undefined;
+  return (
+    <LabelGroup>
+      {statusCounts.map(({ status, count }) => (
+        <Label key={status} status={statusName(toStatus(status))}>
+          <Badge className="tp-plugin__topology_marker_badge">{count}</Badge> {status}
+        </Label>
+      ))}
+    </LabelGroup>
+  );
+};
+
 interface Korrel8rTopologyNodeProps {
-  element: Node;
+  element: Node<NodeModel, korrel8r.Node>;
 }
 
 const Korrel8rTopologyNode: FC<
   Korrel8rTopologyNodeProps & WithContextMenuProps & WithSelectionProps & WithDragNodeProps
 > = ({ element, onSelect, selected, onContextMenu, contextMenuOpen, dragNodeRef }) => {
-  const node = element.getData();
+  const node: korrel8r.Node = element.getData();
+  const decoratorRef = useRef<SVGGElement>(null);
+  const [statusCounts, status] = mergeStatusCounts(node);
+  const nodeStatus = node.disabled ? undefined : statusForNode(status);
+  const tooltip = node.disabled ? undefined : statusTooltip(statusCounts);
+  const isInfo = nodeStatus === NodeStatus.info;
+
+  const infoDecorator = (() => {
+    if (!isInfo || !tooltip) return undefined;
+    const { x, y } = getDefaultShapeDecoratorCenter(TopologyQuadrant.upperLeft, element);
+    return (
+      <Tooltip triggerRef={decoratorRef} content={tooltip} position={TooltipPosition.left}>
+        <Decorator
+          x={x}
+          y={y}
+          radius={DEFAULT_DECORATOR_RADIUS}
+          showBackground
+          onClick={(e) => onSelect(e)}
+          icon={
+            <g className="pf-topology__node__decorator__status">
+              <InfoCircleIcon className="pf-m-info" />
+            </g>
+          }
+          innerRef={decoratorRef}
+        />
+      </Tooltip>
+    );
+  })();
+
   const topologyNode = (
     <DefaultNode
       element={element}
@@ -73,19 +130,25 @@ const Korrel8rTopologyNode: FC<
       contextMenuOpen={contextMenuOpen}
       dragNodeRef={dragNodeRef}
       hover={false}
+      className={node.disabled ? 'tp-plugin__topology_node--disabled' : undefined}
       label={nodeLabel(node)}
-      badge={node?.count?.toString() ?? '?'}
+      badge={nodeBadge(node)}
       badgeClassName="tp-plugin__topology_node_badge"
-      hideContextMenuKebab={node?.queries?.length === 1}
+      hideContextMenuKebab={!!node?.disabled || node?.queries?.length === 1}
+      onStatusDecoratorClick={(e) => onSelect(e)}
+      nodeStatus={nodeStatus}
+      showStatusDecorator={node.disabled ? true : !isInfo && !!nodeStatus}
+      statusDecoratorTooltip={node.disabled ? node.disabled : !isInfo ? tooltip : undefined}
+      attachments={infoDecorator}
     >
-      <g transform={`translate(25, 25)`}>{getIcon(node.class)}</g>
+      <g transform={`translate(25, 25)`}>{getIcon(node?.class)}</g>
     </DefaultNode>
   );
-  if (node.error) {
-    // Gray out, add error tool tip
+  if (node.disabled) {
     return (
-      <g opacity="0.7" className="tp-plugin__topology_invalid_node">
-        <title>{node.error}</title>){topologyNode}
+      <g className="tp-plugin__topology_node--disabled">
+        <title>{node.disabled}</title>
+        {topologyNode}
       </g>
     );
   }
@@ -104,28 +167,38 @@ export const Korrel8rTopology: FC<{
 }> = ({ graph, loggingAvailable, netobserveAvailable, constraint }) => {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
   const navigateToQuery = useNavigateToQuery();
+  const locationQuery = useLocationQuery();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  const nodes = useMemo(
-    () =>
+  useEffect(() => {
+    if (!locationQuery) {
+      setSelectedIds([]);
+      return;
+    }
+    const id = locationQuery.class.toString();
+    setSelectedIds(graph.node(id) ? [id] : []);
+  }, [graph, locationQuery]);
+
+  const nodes: NodeModel[] = useMemo(
+    (): NodeModel[] =>
       graph.nodes.map((node: korrel8r.Node) => {
-        const newNode = { ...node };
-        if (newNode.error) {
+        const data = { ...node };
+        if (data.disabled) {
           // eslint-disable-next-line no-console
-          console.warn(`korrel8r node: ${newNode.error}`);
-          newNode.error = Error(t('Unable to find Console Link'));
-        } else if (newNode.class.domain === 'log' && !loggingAvailable) {
-          newNode.error = Error(t('Logging Plugin Disabled'));
-        } else if (newNode.class.domain === 'netflow' && !netobserveAvailable) {
-          newNode.error = Error(t('Netflow Plugin Disabled'));
+          console.warn(`korrel8r node: ${data.disabled}`);
+          data.disabled = t('Unable to find Console Link');
+        } else if (data.class.domain === 'log' && !loggingAvailable) {
+          data.disabled = t('Logging Plugin Disabled');
+        } else if (data.class.domain === 'netflow' && !netobserveAvailable) {
+          data.disabled = t('Netflow Plugin Disabled');
         }
         return {
-          id: newNode.id,
+          id: data.id,
           type: 'node',
           width: NODE_DIAMETER,
           height: NODE_DIAMETER,
           shape: NODE_SHAPE,
-          data: newNode,
+          data,
         };
       }),
     [graph, loggingAvailable, netobserveAvailable, t],
@@ -150,7 +223,7 @@ export const Korrel8rTopology: FC<{
       const id = selected?.[0]; // Select only one at a time.
       setSelectedIds([id]);
       const node = graph.node(id);
-      if (!node || node.error) return;
+      if (!node || node.disabled) return;
       navigateToQuery(node.queries?.[0]?.query, constraint);
     },
     [graph, navigateToQuery, setSelectedIds, constraint],
@@ -158,7 +231,14 @@ export const Korrel8rTopology: FC<{
 
   const nodeMenu = useCallback(
     (e: GraphElement<ElementModel, korrel8r.Node>): React.ReactElement[] => {
-      const node = e.getData();
+      const node: korrel8r.Node = e.getData();
+      if (!!node.disabled || !node.class) {
+        return [
+          <ContextMenuItem isDisabled={true} key={node.id}>
+            <Title headingLevel="h4">{node.id}</Title>
+          </ContextMenuItem>,
+        ];
+      }
       const menu = [
         <ContextMenuItem isDisabled={true} key={node.class.toString()}>
           <Title headingLevel="h4">{node.class.toString()}</Title>
@@ -173,9 +253,17 @@ export const Korrel8rTopology: FC<{
               setSelectedIds([node.id]);
               navigator.clipboard.writeText(qc.query.toString());
             }}
-            icon={<Badge>{`${qc.count} `}</Badge>}
           >
-            {`${qc.query.selector} `}
+            <Badge>{`${qc.count}`}</Badge> {qc.query.selector}
+            {qc.statuses?.length > 0 && (
+              <LabelGroup>
+                {qc.statuses.map(({ status, count }) => (
+                  <Label key={status} isCompact status={statusName(toStatus(status))}>
+                    {status} {count}
+                  </Label>
+                ))}
+              </LabelGroup>
+            )}
           </ContextMenuItem>,
         ),
       );
@@ -252,7 +340,11 @@ export const Korrel8rTopology: FC<{
   }, [controller]);
 
   return (
-    <div ref={containerRef} style={{ width: '100%', height: '100%' }}>
+    <div
+      ref={containerRef}
+      className="tp-plugin__topology"
+      style={{ width: '100%', height: '100%' }}
+    >
       <TopologyView
         controlBar={
           <TopologyControlBar
