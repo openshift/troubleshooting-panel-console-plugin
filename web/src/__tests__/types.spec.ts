@@ -141,10 +141,12 @@ describe('Node', () => {
         {
           query: { class: { domain: 'a', name: 'b' }, selector: 'c' },
           count: 5,
+          statuses: [],
         },
         {
           query: { class: { domain: 'a', name: 'b' }, selector: 'd' },
           count: 5,
+          statuses: [],
         },
       ],
     });
@@ -154,7 +156,7 @@ describe('Node', () => {
     expect(new Node({ class: 'foobar', count: 1 })).toEqual({
       id: 'foobar',
       count: 1,
-      error: new TypeError('invalid class: foobar'),
+      disabled: 'invalid class: foobar',
       queries: [],
     });
   });
