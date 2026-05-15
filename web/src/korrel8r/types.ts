@@ -248,15 +248,17 @@ export const unixSeconds = (d: Date | undefined): number | undefined => {
   return Math.floor(unixMilliseconds(d) / 1000) || undefined;
 };
 
+export type StatusCount = api.StatusCount;
+
 export class Node {
   id: string;
   count: number;
   class: Class;
   queries: Array<QueryCount>;
-  error: Error;
+  disabled: string;
 
   /** Construct a type-safe node from an API node.
-   *  Does not throw, sets the `error` field on error.
+   *  Does not throw, sets the `disabled` field if there is an error.
    */
   constructor(node: api.Node) {
     this.id = node.class;
@@ -264,7 +266,7 @@ export class Node {
     try {
       this.class = Class.parse(node.class);
     } catch (e) {
-      this.error = e;
+      this.disabled = e?.message ?? e.toString();
     }
     this.queries = QueryCount.array(node.queries ?? []);
   }
@@ -281,6 +283,7 @@ export class Edge {
 export class QueryCount {
   query: Query;
   count: number;
+  statuses: Array<StatusCount>;
   error: Error;
 
   /**
@@ -290,6 +293,7 @@ export class QueryCount {
     try {
       this.count = qc.count;
       this.query = Query.parse(qc.query);
+      this.statuses = qc.statuses ?? [];
     } catch (e) {
       this.error = e;
     }
