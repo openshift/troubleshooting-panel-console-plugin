@@ -147,6 +147,7 @@ describe('Node', () => {
           count: 5,
         },
       ],
+      markers: [],
     });
   });
 
