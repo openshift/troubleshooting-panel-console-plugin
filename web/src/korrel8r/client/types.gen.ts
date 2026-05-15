@@ -160,6 +160,24 @@ export type QueryCount = {
    * Query for correlation data.
    */
   query: Query;
+  /**
+   * Statuses found on data objects for this query.
+   */
+  statuses?: Array<StatusCount>;
+};
+
+/**
+ * Status with number of instances found.
+ */
+export type StatusCount = {
+  /**
+   * Status for correlation data.
+   */
+  status: string;
+  /**
+   * Number of instances found, omitted if none.
+   */
+  count?: number;
 };
 
 /**
@@ -541,6 +559,10 @@ export type ObjectsData = {
      * Query string.
      */
     query: Query;
+    /**
+     * Constrains the objects that will be included in results.
+     */
+    constraint?: Constraint;
   };
   url: '/objects';
 };
