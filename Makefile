@@ -57,7 +57,7 @@ build-backend:
 
 .PHONY: start-backend
 start-backend:
-	TROUBLESHOOTING_PANEL_CONSOLE_PLUGIN_FEATURES='agent-navigation' go run ./cmd/plugin-backend.go -port='9002' -config-path='./web/dist' -static-path='./web/dist' -plugin-config-path='ct.yaml'
+	go run ./cmd/plugin-backend.go -port='9002' -config-path='./web/dist' -static-path='./web/dist' -plugin-config-path='ct.yaml'
 
 .PHONY: install
 install: install-frontend install-backend
@@ -78,7 +78,7 @@ deploy:	test-frontend		## Build and push image, reinstall on cluster using helm.
 
 .PHONY: start-devspace-backend
 start-devspace-backend:
-	/opt/app-root/plugin-backend -port=9443 -cert=/var/serving-cert/tls.crt -key=/var/serving-cert/tls.key -plugin-config-path=/etc/plugin/config.yaml -static-path=/opt/app-root/web/dist -config-path=/opt/app-root/web/dist
+	/opt/app-root/plugin-backend -port=9443 -cert=/var/serving-cert/tls.crt -key=/var/serving-cert/tls.key -plugin-config-path=/etc/plugin/config.yaml -static-path=/opt/app-root/web/dist -config-path=/opt/app-root/web/dist $(if $(FEATURES),-features=$(FEATURES))
 
 .PHONY: generate
 generate: generate-client
