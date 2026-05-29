@@ -17,8 +17,8 @@ import { useLocationQuery } from './useLocationQuery';
 import { useNavigateToQuery } from './useNavigateToQuery';
 
 const useAgentNavigation = ({
-  minDelay = 3000,
-  maxDelay = 30000,
+  minDelay = 500,
+  maxDelay = 5000,
 }: { minDelay?: number; maxDelay?: number } = {}) => {
   const agentEnabled: boolean = useSelector((s: State) => s.plugins?.tp?.get('agentEnabled'));
   const view = useLocationQuery()?.toString();
@@ -32,61 +32,76 @@ const useAgentNavigation = ({
     navigateToQueryRef.current = navigateToQuery;
   });
 
-  // Handle console update events via an SSE request.
+  // Set on connection to trigger an initial send of current state.
+  const [needSend, setNeedSend] = React.useState(false);
+
+  // Handle console update events via an SSE stream.
+  // Endless loop to stay constantly connected to the agent.
   React.useEffect(() => {
     if (!agentEnabled) {
       dispatch(setAgentError(''));
       return;
     }
+
     const controller = new AbortController();
     const consumeStream = async () => {
-      try {
-        // NOTE the generated client has reconnect and back-off built-in so
-        // we don't have to handle it here. By default it will retry until aborted.
-        const result = await getConsoleUpdates(controller.signal, { minDelay, maxDelay });
-        for await (const event of result.stream) {
-          if (controller.signal.aborted) return;
+      while (!controller.signal.aborted) {
+        try {
+          const result = await getConsoleUpdates(controller.signal, {
+            minDelay,
+            maxDelay,
+            onSseError: (err: unknown) => {
+              if (!controller.signal.aborted) {
+                dispatch(setAgentError((err as Error)?.message || String(err)));
+              }
+            },
+          });
           dispatch(setAgentError(''));
-          if (event.view) {
-            navigateToQueryRef.current(Query.parse(event.view), null);
-          }
-          if (event.search) {
-            const s = fromAPISearch(event.search);
-            if (s) {
-              dispatch(setSearch(s));
-              dispatch(openTP());
+          setNeedSend(true);
+          for await (const event of result.stream) {
+            if (controller.signal.aborted) return;
+            if (event.view) {
+              navigateToQueryRef.current(Query.parse(event.view), null);
+            }
+            if (event.search) {
+              const s = fromAPISearch(event.search);
+              if (s) {
+                dispatch(setSearch(s));
+                dispatch(openTP());
+              }
             }
           }
+        } catch (err) {
+          if (controller.signal.aborted) return;
+          dispatch(setAgentError((err as Error)?.message || String(err)));
         }
-      } catch (err) {
-        if (controller.signal.aborted) return;
-        dispatch(setAgentError(err?.message || String(err)));
+        setNeedSend(false);
+        await sleep(minDelay, controller.signal);
       }
     };
     consumeStream();
     return () => controller.abort();
   }, [agentEnabled, minDelay, maxDelay, dispatch]);
 
-  // Send console updates when view or search changes.
+  // Send console updates when local view or search changes, or on connect.
+  // Sends even when view/search are empty to signal that the console is connected.
   React.useEffect(() => {
-    if (!agentEnabled) return;
-    const body = {
-      view,
-      search: isOpen ? toAPISearch(search) : undefined,
-    };
-    if (!body.view && !body.search) return;
-
+    if (!agentEnabled || !needSend) return;
     const controller = new AbortController();
     const sendWithRetry = async () => {
       let backoff = minDelay;
       while (!controller.signal.aborted) {
         try {
-          await sendConsoleUpdate(body, controller.signal);
+          await sendConsoleUpdate(
+            { view, search: isOpen ? toAPISearch(search) : undefined },
+            controller.signal,
+          );
+          if (controller.signal.aborted) return;
           dispatch(setAgentError(''));
           return;
         } catch (err) {
           if (controller.signal.aborted) return;
-          dispatch(setAgentError(err?.message || String(err)));
+          dispatch(setAgentError((err as Error)?.message || String(err)));
           await sleep(backoff, controller.signal);
           backoff = Math.min(backoff * 2, maxDelay);
         }
@@ -94,7 +109,7 @@ const useAgentNavigation = ({
     };
     sendWithRetry();
     return () => controller.abort();
-  }, [view, search, isOpen, agentEnabled, minDelay, maxDelay, dispatch]);
+  }, [view, search, isOpen, agentEnabled, needSend, minDelay, maxDelay, dispatch]);
 };
 
 export default useAgentNavigation;
@@ -113,15 +128,15 @@ export const toAPISearch = (search: Search): api.Search | undefined => {
 };
 
 export const fromAPISearch = (search: api.Search): Search | undefined => {
-  let result: Search | undefined = undefined;
-  if (search.goals && !search.neighbors) {
+  if (search.goals && search.neighbors) return undefined; // Invalid to  set both
+  let result: Search | undefined;
+  if (search.goals) {
     result = {
       queryStr: search.goals.start?.queries?.[0],
       searchType: SearchType.Goal,
       goal: search.goals.goals?.[0],
     };
-  }
-  if (search.neighbors && !search.goals) {
+  } else if (search.neighbors) {
     result = {
       queryStr: search.neighbors.start?.queries?.[0],
       searchType: SearchType.Depth,

@@ -2,8 +2,6 @@ import {
   Dropdown,
   DropdownItem,
   DropdownList,
-  Flex,
-  FlexItem,
   Icon,
   Label,
   MenuToggle,
@@ -25,7 +23,8 @@ const AgentMenu = () => {
 
   const agentEnabled: boolean = useSelector((s: State) => s.plugins?.tp?.get('agentEnabled'));
   const agentError: string = useSelector((s: State) => s.plugins?.tp?.get('agentError'));
-  const status = agentError ? 'warning' : undefined;
+
+  const status = !agentEnabled ? undefined : agentError ? 'danger' : 'success';
 
   useEffect(() => {
     if (agentError) {
@@ -33,6 +32,7 @@ const AgentMenu = () => {
       console.error('Agent navigation error:', agentError);
     }
   }, [agentError]);
+
   return (
     <Dropdown
       isOpen={isOpen}
@@ -40,13 +40,14 @@ const AgentMenu = () => {
       popperProps={{ position: 'end' }}
       toggle={(toggleRef: Ref<MenuToggleElement>) => (
         <MenuToggle
+          status={status}
           ref={toggleRef}
           variant="plain"
           onClick={() => setIsOpen(!isOpen)}
           isExpanded={isOpen}
           aria-label={t('AI Agent settings')}
         >
-          <Icon status={status}>
+          <Icon status={status} size={'xl'}>
             <AIExperienceIcon />
           </Icon>
         </MenuToggle>
@@ -54,24 +55,26 @@ const AgentMenu = () => {
     >
       <DropdownList>
         <DropdownItem key="header">
-          <Flex alignItems={{ default: 'alignItemsCenter' }}>
-            <FlexItem grow={{ default: 'grow' }}>
-              <Switch
-                id="agent-enabled"
-                isChecked={agentEnabled}
-                hasCheckIcon
-                label={t('Agent Navigation')}
-                onChange={(_event, checked: boolean) => dispatch(setAgentEnabled(checked))}
-              />
-              <HelpPopover>
-                {t(
-                  'Allow an AI agent with your user-id to connect with this console and use it to show you relevant views and correlation searches.',
-                )}
-              </HelpPopover>
-              {!!agentError && <Label status={status}>{t('Connection error')}</Label>}
-            </FlexItem>
-          </Flex>
+          <Switch
+            id="agent-enabled"
+            isChecked={agentEnabled}
+            hasCheckIcon
+            label={t('Agent Navigation')}
+            onChange={(_event, checked: boolean) => dispatch(setAgentEnabled(checked))}
+          />
+          <HelpPopover>
+            {t(
+              'Allow an AI agent with your user-id to connect with this console and use it to show you relevant views and correlation searches.',
+            )}
+          </HelpPopover>
         </DropdownItem>
+        {!!agentError && (
+          <DropdownItem>
+            <Label status={status}>
+              {t('Connection error')}: {agentError}
+            </Label>
+          </DropdownItem>
+        )}
       </DropdownList>
     </Dropdown>
   );
