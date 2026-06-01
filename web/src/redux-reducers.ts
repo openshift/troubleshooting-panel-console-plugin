@@ -18,8 +18,8 @@ const reducer = (state: TPState, action: TPAction): TPState => {
     return ImmutableMap({
       isOpen: false,
       search: defaultSearch,
-      agentEnabled: false, // True if the user switches on the agent feature.
-      agentError: '', // Error message of last unresolved error, cleared on success.
+      agentEnabled: false,
+      agentError: '',
     });
   }
 

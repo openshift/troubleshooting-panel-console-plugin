@@ -44,14 +44,19 @@ export const sendConsoleUpdate = (body: Console, signal: AbortSignal) => {
 
 export const getConsoleUpdates = (
   signal: AbortSignal,
-  { minDelay, maxDelay }: { minDelay: number; maxDelay: number },
+  {
+    minDelay,
+    maxDelay,
+    onSseError,
+  }: { minDelay: number; maxDelay: number; onSseError?: (error: unknown) => void },
 ) => {
-  // Cast: sseSleepFn is supported by the SSE runtime but not exposed in the generated Options type.
+  // Cast: SSE options are supported by the runtime but not exposed in the generated Options type.
   return consoleEvents({
     client: korrel8rClient({ signal }),
     sseDefaultRetryDelay: minDelay,
     sseMaxRetryDelay: maxDelay,
     sseSleepFn: (ms: number) => sleep(ms, signal),
+    onSseError,
   } as Parameters<typeof consoleEvents>[0]);
 };
 

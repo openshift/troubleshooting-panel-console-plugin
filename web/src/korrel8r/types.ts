@@ -219,7 +219,7 @@ export class Domains {
         continue;
       }
     }
-    throw new TypeError(`cannot convert link: ${link}`);
+    throw new TypeError(`no domain recognizes link: ${link}`);
   }
 
   // Convert a korrel8r query to a relative URI Reference, try all available domains.
@@ -293,10 +293,10 @@ export class QueryCount {
     try {
       this.count = qc.count;
       this.query = Query.parse(qc.query);
-      this.statuses = qc.statuses ?? [];
     } catch (e) {
       this.error = e;
     }
+    this.statuses = qc.statuses ?? [];
   }
 
   /** Highest count first, errors last */

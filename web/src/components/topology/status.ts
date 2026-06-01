@@ -17,7 +17,8 @@ export const statusName = (s: Status): StatusName => {
 };
 
 // Convert Status enum to NodeStatus
-export const statusForNode = (s: Status): NodeStatus | undefined => {
+export const statusForNode = (s: Status | undefined): NodeStatus | undefined => {
+  if (s === undefined) return undefined;
   const name = statusName(s);
   return name ? NodeStatus[name] : undefined;
 };
@@ -38,10 +39,10 @@ export const mergeStatusCounts = (
   const m = new Map<string, number>(); // Original status string, total count.
   let s = 0;
   node.queries.forEach((qc) =>
-    qc.statuses.forEach((sc) => {
+    (qc.statuses ?? []).forEach((sc) => {
       if (!sc.status) return;
-      m.set(sc.status, (m.get(sc.status) ?? 0) + sc.count);
-      s = Math.max(s, toStatus(sc.status));
+      m.set(sc.status, (m.get(sc.status) ?? 0) + (sc.count ?? 0));
+      s = Math.max(s, toStatus(sc.status) ?? 0);
     }),
   );
   const sc = [...m.entries()].map(([status, count]) => ({ status, count }));

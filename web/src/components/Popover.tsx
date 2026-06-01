@@ -1,15 +1,15 @@
 import { useActivePerspective } from '@openshift-console/dynamic-plugin-sdk';
 import { Button, Flex, FlexItem, Stack, StackItem, Title } from '@patternfly/react-core';
 import { TimesCircleIcon } from '@patternfly/react-icons';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { closeTP } from '../redux-actions';
 import { State } from '../redux-reducers';
 import { HelpPopover } from './HelpPopover';
 import Korrel8rPanel from './Korrel8rPanel';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import './popover.css';
-import { useCallback, useEffect } from 'react';
 
 const queryClient = new QueryClient({
   defaultOptions: {
