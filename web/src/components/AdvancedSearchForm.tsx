@@ -161,7 +161,7 @@ export const AdvancedSearchForm: FC<AdvancedSearchFormProps> = ({ search, onSear
           <FormHelperText>
             <HelperText>
               <HelperTextItem icon={<ExclamationCircleIcon />} variant="error">
-                <p>{queryError.message}</p>
+                <p>{String(queryError.message)}</p>
               </HelperTextItem>
             </HelperText>
           </FormHelperText>
@@ -235,7 +235,7 @@ export const AdvancedSearchForm: FC<AdvancedSearchFormProps> = ({ search, onSear
                 <FormHelperText>
                   <HelperText>
                     <HelperTextItem icon={<ExclamationCircleIcon />} variant="error">
-                      {classError.message}
+                      {String(classError.message)}
                     </HelperTextItem>
                   </HelperText>
                 </FormHelperText>
