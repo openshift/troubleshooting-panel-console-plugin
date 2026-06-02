@@ -71,7 +71,7 @@ const AgentMenu = () => {
         {!!agentError && (
           <DropdownItem>
             <Label status={status}>
-              {t('Connection error')}: {agentError}
+              {t('Connection error')}: {String(agentError)}
             </Label>
           </DropdownItem>
         )}

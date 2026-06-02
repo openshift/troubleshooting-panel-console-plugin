@@ -147,7 +147,7 @@ const Korrel8rTopologyNode: FC<
   if (node.disabled) {
     return (
       <g className="tp-plugin__topology_node--disabled">
-        <title>{node.disabled}</title>
+        <title>{String(node.disabled)}</title>
         {topologyNode}
       </g>
     );
