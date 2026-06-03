@@ -1,5 +1,0 @@
-= Troubleshooting Panel User Guide
-:doctype: book
-:toc: left
-
-See downstream documentation https://docs.redhat.com/en/documentation/red_hat_openshift_cluster_observability_operator/1-latest/html/ui_plugins_for_red_hat_openshift_cluster_observability_operator/troubleshooting-ui-plugin[Chapter 5. Troubleshooting UI plugin]
