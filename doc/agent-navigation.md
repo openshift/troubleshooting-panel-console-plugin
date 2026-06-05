@@ -74,6 +74,10 @@ Korrel8r serves MCP at the `/mcp` endpoint (streamable HTTP). Configure your age
 > The bearer token and the console login must belong to the same user.
 > Korrel8r isolates sessions by user, so only an agent with a valid token for your user-id can access your console.
 
+> [!WARNING]
+> If you are connected to a cluster with a self-signed certificates you may need to override your mcp configuration
+> locally to prevent denying usage of self-signed certificates. For claude code you can run `export NODE_TLS_REJECT_UNAUTHORIZED=0`. This is not recommended for production use
+
 ## Enable with the AI button
 
 The troubleshooting panel has an "AI" menu with a switch to allow or disallow agent navigation.
