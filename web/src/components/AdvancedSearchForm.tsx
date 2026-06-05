@@ -1,5 +1,7 @@
 import {
   ActionGroup,
+  ActionList,
+  ActionListItem,
   Button,
   Flex,
   FlexItem,
@@ -258,29 +260,33 @@ export const AdvancedSearchForm: FC<AdvancedSearchFormProps> = ({ search, onSear
       </FormGroup>
 
       <ActionGroup>
-        <div>
-          <Tooltip
-            content={
-              !isValid
-                ? t('Fix validation errors before searching')
-                : hasChanged
-                  ? t('Update the correlation graph')
-                  : t('Correlation graph already matches search')
-            }
-          >
-            <Button
-              type="submit"
-              variant="primary"
-              isAriaDisabled={!hasChanged || !isValid}
-              size="sm"
+        <ActionList>
+          <ActionListItem>
+            <Tooltip
+              content={
+                !isValid
+                  ? t('Fix validation errors before searching')
+                  : hasChanged
+                    ? t('Update the correlation graph')
+                    : t('Correlation graph already matches search')
+              }
             >
-              {t('Search')}
+              <Button
+                type="submit"
+                variant="primary"
+                isAriaDisabled={!hasChanged || !isValid}
+                size="sm"
+              >
+                {t('Search')}
+              </Button>
+            </Tooltip>
+          </ActionListItem>
+          <ActionListItem>
+            <Button type="button" variant="secondary" size="sm" onClick={onClose}>
+              {t('Cancel')}
             </Button>
-          </Tooltip>
-        </div>
-        <Button variant="secondary" size="sm" onClick={onClose}>
-          {t('Close')}
-        </Button>
+          </ActionListItem>
+        </ActionList>
       </ActionGroup>
     </Form>
   );
