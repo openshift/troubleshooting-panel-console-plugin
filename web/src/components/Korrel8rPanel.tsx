@@ -13,6 +13,7 @@ import {
   Tooltip,
 } from '@patternfly/react-core';
 import {
+  BanIcon,
   CubesIcon,
   ExclamationCircleIcon,
   LinkIcon,
@@ -165,7 +166,7 @@ export default function Korrel8rPanel() {
                 onClick={() => queryClient.cancelQueries({ queryKey: ['korrel8r', 'graph'] })}
                 aria-label={t('Cancel')}
               >
-                {t('Cancel')}
+                <BanIcon />
               </Button>
             ) : (
               <Button

@@ -61,8 +61,14 @@ const capitalize = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : '');
 const nodeLabel = (node: korrel8r.Node): string => {
   const c = node.class;
   if (!c) return `[${node.id}]`; // Original un-parsed class name.
-  if (c.domain === 'k8s') return c.name.replace(/\..*$/, ''); // Strip group/version
-  return capitalize(c.name);
+  switch (c.domain) {
+    case 'k8s':
+      return capitalize(c.name.replace(/\..*$/, '')); // Strip group/version
+    case 'log':
+      return capitalize(c.name) + ' Log';
+    default:
+      return capitalize(c.name);
+  }
 };
 
 const nodeBadge = (node: korrel8r.Node): string => {
