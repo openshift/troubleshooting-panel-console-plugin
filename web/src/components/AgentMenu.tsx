@@ -8,7 +8,7 @@ import {
   MenuToggleElement,
   Switch,
 } from '@patternfly/react-core';
-import { Ref, useEffect, useState } from 'react';
+import { Ref, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { setAgentEnabled } from '../redux-actions';
@@ -25,13 +25,6 @@ const AgentMenu = () => {
   const agentError: string = useSelector((s: State) => s.plugins?.tp?.get('agentError'));
 
   const status = !agentEnabled ? undefined : agentError ? 'danger' : 'success';
-
-  useEffect(() => {
-    if (agentError) {
-      // eslint-disable-next-line no-console
-      console.error('Agent navigation error:', agentError);
-    }
-  }, [agentError]);
 
   return (
     <Dropdown

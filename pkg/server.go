@@ -36,7 +36,7 @@ type Config struct {
 }
 
 type PluginConfig struct {
-	Timeout         time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	Timeout               time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	EnableAgentNavigation bool          `json:"enableAgentNavigation,omitempty" yaml:"enableAgentNavigation,omitempty"`
 }
 
@@ -53,12 +53,6 @@ func (pluginConfig *PluginConfig) MarshalJSON() ([]byte, error) {
 
 func Start(cfg *Config) {
 	router, pluginConfig := setupRoutes(cfg)
-	if pluginConfig != nil && pluginConfig.EnableAgentNavigation {
-		if cfg.Features == nil {
-			cfg.Features = make(map[string]bool)
-		}
-		cfg.Features["agent-navigation"] = true
-	}
 	router.Use(corsHeaderMiddleware())
 
 	tlsConfig := oscrypto.SecureTLSConfig(&tls.Config{})
