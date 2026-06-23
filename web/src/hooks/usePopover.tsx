@@ -17,6 +17,12 @@ const usePopover = () => {
     }
   }, [launchModal, isOpen]);
 
+  useEffect(() => {
+    // Log once on mount of troubleshooting component.
+    // eslint-disable-next-line no-console
+    console.debug(`troubleshooting: pop-over mounted ${new Date().toLocaleString()}`);
+  }, []);
+
   return [];
 };
 
