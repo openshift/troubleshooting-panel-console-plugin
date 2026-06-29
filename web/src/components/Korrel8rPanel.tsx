@@ -6,20 +6,22 @@ import {
   EmptyStateVariant,
   ExpandableSection,
   ExpandableSectionToggle,
-  Flex,
   Spinner,
   Stack,
   StackItem,
+  Toolbar,
+  ToolbarContent,
+  ToolbarGroup,
+  ToolbarItem,
   Tooltip,
 } from '@patternfly/react-core';
+
 import {
   BanIcon,
+  CogIcon,
   CubesIcon,
   ExclamationCircleIcon,
-  LinkIcon,
-  SlidersHIcon,
-  SyncIcon,
-  UnlinkIcon,
+  RedoIcon,
 } from '@patternfly/react-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -47,14 +49,14 @@ export default function Korrel8rPanel() {
 
   const search: Search = useSelector((state: State) => state.plugins?.tp?.get('search'));
 
-  // Compute constraint from search period.
+  // Compute constraint from search period and max results.
   const constraint = useMemo(() => {
-    if (!search.period) {
+    if (!search.period && !search.limit) {
       return undefined;
     }
-    const [start, end] = search.period.startEnd();
-    return new korrel8r.Constraint({ start, end });
-  }, [search.period]);
+    const [start, end] = search.period?.startEnd() ?? [undefined, undefined];
+    return new korrel8r.Constraint({ start, end, limit: search.limit });
+  }, [search.period, search.limit]);
 
   const { data, isError, error, isFetching, isPending, fetchStatus, refetch } = useKorrel8rGraph({
     search,
@@ -98,90 +100,92 @@ export default function Korrel8rPanel() {
   return (
     <>
       <Stack>
-        <Flex
-          className="tp-plugin__panel-toolbar"
-          direction={{ default: 'row' }}
-          flexWrap={{ default: 'wrap' }}
-          alignItems={{ default: 'alignItemsCenter' }}
-          spaceItems={{ default: 'spaceItemsXs' }}
-        >
-          <Tooltip
-            position="bottom-start"
-            content={
-              locationQuery
-                ? isFocused
-                  ? t('Correlation graph is focused on the current view.')
-                  : t('Focus the correlation on the current view.')
-                : t('Current view does not provide a starting point for correlation')
-            }
-          >
-            <Button
-              className="tp-plugin__compact-control"
-              isAriaDisabled={!locationQuery || isFocused}
-              size="sm"
-              onClick={() => {
-                dispatchSearch({
-                  ...defaultSearch,
-                  queryStr: locationQuery?.toString(),
-                  period: search?.period,
-                });
-              }}
-              icon={isFocused ? <LinkIcon /> : <UnlinkIcon />}
-            >
-              {t('Focus')}
-            </Button>
-          </Tooltip>
-
-          {/* Time range drop-down */}
-          <Flex align={{ default: 'alignRight' }} spaceItems={{ default: 'spaceItemsNone' }}>
-            <TimeRangeDropdown
-              className="tp-plugin__compact-control"
-              period={search.period ?? defaultSearch.period}
-              onChange={(period: time.Period) => dispatchSearch({ ...search, period })}
-            />
-          </Flex>
-
-          {/* Right aligned buttons */}
-          <Flex align={{ default: 'alignRight' }} spaceItems={{ default: 'spaceItemsNone' }}>
-            {/* AI Agent menu */}
-            {featureEnabled && <AgentMenu />}
-            {/* Advanced search toggle */}
-            <Tooltip content={t('Advanced search parameters')} position="bottom-end">
-              <ExpandableSectionToggle
-                contentId={advancedContentID}
-                toggleId={advancedToggleID}
-                isExpanded={showAdvanced}
-                onToggle={(on: boolean) => setShowAdvanced(on)}
-                aria-label={t('Advanced search parameters')}
+        <Toolbar className="tp-plugin__panel-toolbar">
+          <ToolbarContent>
+            <ToolbarItem>
+              <Tooltip
+                content={
+                  isFocused
+                    ? t('Graph is already focused on the current view')
+                    : locationQuery
+                      ? t('Create a correlation graph starting from the current view')
+                      : t('Current view does not support correlation')
+                }
+                position="bottom-start"
               >
-                <SlidersHIcon />
-              </ExpandableSectionToggle>
-            </Tooltip>
+                <Button
+                  variant={isFocused ? 'secondary' : 'primary'}
+                  isAriaDisabled={!locationQuery}
+                  onClick={() => {
+                    dispatchSearch({
+                      ...search,
+                      queryStr: locationQuery?.toString(),
+                    });
+                  }}
+                >
+                  {t('Focus')}
+                </Button>
+              </Tooltip>
+            </ToolbarItem>
 
-            {/* Refresh / Cancel button */}
-            {isFetching ? (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => queryClient.cancelQueries({ queryKey: ['korrel8r', 'graph'] })}
-                aria-label={t('Cancel')}
-              >
-                <BanIcon />
-              </Button>
-            ) : (
-              <Button
-                variant="link"
-                size="sm"
-                isAriaDisabled={!search?.queryStr}
-                onClick={() => refetch()}
-                aria-label={t('Refresh')}
-              >
-                <SyncIcon />
-              </Button>
-            )}
-          </Flex>
-        </Flex>
+            <ToolbarItem>
+              <Tooltip content={t('Advanced search parameters')} position="bottom-start">
+                <ExpandableSectionToggle
+                  contentId={advancedContentID}
+                  toggleId={advancedToggleID}
+                  isExpanded={showAdvanced}
+                  onToggle={(on: boolean) => setShowAdvanced(on)}
+                  aria-label={t('Advanced search parameters')}
+                >
+                  <CogIcon />
+                </ExpandableSectionToggle>
+              </Tooltip>
+            </ToolbarItem>
 
+            <ToolbarGroup align={{ default: 'alignCenter' }}>
+              <ToolbarItem>
+                <Tooltip content={t('Limit search to this time range')} position="bottom-start">
+                  <TimeRangeDropdown
+                    period={search.period ?? defaultSearch.period}
+                    onChange={(period: time.Period) => dispatchSearch({ ...search, period })}
+                  />
+                </Tooltip>
+              </ToolbarItem>
+            </ToolbarGroup>
+
+            <ToolbarGroup align={{ default: 'alignEnd' }}>
+              {featureEnabled && (
+                <ToolbarItem>
+                  <Tooltip content={t('AI agent navigation')} position="bottom-end">
+                    <AgentMenu />
+                  </Tooltip>
+                </ToolbarItem>
+              )}
+              <ToolbarItem>
+                {isFetching ? (
+                  <Button
+                    variant="plain"
+                    onClick={() => queryClient.cancelQueries({ queryKey: ['korrel8r', 'graph'] })}
+                    aria-label={t('Cancel refresh')}
+                  >
+                    <BanIcon />
+                  </Button>
+                ) : (
+                  <Tooltip content={t('Re-calculate the current graph')} position="bottom-end">
+                    <Button
+                      variant="plain"
+                      isAriaDisabled={!search?.queryStr}
+                      onClick={() => refetch()}
+                      aria-label={t('Refresh')}
+                    >
+                      <RedoIcon />
+                    </Button>
+                  </Tooltip>
+                )}
+              </ToolbarItem>
+            </ToolbarGroup>
+          </ToolbarContent>
+        </Toolbar>
         <ExpandableSection
           className="tp-plugin__panel-query-container"
           contentId={advancedContentID}

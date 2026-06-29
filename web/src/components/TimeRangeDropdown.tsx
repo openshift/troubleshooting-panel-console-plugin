@@ -13,15 +13,14 @@ import {
   ModalBody,
   ModalFooter,
   ModalHeader,
-  ModalVariant,
   NumberInput,
 } from '@patternfly/react-core';
+import { FC, Ref, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTimeUnitLabel } from '../hooks/useTimeUnitLabel';
 import * as time from '../time';
 import { DateTimePicker } from './DateTimePicker';
 import { TimeUnitPicker } from './TimeUnitPicker';
-import { FC, Ref, useCallback, useMemo, useState } from 'react';
 
 const CUSTOM_RANGE_KEY = 'CUSTOM_RANGE';
 const CUSTOM_DURATION_KEY = 'CUSTOM_DURATION';
@@ -58,10 +57,10 @@ const TimeRangeModal: FC<TimeRangeModalProps> = ({ initialRange, onSave, onClose
   const isValid = start < end;
 
   return (
-    <Modal variant={ModalVariant.small} isOpen onClose={onClose}>
+    <Modal isOpen onClose={onClose}>
       <ModalHeader title={t('Custom time range')} />
       <ModalBody>
-        <Flex direction={{ default: 'column' }} spaceItems={{ default: 'spaceItemsMd' }}>
+        <Flex direction={{ default: 'column' }}>
           <FlexItem>
             <label>{t('From')}</label>
             <DateTimePicker date={start} onChange={setStart} />
@@ -111,7 +110,7 @@ const DurationModal: FC<DurationModalProps> = ({ initialDuration, onSave, onClos
   const onChangeCount = (n: number) => setCount(Math.max(1, n || 1));
 
   return (
-    <Modal variant={ModalVariant.small} isOpen onClose={onClose}>
+    <Modal isOpen onClose={onClose}>
       <ModalHeader title={t('Custom duration')} />
       <ModalBody>
         <Flex alignItems={{ default: 'alignItemsCenter' }} spaceItems={{ default: 'spaceItemsSm' }}>
@@ -229,14 +228,14 @@ export const TimeRangeDropdown: FC<TimeRangeDropdownProps> = ({ period, onChange
             isSelected={selectedKey === CUSTOM_DURATION_KEY}
             onClick={handleCustomDurationClick}
           >
-            {t('Other duration')}
+            {t('Custom duration')}
           </DropdownItem>
           <DropdownItem
             key={CUSTOM_RANGE_KEY}
             isSelected={selectedKey === CUSTOM_RANGE_KEY}
             onClick={handleCustomRangeClick}
           >
-            {t('Start-end time range')}
+            {t('Custom time range')}
           </DropdownItem>
         </DropdownList>
       </Dropdown>

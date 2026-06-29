@@ -21,6 +21,7 @@ export type Search = {
   depth?: number;
   goal?: string;
   period?: Period;
+  limit?: number;
 };
 
 // Default search parameters do a neighbourhood search of depth 3.
@@ -29,6 +30,7 @@ export const defaultSearch: Search = {
   searchType: SearchType.Depth,
   depth: 3,
   period: new Duration(1, HOUR),
+  limit: 1000,
 };
 
 export const closeTP = () => action(ActionType.CloseTroubleshootingPanel);
