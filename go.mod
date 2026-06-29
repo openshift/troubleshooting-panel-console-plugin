@@ -1,6 +1,6 @@
 module github.com/openshift/troubleshooting-panel-console-plugin
 
-go 1.24.0
+go 1.26.3
 
 require (
 	github.com/evanphx/json-patch v4.12.0+incompatible
