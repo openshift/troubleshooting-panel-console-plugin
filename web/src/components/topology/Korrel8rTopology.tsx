@@ -1,4 +1,5 @@
-import { Badge, Label, LabelGroup, Title, Tooltip, TooltipPosition } from '@patternfly/react-core';
+import { Badge, Label, LabelGroup, Title, Tooltip } from '@patternfly/react-core';
+import CrosshairsIcon from '@patternfly/react-icons/dist/dynamic/icons/crosshairs-icon';
 import InfoCircleIcon from '@patternfly/react-icons/dist/dynamic/icons/info-circle-icon';
 import {
   action,
@@ -56,6 +57,8 @@ class StraightEdgeDagreLayout extends DagreLayout {
   }
 }
 
+type TopologyNodeData = korrel8r.Node & { isStart?: boolean };
+
 const capitalize = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : '');
 
 const nodeLabel = (node: korrel8r.Node): string => {
@@ -92,40 +95,44 @@ const statusTooltip = (statusCounts: korrel8r.StatusCount[]): React.ReactNode =>
 };
 
 interface Korrel8rTopologyNodeProps {
-  element: Node<NodeModel, korrel8r.Node>;
+  element: Node<NodeModel, TopologyNodeData>;
 }
+
+const NodeDecorator: FC<{
+  show: boolean;
+  quadrant: TopologyQuadrant;
+  element: Node<NodeModel, TopologyNodeData>;
+  tooltipContent: React.ReactNode;
+  icon: React.ReactNode;
+  onClick?: (e: React.MouseEvent) => void;
+}> = ({ show, quadrant, element, tooltipContent, icon, onClick }) => {
+  const ref = useRef<SVGGElement>(null);
+  if (!show) return null;
+  const { x, y } = getDefaultShapeDecoratorCenter(quadrant, element);
+  return (
+    <Tooltip triggerRef={ref} content={tooltipContent}>
+      <Decorator
+        x={x}
+        y={y}
+        radius={DEFAULT_DECORATOR_RADIUS}
+        showBackground
+        onClick={onClick}
+        icon={icon}
+        innerRef={ref}
+      />
+    </Tooltip>
+  );
+};
 
 const Korrel8rTopologyNode: FC<
   Korrel8rTopologyNodeProps & WithContextMenuProps & WithSelectionProps & WithDragNodeProps
 > = ({ element, onSelect, selected, onContextMenu, contextMenuOpen, dragNodeRef }) => {
-  const node: korrel8r.Node = element.getData();
-  const decoratorRef = useRef<SVGGElement>(null);
+  const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
+  const node = element.getData();
   const [statusCounts, status] = mergeStatusCounts(node);
   const nodeStatus = node.disabled ? undefined : statusForNode(status);
   const tooltip = node.disabled ? undefined : statusTooltip(statusCounts);
   const isInfo = nodeStatus === NodeStatus.info;
-
-  const infoDecorator = (() => {
-    if (!isInfo || !tooltip) return undefined;
-    const { x, y } = getDefaultShapeDecoratorCenter(TopologyQuadrant.upperLeft, element);
-    return (
-      <Tooltip triggerRef={decoratorRef} content={tooltip} position={TooltipPosition.left}>
-        <Decorator
-          x={x}
-          y={y}
-          radius={DEFAULT_DECORATOR_RADIUS}
-          showBackground
-          onClick={(e) => onSelect(e)}
-          icon={
-            <g className="pf-topology__node__decorator__status">
-              <InfoCircleIcon className="pf-m-info" />
-            </g>
-          }
-          innerRef={decoratorRef}
-        />
-      </Tooltip>
-    );
-  })();
 
   const topologyNode = (
     <DefaultNode
@@ -145,7 +152,33 @@ const Korrel8rTopologyNode: FC<
       nodeStatus={nodeStatus}
       showStatusDecorator={node.disabled ? true : !isInfo && !!nodeStatus}
       statusDecoratorTooltip={node.disabled ? node.disabled : !isInfo ? tooltip : undefined}
-      attachments={infoDecorator}
+      attachments={
+        <>
+          <NodeDecorator
+            show={isInfo && !!tooltip}
+            quadrant={TopologyQuadrant.upperLeft}
+            element={element}
+            tooltipContent={tooltip}
+            icon={
+              <g className="pf-topology__node__decorator__status">
+                <InfoCircleIcon className="pf-m-info" />
+              </g>
+            }
+            onClick={(e) => onSelect(e)}
+          />
+          <NodeDecorator
+            show={!!node.isStart && !node.disabled}
+            quadrant={TopologyQuadrant.lowerRight}
+            element={element}
+            tooltipContent={t('Search start')}
+            icon={
+              <g className="tp-plugin__topology_start_decorator">
+                <CrosshairsIcon />
+              </g>
+            }
+          />
+        </>
+      }
     >
       <g transform={`translate(25, 25)`}>{getIcon(node?.class)}</g>
     </DefaultNode>
@@ -167,10 +200,11 @@ const PADDING = 30;
 
 export const Korrel8rTopology: FC<{
   graph: korrel8r.Graph;
+  startNode?: string;
   loggingAvailable: boolean;
   netobserveAvailable: boolean;
   constraint: korrel8r.Constraint;
-}> = ({ graph, loggingAvailable, netobserveAvailable, constraint }) => {
+}> = ({ graph, startNode, loggingAvailable, netobserveAvailable, constraint }) => {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
   const navigateToQuery = useNavigateToQuery();
   const locationQuery = useLocationQuery();
@@ -188,7 +222,7 @@ export const Korrel8rTopology: FC<{
   const nodes: NodeModel[] = useMemo(
     (): NodeModel[] =>
       graph.nodes.map((node: korrel8r.Node) => {
-        const data = { ...node };
+        const data: TopologyNodeData = { ...node, isStart: node.id === startNode };
         if (data.disabled) {
           // eslint-disable-next-line no-console
           console.warn(`korrel8r node: ${data.disabled}`);
@@ -207,7 +241,7 @@ export const Korrel8rTopology: FC<{
           data,
         };
       }),
-    [graph, loggingAvailable, netobserveAvailable, t],
+    [graph, startNode, loggingAvailable, netobserveAvailable, t],
   );
 
   const edges = useMemo(

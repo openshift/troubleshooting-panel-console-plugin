@@ -65,6 +65,14 @@ export default function Korrel8rPanel() {
   const isCancelled = !!search?.queryStr && isPending && fetchStatus === 'idle';
   const queryClient = useQueryClient();
 
+  const startNodeId = useMemo(() => {
+    try {
+      return search?.queryStr ? korrel8r.Query.parse(search.queryStr).class.toString() : undefined;
+    } catch {
+      return undefined;
+    }
+  }, [search?.queryStr]);
+
   // Disable focus button if the panel is already focused on the current location,
   // or the current result is an error.
   const isFocused = useMemo(
@@ -206,6 +214,7 @@ export default function Korrel8rPanel() {
           <Topology
             isLoading={isFetching}
             result={data}
+            startNode={startNodeId}
             constraint={constraint}
             error={error}
             isCancelled={isCancelled}
@@ -220,11 +229,19 @@ interface TopologyProps {
   isLoading?: boolean;
   isCancelled?: boolean;
   result?: GraphResult;
+  startNode?: string;
   error?: Error;
   constraint?: korrel8r.Constraint;
 }
 
-const Topology: FC<TopologyProps> = ({ isLoading, result, constraint, error, isCancelled }) => {
+const Topology: FC<TopologyProps> = ({
+  isLoading,
+  result,
+  startNode,
+  constraint,
+  error,
+  isCancelled,
+}) => {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
   const [loggingAvailable, loggingAvailableLoading] = usePluginAvailable('logging-view-plugin');
   const [netobserveAvailable, netobserveAvailableLoading] = usePluginAvailable('netobserv-plugin');
@@ -245,6 +262,7 @@ const Topology: FC<TopologyProps> = ({ isLoading, result, constraint, error, isC
     return (
       <Korrel8rTopology
         graph={result.graph}
+        startNode={startNode}
         loggingAvailable={loggingAvailable}
         netobserveAvailable={netobserveAvailable}
         constraint={constraint}
