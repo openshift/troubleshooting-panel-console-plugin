@@ -1,44 +1,46 @@
 import { Badge, Label, LabelGroup, Title, Tooltip, TooltipPosition } from '@patternfly/react-core';
 import InfoCircleIcon from '@patternfly/react-icons/dist/dynamic/icons/info-circle-icon';
 import {
-  action,
-  ComponentFactory,
-  ContextMenuItem,
-  createTopologyControlButtons,
-  DagreLayout,
-  Decorator,
-  DEFAULT_DECORATOR_RADIUS,
-  defaultControlButtonsOptions,
-  DefaultEdge,
-  DefaultGroup,
-  DefaultNode,
-  EdgeStyle,
-  ElementModel,
-  getDefaultShapeDecoratorCenter,
-  Graph,
-  GraphComponent,
-  GraphElement,
-  Model,
-  ModelKind,
-  Node,
-  NodeModel,
-  NodeShape,
-  NodeStatus,
-  SELECTION_EVENT,
-  TOP_TO_BOTTOM,
-  TopologyControlBar,
-  TopologyQuadrant,
-  TopologyView,
-  Visualization,
-  VisualizationProvider,
-  VisualizationSurface,
-  withContextMenu,
-  WithContextMenuProps,
-  withDragNode,
-  WithDragNodeProps,
-  withPanZoom,
-  withSelection,
-  WithSelectionProps,
+    action,
+    ComponentFactory,
+    ContextMenuItem,
+    createTopologyControlButtons,
+    DagreLayout,
+    Decorator,
+    DEFAULT_DECORATOR_RADIUS,
+    defaultControlButtonsOptions,
+    DefaultEdge,
+    DefaultGroup,
+    DefaultNode,
+    Edge,
+    EdgeModel,
+    EdgeStyle,
+    ElementModel,
+    getDefaultShapeDecoratorCenter,
+    Graph,
+    GraphComponent,
+    GraphElement,
+    Model,
+    ModelKind,
+    Node,
+    NodeModel,
+    NodeShape,
+    NodeStatus,
+    SELECTION_EVENT,
+    TOP_TO_BOTTOM,
+    TopologyControlBar,
+    TopologyQuadrant,
+    TopologyView,
+    Visualization,
+    VisualizationProvider,
+    VisualizationSurface,
+    withContextMenu,
+    WithContextMenuProps,
+    withDragNode,
+    WithDragNodeProps,
+    withPanZoom,
+    withSelection,
+    WithSelectionProps,
 } from '@patternfly/react-topology';
 import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -161,6 +163,19 @@ const Korrel8rTopologyNode: FC<
   return topologyNode;
 };
 
+const Korrel8rEdge: FC<{ element: Edge<EdgeModel, { rules: korrel8r.Rule[] }> }> = ({
+  element,
+  ...rest
+}) => {
+  const rules = element.getData()?.rules ?? [];
+  const ruleNames = rules.map((r) => r.name).join('\n');
+  return (
+    <DefaultEdge element={element} {...rest}>
+      {ruleNames && <title>{ruleNames}</title>}
+    </DefaultEdge>
+  );
+};
+
 const NODE_SHAPE = NodeShape.ellipse;
 const NODE_DIAMETER = 75;
 const PADDING = 30;
@@ -219,6 +234,7 @@ export const Korrel8rTopology: FC<{
           source: edge.start.id,
           target: edge.goal.id,
           edgeStyle: EdgeStyle.default,
+          data: { rules: edge.rules },
         };
       }),
     [graph],
@@ -287,7 +303,7 @@ export const Korrel8rTopology: FC<{
         case ModelKind.node:
           return withDragNode()(withContextMenu(nodeMenu)(withSelection()(Korrel8rTopologyNode)));
         case ModelKind.edge:
-          return DefaultEdge;
+          return Korrel8rEdge;
         default:
           return undefined;
       }
