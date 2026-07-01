@@ -30,12 +30,18 @@ export const listDomains = (signal: AbortSignal) => {
   return clientListDomains({ client: korrel8rClient({ signal }) });
 };
 
+const graphQuery = { options: { rules: true } };
+
 const getNeighborsGraph = (neighbours: Neighbors, signal: AbortSignal) => {
-  return graphNeighbors({ client: korrel8rClient({ signal }), body: neighbours });
+  return graphNeighbors({
+    client: korrel8rClient({ signal }),
+    body: neighbours,
+    query: graphQuery,
+  });
 };
 
 const getGoalsGraph = (goals: Goals, signal: AbortSignal) => {
-  return graphGoals({ client: korrel8rClient({ signal }), body: goals });
+  return graphGoals({ client: korrel8rClient({ signal }), body: goals, query: graphQuery });
 };
 
 export const sendConsoleUpdate = (body: Console, signal: AbortSignal) => {

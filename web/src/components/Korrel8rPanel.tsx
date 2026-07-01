@@ -163,13 +163,15 @@ export default function Korrel8rPanel() {
               )}
               <ToolbarItem>
                 {isFetching ? (
-                  <Button
-                    variant="plain"
-                    onClick={() => queryClient.cancelQueries({ queryKey: ['korrel8r', 'graph'] })}
-                    aria-label={t('Cancel refresh')}
-                  >
-                    <BanIcon />
-                  </Button>
+                  <Tooltip content={t('Cancel refresh')} position="bottom-end">
+                    <Button
+                      variant="plain"
+                      onClick={() => queryClient.cancelQueries({ queryKey: ['korrel8r', 'graph'] })}
+                      aria-label={t('Cancel refresh')}
+                    >
+                      <BanIcon />
+                    </Button>
+                  </Tooltip>
                 ) : (
                   <Tooltip content={t('Re-calculate the current graph')} position="bottom-end">
                     <Button
