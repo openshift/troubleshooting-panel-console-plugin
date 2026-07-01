@@ -53,7 +53,10 @@ const AgentMenu = () => {
             isChecked={agentEnabled}
             hasCheckIcon
             label={t('Agent Navigation')}
-            onChange={(_event, checked: boolean) => dispatch(setAgentEnabled(checked))}
+            onChange={(_event, checked: boolean) => {
+              dispatch(setAgentEnabled(checked));
+              setIsOpen(false);
+            }}
           />
           <HelpPopover>
             {t(

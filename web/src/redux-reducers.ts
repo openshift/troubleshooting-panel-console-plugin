@@ -20,6 +20,7 @@ const reducer = (state: TPState, action: TPAction): TPState => {
       search: defaultSearch,
       agentEnabled: false,
       agentError: '',
+      agentNotification: '',
     });
   }
 
@@ -38,6 +39,9 @@ const reducer = (state: TPState, action: TPAction): TPState => {
 
     case ActionType.SetAgentEnabled:
       return state.set('agentEnabled', action.payload);
+
+    case ActionType.SetAgentNotification:
+      return state.set('agentNotification', action.payload);
 
     default:
       break;

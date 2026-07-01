@@ -7,6 +7,7 @@ export enum ActionType {
   SetSearch = 'setSearch',
   SetAgentError = 'setAgentError',
   SetAgentEnabled = 'setAgentEnabled',
+  SetAgentNotification = 'setAgentNotification',
 }
 
 export enum SearchType {
@@ -38,6 +39,8 @@ export const openTP = () => action(ActionType.OpenTroubleshootingPanel);
 export const setSearch = (search: Search) => action(ActionType.SetSearch, search);
 export const setAgentError = (message: string) => action(ActionType.SetAgentError, message);
 export const setAgentEnabled = (enabled: boolean) => action(ActionType.SetAgentEnabled, enabled);
+export const setAgentNotification = (message: string) =>
+  action(ActionType.SetAgentNotification, message);
 
 export const actions = {
   closeTP,
@@ -45,6 +48,7 @@ export const actions = {
   setSearch,
   setAgentError,
   setAgentEnabled,
+  setAgentNotification,
 };
 
 export type TPAction = Action<typeof actions>;
