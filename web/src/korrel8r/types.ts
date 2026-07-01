@@ -265,8 +265,8 @@ export class Node {
     this.count = node.count;
     try {
       this.class = Class.parse(node.class);
-    } catch (e) {
-      this.disabled = e?.message ?? e.toString();
+    } catch {
+      this.disabled = `invalid class: ${node.class}`;
     }
     this.queries = QueryCount.array(node.queries ?? []);
   }

@@ -52,7 +52,7 @@ export const AdvancedSearchForm: FC<AdvancedSearchFormProps> = ({ search, onSear
     setDepth(Math.max(1, Math.min(10, depth ?? defaultSearch.depth)));
   const onLimitChange = (limit: number) => setLimit(Math.max(1, limit || defaultSearch.limit));
 
-  // Update state if search changes (e.g. Focus button pressed externally).
+  // Update state if search changes (e.g. Correlate button pressed externally).
   useEffect(() => {
     setQueryStr(search.queryStr);
     setSearchType(search.searchType);
@@ -138,7 +138,7 @@ export const AdvancedSearchForm: FC<AdvancedSearchFormProps> = ({ search, onSear
             <Trans t={t}>
               <p>Query to select the starting data for the search.</p>
               <p>
-                The <code>[Focus]</code> button fills in a query for the data shown in the main
+                The <code>[Correlate]</code> button fills in a query for the data shown in the main
                 view. You can enter your own query.
               </p>
             </Trans>
@@ -300,18 +300,13 @@ export const AdvancedSearchForm: FC<AdvancedSearchFormProps> = ({ search, onSear
                     : t('Correlation graph already matches search')
               }
             >
-              <Button
-                type="submit"
-                variant="primary"
-                isAriaDisabled={!hasChanged || !isValid}
-                size="sm"
-              >
+              <Button type="submit" variant="primary" isAriaDisabled={!hasChanged || !isValid}>
                 {t('Search')}
               </Button>
             </Tooltip>
           </ActionListItem>
           <ActionListItem>
-            <Button type="button" variant="secondary" size="sm" onClick={onClose}>
+            <Button type="button" variant="secondary" onClick={onClose}>
               {t('Close')}
             </Button>
           </ActionListItem>

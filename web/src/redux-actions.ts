@@ -30,7 +30,7 @@ export const defaultSearch: Search = {
   searchType: SearchType.Depth,
   depth: 3,
   period: new Duration(1, HOUR),
-  limit: 1000,
+  limit: 100,
 };
 
 export const closeTP = () => action(ActionType.CloseTroubleshootingPanel);
