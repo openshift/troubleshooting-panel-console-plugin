@@ -13,6 +13,8 @@ import {
   DefaultEdge,
   DefaultGroup,
   DefaultNode,
+  Edge,
+  EdgeModel,
   EdgeStyle,
   ElementModel,
   getDefaultShapeDecoratorCenter,
@@ -187,6 +189,19 @@ const Korrel8rTopologyNode: FC<
   return topologyNode;
 };
 
+const Korrel8rEdge: FC<{ element: Edge<EdgeModel, { rules: korrel8r.Rule[] }> }> = ({
+  element,
+  ...rest
+}) => {
+  const rules = element.getData()?.rules ?? [];
+  const ruleNames = rules.map((r) => r.name).join('\n');
+  return (
+    <DefaultEdge element={element} {...rest}>
+      {ruleNames && <title>{ruleNames}</title>}
+    </DefaultEdge>
+  );
+};
+
 const NODE_SHAPE = NodeShape.ellipse;
 const NODE_DIAMETER = 75;
 const PADDING = 30;
@@ -246,6 +261,7 @@ export const Korrel8rTopology: FC<{
           source: edge.start.id,
           target: edge.goal.id,
           edgeStyle: EdgeStyle.default,
+          data: { rules: edge.rules },
         };
       }),
     [graph],
@@ -314,7 +330,7 @@ export const Korrel8rTopology: FC<{
         case ModelKind.node:
           return withDragNode()(withContextMenu(nodeMenu)(withSelection()(Korrel8rTopologyNode)));
         case ModelKind.edge:
-          return DefaultEdge;
+          return Korrel8rEdge;
         default:
           return undefined;
       }
