@@ -27,17 +27,17 @@ The panel opens on the right side of the console, automatically focused on what 
 
 > [!NOTE]
 > Some pages don't support correlation, for example the _Overview_ page. The panel will show `No results`.
-> Use the `Focus` button to focus on a more interesting page.
+> Use the `Correlate` button to correlate from a more interesting page.
 
-## Focus
+## Correlate
 
-![](images/toolbar.png)
+![Toolbar](images/toolbar.png)
 
-The `Focus` button resets the correlation to start from on whatever is currently displayed in the main console view.
-You can follow lines and perform searches in the main view as usual, and click `Focus` at any time to see correlated data.
+The `Correlate` button resets the correlation to start from whatever is currently displayed in the main console view.
+You can follow lines and perform searches in the main view as usual, and click `Correlate` at any time to see correlated data.
 
-- When already focused on the current view, the button shows a link icon and is disabled.
-- When you have navigated away, the button shows an unlink icon. Click it to re-focus.
+- When the panel already matches the current view, the button is disabled.
+- When you have navigated away, click it to correlate from the new view.
 
 ## The correlation graph
 
@@ -78,7 +78,7 @@ Nodes can display **status markers** indicating severity:
 ![Status](images/status.png)
 
 - **Error** (red): Probably requires action.
-- **Warning** (yellow): May require action if unattende.d
+- **Warning** (yellow): May require action if unattended.
 - **Info** (purple): Usually does not require action, but may be of interest.
 
 Hover over a marker to see a breakdown of status counts.
@@ -91,7 +91,7 @@ Click the **sliders icon** in the toolbar to open the advanced search form.
 
 ### Start query
 
-Shows the current starting query in `domain:class:selector` format. **Focus** fills this automatically from the current view, or you can type a query manually.
+Shows the current starting query in `domain:class:selector` format. **Correlate** fills this automatically from the current view, or you can type a query manually.
 
 ### Search type
 
@@ -102,17 +102,15 @@ Shows the current starting query in `domain:class:selector` format. **Focus** fi
 
 The **time range dropdown** controls the search time window:
 
-![timerange](images/timerange.png)
+![Time range](images/timerange.png)
 
 - Last 5 minutes, 30 minutes, 1 hour (default), 1 day, or 1 week
 - **Custom duration**: specify a count and unit (minutes, hours, days, weeks).
 - **Custom time range**: pick specific start and end dates/times.
 
-The time range menu lets you indicate how much time you want to include in correlation searches.
-
 ### AI agent navigation
 
-The AI button is only available if you have enable the [dev preview AI agent navigation feature](agent-navigation.md)
+The AI button is only available if you have enabled the [dev preview AI agent navigation feature](agent-navigation.md).
 
 ### Refresh and cancel
 

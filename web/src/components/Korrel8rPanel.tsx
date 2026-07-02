@@ -65,7 +65,15 @@ export default function Korrel8rPanel() {
   const isCancelled = !!search?.queryStr && isPending && fetchStatus === 'idle';
   const queryClient = useQueryClient();
 
-  // Disable focus button if the panel is already focused on the current location,
+  const startNodeId = useMemo(() => {
+    try {
+      return search?.queryStr ? korrel8r.Query.parse(search.queryStr).class.toString() : undefined;
+    } catch {
+      return undefined;
+    }
+  }, [search?.queryStr]);
+
+  // Disable Correlate button if the panel already matches the current location,
   // or the current result is an error.
   const isFocused = useMemo(
     () => locationQuery?.toString() === search.queryStr && !isError,
@@ -106,16 +114,16 @@ export default function Korrel8rPanel() {
               <Tooltip
                 content={
                   isFocused
-                    ? t('Graph is already focused on the current view')
+                    ? t('Already showing this view')
                     : locationQuery
-                      ? t('Create a correlation graph starting from the current view')
-                      : t('Current view does not support correlation')
+                      ? t('Correlate from this view')
+                      : t("This view can't be correlated")
                 }
                 position="bottom-start"
               >
                 <Button
-                  variant={isFocused ? 'secondary' : 'primary'}
-                  isAriaDisabled={!locationQuery}
+                  variant="primary"
+                  isAriaDisabled={!locationQuery || isFocused}
                   onClick={() => {
                     dispatchSearch({
                       ...search,
@@ -123,19 +131,19 @@ export default function Korrel8rPanel() {
                     });
                   }}
                 >
-                  {t('Focus')}
+                  {t('Correlate')}
                 </Button>
               </Tooltip>
             </ToolbarItem>
 
             <ToolbarItem>
-              <Tooltip content={t('Advanced search parameters')} position="bottom-start">
+              <Tooltip content={t('Advanced search')} position="bottom-start">
                 <ExpandableSectionToggle
                   contentId={advancedContentID}
                   toggleId={advancedToggleID}
                   isExpanded={showAdvanced}
                   onToggle={(on: boolean) => setShowAdvanced(on)}
-                  aria-label={t('Advanced search parameters')}
+                  aria-label={t('Advanced search')}
                 >
                   <CogIcon />
                 </ExpandableSectionToggle>
@@ -163,15 +171,17 @@ export default function Korrel8rPanel() {
               )}
               <ToolbarItem>
                 {isFetching ? (
-                  <Button
-                    variant="plain"
-                    onClick={() => queryClient.cancelQueries({ queryKey: ['korrel8r', 'graph'] })}
-                    aria-label={t('Cancel refresh')}
-                  >
-                    <BanIcon />
-                  </Button>
+                  <Tooltip content={t('Cancel refresh')} position="bottom-end">
+                    <Button
+                      variant="plain"
+                      onClick={() => queryClient.cancelQueries({ queryKey: ['korrel8r', 'graph'] })}
+                      aria-label={t('Cancel refresh')}
+                    >
+                      <BanIcon />
+                    </Button>
+                  </Tooltip>
                 ) : (
-                  <Tooltip content={t('Re-calculate the current graph')} position="bottom-end">
+                  <Tooltip content={t('Refresh')} position="bottom-end">
                     <Button
                       variant="plain"
                       isAriaDisabled={!search?.queryStr}
@@ -206,6 +216,7 @@ export default function Korrel8rPanel() {
           <Topology
             isLoading={isFetching}
             result={data}
+            startNode={startNodeId}
             constraint={constraint}
             error={error}
             isCancelled={isCancelled}
@@ -220,11 +231,19 @@ interface TopologyProps {
   isLoading?: boolean;
   isCancelled?: boolean;
   result?: GraphResult;
+  startNode?: string;
   error?: Error;
   constraint?: korrel8r.Constraint;
 }
 
-const Topology: FC<TopologyProps> = ({ isLoading, result, constraint, error, isCancelled }) => {
+const Topology: FC<TopologyProps> = ({
+  isLoading,
+  result,
+  startNode,
+  constraint,
+  error,
+  isCancelled,
+}) => {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
   const [loggingAvailable, loggingAvailableLoading] = usePluginAvailable('logging-view-plugin');
   const [netobserveAvailable, netobserveAvailableLoading] = usePluginAvailable('netobserv-plugin');
@@ -235,9 +254,7 @@ const Topology: FC<TopologyProps> = ({ isLoading, result, constraint, error, isC
   }
 
   if (isCancelled) {
-    return (
-      <TopologyInfoState titleText={t('Canceled')} text={t('Search was interrupted')} isError />
-    );
+    return <TopologyInfoState titleText={t('Canceled')} text={t('Search was interrupted')} />;
   }
 
   if (result?.graph?.nodes) {
@@ -245,6 +262,7 @@ const Topology: FC<TopologyProps> = ({ isLoading, result, constraint, error, isC
     return (
       <Korrel8rTopology
         graph={result.graph}
+        startNode={startNode}
         loggingAvailable={loggingAvailable}
         netobserveAvailable={netobserveAvailable}
         constraint={constraint}
@@ -253,14 +271,12 @@ const Topology: FC<TopologyProps> = ({ isLoading, result, constraint, error, isC
   }
 
   if (error) {
-    const titleText = error?.message ? t('Search Error') : t('Search Failed');
-    const text = String(error?.message || error?.name || t('Unknown Error'));
+    const detail = String(error?.message || error?.name || t('Unknown error'));
 
     return (
       <TopologyInfoState
-        titleText={titleText}
-        // Only display first 400 characters of error to prevent repeating errors
-        text={text.slice(0, 400)}
+        titleText={t('Could not reach the correlation service')}
+        text={detail.slice(0, 400)}
         isError
       />
     );
@@ -268,9 +284,8 @@ const Topology: FC<TopologyProps> = ({ isLoading, result, constraint, error, isC
 
   return (
     <TopologyInfoState
-      titleText={result?.title || t('No Correlated Signals Found')}
-      // Only display first 400 characters of error to prevent repeating errors
-      text={result?.message ? result?.message.slice(0, 400) : t('No results.')}
+      titleText={result?.title || t('No correlated signals found')}
+      text={result?.message?.slice(0, 400) || t('Try a different view or adjust the time range')}
     />
   );
 };

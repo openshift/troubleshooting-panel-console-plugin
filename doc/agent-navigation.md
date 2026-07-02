@@ -75,8 +75,8 @@ Korrel8r serves MCP at the `/mcp` endpoint (streamable HTTP). Configure your age
 > Korrel8r isolates sessions by user, so only an agent with a valid token for your user-id can access your console.
 
 > [!WARNING]
-> If you are connected to a cluster with a self-signed certificates you may need to override your mcp configuration
-> locally to prevent denying usage of self-signed certificates. For claude code you can run `export NODE_TLS_REJECT_UNAUTHORIZED=0`. This is not recommended for production use
+> If you are connected to a cluster with self-signed certificates, you may need to disable TLS verification locally.
+> For Claude Code you can run `export NODE_TLS_REJECT_UNAUTHORIZED=0`. This is not recommended for production use.
 
 ## Enable with the AI button
 

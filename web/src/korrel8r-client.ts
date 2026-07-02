@@ -85,7 +85,7 @@ export const useKorrel8rGraph = ({
       return fetch.then(({ data }: { data: Graph }) => {
         return Array.isArray(data?.nodes) && data.nodes.length > 0
           ? { graph: new korrel8r.Graph(data) }
-          : { title: t('Empty Result'), message: t('No correlated data found') };
+          : { title: t('No correlated signals found') };
       });
     },
     enabled: validRequest(search),

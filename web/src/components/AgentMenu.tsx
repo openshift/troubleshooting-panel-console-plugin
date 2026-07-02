@@ -40,7 +40,7 @@ const AgentMenu = () => {
           isExpanded={isOpen}
           aria-label={t('AI Agent settings')}
         >
-          <Icon status={status} size={'xl'}>
+          <Icon status={status}>
             <AIExperienceIcon />
           </Icon>
         </MenuToggle>
