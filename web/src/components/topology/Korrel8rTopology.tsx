@@ -49,13 +49,6 @@ import { getIcon } from '../icons';
 import './korrel8rtopology.css';
 import { mergeStatusCounts, statusForNode, statusName, toStatus } from './status';
 
-// DagreLayout with straight edges (no angular bendpoints).
-class StraightEdgeDagreLayout extends DagreLayout {
-  protected updateEdgeBendpoints(): void {
-    // no-op: skip bendpoints for straight edges between nodes.
-  }
-}
-
 const capitalize = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : '');
 
 const nodeLabel = (node: korrel8r.Node): string => {
@@ -309,10 +302,12 @@ export const Korrel8rTopology: FC<{
     const controller = new Visualization();
     controller.registerLayoutFactory(
       (_, graph: Graph) =>
-        new StraightEdgeDagreLayout(graph, {
+        new DagreLayout(graph, {
           rankdir: TOP_TO_BOTTOM,
           ranksep: 10,
           nodeDistance: 15,
+          edgesep: 5,
+          ranker: 'network-simplex',
         }),
     );
     controller.fromModel(model, false);
