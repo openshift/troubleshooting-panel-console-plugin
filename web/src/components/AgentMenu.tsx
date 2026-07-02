@@ -7,11 +7,12 @@ import {
   MenuToggle,
   MenuToggleElement,
   Switch,
+  Tooltip,
 } from '@patternfly/react-core';
 import { Ref, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import { setAgentEnabled } from '../redux-actions';
+import { setAgentConnected, setAgentEnabled, setAgentError } from '../redux-actions';
 import { State } from '../redux-reducers';
 import { AIExperienceIcon } from './AIExperienceIcon';
 import { HelpPopover } from './HelpPopover';
@@ -21,10 +22,17 @@ const AgentMenu = () => {
   const dispatch = useDispatch();
   const [isOpen, setIsOpen] = useState(false);
 
+  const agentConnected: boolean = useSelector((s: State) => s.plugins?.tp?.get('agentConnected'));
   const agentEnabled: boolean = useSelector((s: State) => s.plugins?.tp?.get('agentEnabled'));
   const agentError: string = useSelector((s: State) => s.plugins?.tp?.get('agentError'));
 
-  const status = !agentEnabled ? undefined : agentError ? 'danger' : 'success';
+  const status = agentError
+    ? 'danger'
+    : agentConnected
+      ? 'success'
+      : agentEnabled
+        ? 'warning'
+        : undefined;
 
   return (
     <Dropdown
@@ -53,7 +61,11 @@ const AgentMenu = () => {
             isChecked={agentEnabled}
             hasCheckIcon
             label={t('Agent Navigation')}
-            onChange={(_event, checked: boolean) => dispatch(setAgentEnabled(checked))}
+            onChange={(_event, checked: boolean) => {
+              dispatch(setAgentError(''));
+              dispatch(setAgentConnected(false));
+              dispatch(setAgentEnabled(checked));
+            }}
           />
           <HelpPopover>
             {t(
@@ -61,11 +73,17 @@ const AgentMenu = () => {
             )}
           </HelpPopover>
         </DropdownItem>
-        {!!agentError && (
+        {status && (
           <DropdownItem>
-            <Label status={status}>
-              {t('Connection error')}: {String(agentError)}
-            </Label>
+            {status === 'danger' ? (
+              <Tooltip content={String(agentError)}>
+                <Label status={status}>{t('Unable to connect')}</Label>
+              </Tooltip>
+            ) : (
+              <Label status={status}>
+                {status === 'success' ? t('Connected') : t('Connecting')}
+              </Label>
+            )}
           </DropdownItem>
         )}
       </DropdownList>
