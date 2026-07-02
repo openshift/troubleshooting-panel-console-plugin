@@ -9,6 +9,7 @@ import {
   Search,
   SearchType,
   setAgentError,
+  setAgentNotification,
   setSearch,
 } from '../redux-actions';
 import { State } from '../redux-reducers';
@@ -60,16 +61,16 @@ const useAgentNavigation = ({
           setNeedSend(true);
           for await (const event of result.stream) {
             if (controller.signal.aborted) return;
+            const search = event.search && fromAPISearch(event.search);
             if (event.view) {
               navigateToQueryRef.current(Query.parse(event.view), null);
             }
-            if (event.search) {
-              const s = fromAPISearch(event.search);
-              if (s) {
-                dispatch(setSearch(s));
-                dispatch(openTP());
-              }
+            if (search) {
+              dispatch(setSearch(search));
+              dispatch(openTP());
             }
+            const notification = event.view || search?.queryStr;
+            if (notification) dispatch(setAgentNotification(notification));
           }
         } catch (err) {
           if (controller.signal.aborted) return;
