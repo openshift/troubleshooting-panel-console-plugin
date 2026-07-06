@@ -28,7 +28,7 @@ import {
   NodeShape,
   NodeStatus,
   SELECTION_EVENT,
-  TOP_TO_BOTTOM,
+  LEFT_TO_RIGHT,
   TopologyControlBar,
   TopologyQuadrant,
   TopologyView,
@@ -353,7 +353,7 @@ export const Korrel8rTopology: FC<{
     controller.registerLayoutFactory(
       (_, graph: Graph) =>
         new DagreLayout(graph, {
-          rankdir: TOP_TO_BOTTOM,
+          rankdir: LEFT_TO_RIGHT,
           ranksep: 10,
           nodeDistance: 15,
           edgesep: 5,
