@@ -1,4 +1,4 @@
-import { Class, Constraint, Domain, Query, unixMilliseconds, URIRef } from './types';
+import { capitalize, Class, Constraint, Domain, Query, unixMilliseconds, URIRef } from './types';
 
 enum LogClass {
   application = 'application',
@@ -11,6 +11,10 @@ enum LogClass {
 export class LogDomain extends Domain {
   constructor() {
     super('log');
+  }
+
+  classLabel(name: string): string {
+    return capitalize(name) + ' Log';
   }
 
   class(name: string): Class {

@@ -1,4 +1,40 @@
 import { consoleFetch } from '@openshift-console/dynamic-plugin-sdk';
+
+export class HttpError extends Error {
+  retryAfter?: number; // milliseconds
+  constructor(
+    public status: number,
+    statusText: string,
+    retryAfter?: number,
+  ) {
+    super(`${status} ${statusText}`);
+    this.retryAfter = retryAfter;
+  }
+}
+
+// Parse a Retry-After HTTP header value, return milliseconds.
+// Documentation: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Retry-After
+const parseRetryAfter = (value: string | null): number | undefined => {
+  if (!value) return undefined;
+  const seconds = Number(value);
+  if (!isNaN(seconds) && seconds >= 0) return seconds * 1000;
+  const date = Date.parse(value);
+  if (!isNaN(date)) return Math.max(0, date - Date.now());
+  return undefined;
+};
+
+const RETRYABLE_STATUS_CODES = new Set([408, 429, 500, 502, 503, 504]);
+
+// If err is a HTTP error with a Retry-After header, return that delay.
+// Otherwise return the current backoff delay.
+export const retryDelay = (err: unknown, backoff: number, maxDelay: number): number => {
+  if (err instanceof HttpError) {
+    if (err.retryAfter !== undefined) return err.retryAfter;
+    if (!RETRYABLE_STATUS_CODES.has(err.status)) return maxDelay;
+  }
+  return backoff;
+};
+
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
 import {
   listDomains as clientListDomains,
@@ -17,7 +53,6 @@ import * as korrel8r from './korrel8r/types';
 
 import { useTranslation } from 'react-i18next';
 import { Search, SearchType } from './redux-actions';
-import { sleep } from './sleep';
 
 // Result displayed in troubleshooting panel, graph or message.
 export type GraphResult = {
@@ -50,19 +85,34 @@ export const sendConsoleUpdate = (body: Console, signal: AbortSignal) => {
 
 export const getConsoleUpdates = (
   signal: AbortSignal,
-  {
-    minDelay,
-    maxDelay,
-    onSseError,
-  }: { minDelay: number; maxDelay: number; onSseError?: (error: unknown) => void },
+  callbacks: { onSseError?: (error: unknown) => void; onConnect?: () => void } = {},
 ) => {
+  const connectFetch = async (req: Request): Promise<Response> => {
+    let response: Response;
+    try {
+      response = await requestWrapper(req);
+    } catch (err) {
+      // consoleFetch throws its own HttpError with a `code` property; convert to ours.
+      const code = (err as { code?: unknown }).code;
+      throw typeof code === 'number' ? new HttpError(code, String(err)) : err;
+    }
+    if (!response.ok) {
+      throw new HttpError(
+        response.status,
+        response.statusText,
+        parseRetryAfter(response.headers.get('Retry-After')),
+      );
+    }
+    callbacks.onConnect?.();
+    return response;
+  };
   // Cast: SSE options are supported by the runtime but not exposed in the generated Options type.
+  // Disable SSE retries: useAgentNavigation has its own reconnect loop that
+  // manages error state and re-sends console state on reconnection.
   return consoleEvents({
-    client: korrel8rClient({ signal }),
-    sseDefaultRetryDelay: minDelay,
-    sseMaxRetryDelay: maxDelay,
-    sseSleepFn: (ms: number) => sleep(ms, signal),
-    onSseError,
+    client: korrel8rClient({ signal, fetch: connectFetch as typeof fetch }),
+    sseMaxRetryAttempts: 1,
+    onSseError: callbacks.onSseError,
   } as Parameters<typeof consoleEvents>[0]);
 };
 

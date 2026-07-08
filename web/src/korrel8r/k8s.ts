@@ -1,5 +1,5 @@
 import { getCachedResources } from '../getResources';
-import { Class, Domain, Query, URIRef, keyValueList } from './types';
+import { capitalize, Class, Domain, Query, URIRef, keyValueList } from './types';
 
 // k8s model type stored in browser cache.
 type Model = {
@@ -30,6 +30,10 @@ const classRE = new RegExp(`^(?<kind>[^./]+)(\\.${versionRE.source})?(.(?<group>
 export class K8sDomain extends Domain {
   constructor() {
     super('k8s');
+  }
+
+  classLabel(name: string): string {
+    return capitalize(name.replace(/\..*$/, ''));
   }
 
   class(name: string): Class {

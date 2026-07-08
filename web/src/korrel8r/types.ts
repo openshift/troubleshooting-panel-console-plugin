@@ -1,6 +1,8 @@
 /** Type-safe versions of the Korrel8r API types. */
 import * as api from './client';
 
+export const capitalize = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : '');
+
 export class Class {
   constructor(
     public domain: string,
@@ -83,6 +85,10 @@ export class Constraint {
 // Domain converts between Korrel8r queries and URLs for a Korrel8r domain.
 export abstract class Domain {
   constructor(public name: string) {}
+
+  classLabel(name: string): string {
+    return capitalize(name);
+  }
 
   /** Construct a Class object for this domain.
    * @throw {TypeError} if the name is not valid.
@@ -235,6 +241,14 @@ export class Domains {
     const c = Class.parse(fullName);
     const domain = this.get(c.domain);
     return domain.class(c.name);
+  }
+
+  classLabel(c: Class): string {
+    try {
+      return this.get(c.domain).classLabel(c.name);
+    } catch {
+      return capitalize(c.name);
+    }
   }
 }
 

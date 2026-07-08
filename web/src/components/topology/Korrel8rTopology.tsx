@@ -45,6 +45,7 @@ import {
 } from '@patternfly/react-topology';
 import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useDomains } from '../../hooks/useDomains';
 import { useLocationQuery } from '../../hooks/useLocationQuery';
 import { useNavigateToQuery } from '../../hooks/useNavigateToQuery';
 import * as korrel8r from '../../korrel8r/types';
@@ -52,22 +53,7 @@ import { getIcon } from '../icons';
 import './korrel8rtopology.css';
 import { mergeStatusCounts, statusForNode, statusName, toStatus } from './status';
 
-type TopologyNodeData = korrel8r.Node & { isStart?: boolean };
-
-const capitalize = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : '');
-
-const nodeLabel = (node: korrel8r.Node): string => {
-  const c = node.class;
-  if (!c) return `[${node.id}]`; // Original un-parsed class name.
-  switch (c.domain) {
-    case 'k8s':
-      return capitalize(c.name.replace(/\..*$/, '')); // Strip group/version
-    case 'log':
-      return capitalize(c.name) + ' Log';
-    default:
-      return capitalize(c.name);
-  }
-};
+type TopologyNodeData = korrel8r.Node & { isStart?: boolean; label: string };
 
 const nodeBadge = (node: korrel8r.Node): string => {
   if (node.queries?.length > 1) {
@@ -139,7 +125,7 @@ const Korrel8rTopologyNode: FC<
       dragNodeRef={dragNodeRef}
       hover={false}
       className={node.disabled ? 'tp-plugin__topology_node--disabled' : undefined}
-      label={nodeLabel(node)}
+      label={node.label}
       badge={nodeBadge(node)}
       badgeClassName="tp-plugin__topology_node_badge"
       hideContextMenuKebab={!!node?.disabled || node?.queries?.length === 1}
@@ -214,6 +200,7 @@ export const Korrel8rTopology: FC<{
   constraint: korrel8r.Constraint;
 }> = ({ graph, startNode, loggingAvailable, netobserveAvailable, constraint }) => {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
+  const domains = useDomains();
   const navigateToQuery = useNavigateToQuery();
   const locationQuery = useLocationQuery();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -230,7 +217,8 @@ export const Korrel8rTopology: FC<{
   const nodes: NodeModel[] = useMemo(
     (): NodeModel[] =>
       graph.nodes.map((node: korrel8r.Node) => {
-        const data: TopologyNodeData = { ...node, isStart: node.id === startNode };
+        const label = node.class ? domains.classLabel(node.class) : `[${node.id}]`;
+        const data: TopologyNodeData = { ...node, isStart: node.id === startNode, label };
         if (data.disabled) {
           // eslint-disable-next-line no-console
           console.warn(`korrel8r node: ${data.disabled}`);
@@ -249,7 +237,7 @@ export const Korrel8rTopology: FC<{
           data,
         };
       }),
-    [graph, startNode, loggingAvailable, netobserveAvailable, t],
+    [graph, startNode, loggingAvailable, netobserveAvailable, t, domains],
   );
 
   const edges = useMemo(

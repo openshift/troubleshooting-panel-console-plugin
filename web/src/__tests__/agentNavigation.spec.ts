@@ -26,6 +26,18 @@ describe('toAPISearch', () => {
       neighbors: { start: { queries: ['k8s:Pod:{}'] }, depth: 3 },
     });
   });
+
+  it('includes limit in start constraint', () => {
+    const search: Search = {
+      queryStr: 'k8s:Pod:{}',
+      searchType: SearchType.Depth,
+      depth: 3,
+      limit: 50,
+    };
+    expect(toAPISearch(search)).toEqual({
+      neighbors: { start: { queries: ['k8s:Pod:{}'], constraint: { limit: 50 } }, depth: 3 },
+    });
+  });
 });
 
 describe('fromAPISearch', () => {
@@ -48,6 +60,21 @@ describe('fromAPISearch', () => {
       queryStr: 'k8s:Pod:{}',
       searchType: SearchType.Depth,
       depth: 5,
+    });
+  });
+
+  it('extracts limit from start constraint', () => {
+    const apiSearch: api.Search = {
+      neighbors: {
+        start: { queries: ['k8s:Pod:{}'], constraint: { limit: 50 } },
+        depth: 5,
+      },
+    };
+    expect(fromAPISearch(apiSearch)).toEqual({
+      queryStr: 'k8s:Pod:{}',
+      searchType: SearchType.Depth,
+      depth: 5,
+      limit: 50,
     });
   });
 
