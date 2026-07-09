@@ -9,6 +9,7 @@ export enum ActionType {
   SetAgentError = 'setAgentError',
   SetAgentEnabled = 'setAgentEnabled',
   SetAgentToast = 'setAgentToast',
+  SetRankdir = 'setRankdir',
 }
 
 export enum SearchType {
@@ -43,6 +44,10 @@ export const setAgentConnected = (connected: boolean) =>
 export const setAgentError = (message: string) => action(ActionType.SetAgentError, message);
 export const setAgentEnabled = (enabled: boolean) => action(ActionType.SetAgentEnabled, enabled);
 export const setAgentToast = (message: string) => action(ActionType.SetAgentToast, message);
+export const LEFT_TO_RIGHT = 'LR';
+export const TOP_TO_BOTTOM = 'TB';
+
+export const setRankdir = (rankdir: string) => action(ActionType.SetRankdir, rankdir);
 
 export const actions = {
   closeTP,
@@ -52,6 +57,7 @@ export const actions = {
   setAgentError,
   setAgentEnabled,
   setAgentToast,
+  setRankdir,
 };
 
 export type TPAction = Action<typeof actions>;

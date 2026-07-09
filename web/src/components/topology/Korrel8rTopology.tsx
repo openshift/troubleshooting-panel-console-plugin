@@ -1,4 +1,5 @@
 import { Badge, Label, LabelGroup, Title, Tooltip } from '@patternfly/react-core';
+import RetweetIcon from '@patternfly/react-icons/dist/dynamic/icons/retweet-icon';
 import CrosshairsIcon from '@patternfly/react-icons/dist/dynamic/icons/crosshairs-icon';
 import InfoCircleIcon from '@patternfly/react-icons/dist/dynamic/icons/info-circle-icon';
 import {
@@ -28,7 +29,6 @@ import {
   NodeShape,
   NodeStatus,
   SELECTION_EVENT,
-  LEFT_TO_RIGHT,
   TopologyControlBar,
   TopologyQuadrant,
   TopologyView,
@@ -44,11 +44,14 @@ import {
   WithSelectionProps,
 } from '@patternfly/react-topology';
 import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { useDomains } from '../../hooks/useDomains';
 import { useLocationQuery } from '../../hooks/useLocationQuery';
 import { useNavigateToQuery } from '../../hooks/useNavigateToQuery';
 import * as korrel8r from '../../korrel8r/types';
+import { LEFT_TO_RIGHT, TOP_TO_BOTTOM, setRankdir } from '../../redux-actions';
+import { State } from '../../redux-reducers';
 import { getIcon } from '../icons';
 import './korrel8rtopology.css';
 import { mergeStatusCounts, statusForNode, statusName, toStatus } from './status';
@@ -203,7 +206,9 @@ export const Korrel8rTopology: FC<{
   const domains = useDomains();
   const navigateToQuery = useNavigateToQuery();
   const locationQuery = useLocationQuery();
+  const dispatch = useDispatch();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const rankdir: string = useSelector((s: State) => s.plugins?.tp?.get('rankdir')) ?? LEFT_TO_RIGHT;
 
   useEffect(() => {
     if (!locationQuery) {
@@ -341,7 +346,7 @@ export const Korrel8rTopology: FC<{
     controller.registerLayoutFactory(
       (_, graph: Graph) =>
         new DagreLayout(graph, {
-          rankdir: LEFT_TO_RIGHT,
+          rankdir,
           ranksep: 10,
           nodeDistance: 15,
           edgesep: 5,
@@ -350,7 +355,7 @@ export const Korrel8rTopology: FC<{
     );
     controller.fromModel(model, false);
     return controller;
-  }, [nodes, edges]);
+  }, [nodes, edges, rankdir]);
 
   // NOTE: For some reason, the controller function above cannot depend on memoized functions
   // like selectionAction or componentfactory. Using a separate memo works. Strange.
@@ -403,6 +408,16 @@ export const Korrel8rTopology: FC<{
                 controller.getGraph().layout();
               }),
               legend: false,
+              customButtons: [
+                {
+                  id: 'layout-direction',
+                  icon: <RetweetIcon />,
+                  tooltip: t('Toggle layout direction'),
+                  ariaLabel: t('Toggle layout direction'),
+                  callback: () =>
+                    dispatch(setRankdir(rankdir === LEFT_TO_RIGHT ? TOP_TO_BOTTOM : LEFT_TO_RIGHT)),
+                },
+              ],
             })}
           />
         }
