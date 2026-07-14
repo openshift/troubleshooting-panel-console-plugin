@@ -19,6 +19,8 @@ import { useDomains } from './useDomains';
 import { useLocationQuery } from './useLocationQuery';
 import { useNavigateToQuery } from './useNavigateToQuery';
 
+const errorMessage = (err: unknown): string => (err as Error)?.message || String(err);
+
 const useAgentNavigation = ({
   minDelay = 500,
   maxDelay = 10000,
@@ -91,9 +93,9 @@ const useAgentNavigation = ({
         if (controller.signal.aborted) return;
         dispatch(setAgentConnected(false));
         if (lastError) {
-          dispatch(setAgentError((lastError as Error)?.message || String(lastError)));
+          dispatch(setAgentError(errorMessage(lastError)));
         }
-        await sleep(retryDelay(lastError, backoff, maxDelay), controller.signal);
+        await sleep(retryDelay(lastError, backoff), controller.signal);
         backoff = Math.min(backoff * 2, maxDelay);
       }
     };
@@ -120,8 +122,8 @@ const useAgentNavigation = ({
           return;
         } catch (err) {
           if (controller.signal.aborted) return;
-          dispatch(setAgentError((err as Error)?.message || String(err)));
-          await sleep(retryDelay(err, backoff, maxDelay), controller.signal);
+          dispatch(setAgentError(errorMessage(err)));
+          await sleep(retryDelay(err, backoff), controller.signal);
           backoff = Math.min(backoff * 2, maxDelay);
         }
       }

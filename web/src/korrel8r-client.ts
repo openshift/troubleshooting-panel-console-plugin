@@ -23,17 +23,8 @@ const parseRetryAfter = (value: string | null): number | undefined => {
   return undefined;
 };
 
-const RETRYABLE_STATUS_CODES = new Set([408, 429, 500, 502, 503, 504]);
-
-// If err is a HTTP error with a Retry-After header, return that delay.
-// Otherwise return the current backoff delay.
-export const retryDelay = (err: unknown, backoff: number, maxDelay: number): number => {
-  if (err instanceof HttpError) {
-    if (err.retryAfter !== undefined) return err.retryAfter;
-    if (!RETRYABLE_STATUS_CODES.has(err.status)) return maxDelay;
-  }
-  return backoff;
-};
+export const retryDelay = (err: unknown, backoff: number): number =>
+  err instanceof HttpError && err.retryAfter !== undefined ? err.retryAfter : backoff;
 
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
 import {
