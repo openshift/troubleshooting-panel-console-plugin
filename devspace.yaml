@@ -16,23 +16,24 @@ dev:
     labelSelector:
       # Use the instance selector that COO adds
       app.kubernetes.io/instance: troubleshooting-panel
-    # Replace the container image with this dev-optimized image (allows to skip image building during development)
+    # Replace the container image with this dev-optimized image (skip image building)
     devImage: quay.io/openshift-observability-ui/troubleshooting-panel-console-plugin:devspace
+
+    # Uncomment the following temporarily to force the cluster to pull the image.
+    #
+    # patches:
+    #   - op: replace
+    #     path: spec.containers[0].imagePullPolicy
+    #     value: Always
+
     # Sync files between the local filesystem and the development container
     sync:
       - path: ./web/dist:/opt/app-root/web/dist
         startContainer: true
         printLogs: true
         waitInitialSync: true
-    command: ["/opt/app-root/plugin-backend"]
-    args:
-      - -port=9443
-      - -cert=/var/serving-cert/tls.crt
-      - -key=/var/serving-cert/tls.key
-      - -plugin-config-path=/etc/plugin/config.yaml
-      - -static-path=/opt/app-root/web/dist
-      - -config-path=/opt/app-root/web/dist
-      - -features=agent-navigation
+    command: ["make"]
+    args: ["start-devspace-backend", "FEATURES=agent-navigation"]
 
     ssh:
       enabled: true
