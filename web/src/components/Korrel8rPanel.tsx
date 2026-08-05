@@ -16,13 +16,7 @@ import {
   Tooltip,
 } from '@patternfly/react-core';
 
-import {
-  BanIcon,
-  CogIcon,
-  CubesIcon,
-  ExclamationCircleIcon,
-  RedoIcon,
-} from '@patternfly/react-icons';
+import { CogIcon, CubesIcon, ExclamationCircleIcon, RedoIcon } from '@patternfly/react-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -177,7 +171,7 @@ export default function Korrel8rPanel() {
                       onClick={() => queryClient.cancelQueries({ queryKey: ['korrel8r', 'graph'] })}
                       aria-label={t('Cancel refresh')}
                     >
-                      <BanIcon />
+                      <Spinner size="md" />
                     </Button>
                   </Tooltip>
                 ) : (
