@@ -15,7 +15,7 @@ describe('AlertNode.fromURL', () => {
     },
     { url: 'monitoring/alerts', query: 'alert:alert:{}' },
     {
-      url: 'monitoring/alerts?alerts=alertname%3DKubePodCrashLooping%2Ccontainer%3Dbad-deployment%2Cnamespace%3Ddefault%2Cpod%3Dbad-pod',
+      url: 'monitoring/alerts?alertname=KubePodCrashLooping&container=bad-deployment&namespace=default&pod=bad-pod',
       query:
         'alert:alert:{"alertname":"KubePodCrashLooping","container":"bad-deployment","namespace":"default","pod":"bad-pod"}',
     },
@@ -42,36 +42,27 @@ describe('AlertNode.fromURL', () => {
   });
 });
 
-describe('AlertNode.fromURL raises error', () => {
-  it.each([
-    {
-      url: 'monitoring/alertrules/999',
-      error: 'unknown alert link: monitoring/alertrules/999: cannot find alertname',
-    },
-  ])('converts $url', ({ url, error }) => {
-    expect(() => new AlertDomain().linkToQuery(new URIRef(url))).toThrow(error);
-  });
-});
-
 describe('AlertDomain.fromQuery', () => {
   it.each([
     {
       query:
         'alert:alert:{"alertname":"KubePodCrashLooping","container":"bad-deployment","namespace":"default","pod":"bad-deployment"}',
-      url: 'monitoring/alerts?alerts=alertname%3DKubePodCrashLooping%2Ccontainer%3Dbad-deployment%2Cnamespace%3Ddefault%2Cpod%3Dbad-deployment',
+      url: 'monitoring/alerts/42?alertname=KubePodCrashLooping&container=bad-deployment&namespace=default&pod=bad-deployment',
+      idToName: new Map([['42', 'KubePodCrashLooping']]),
     },
     { query: 'alert:alert:{}', url: 'monitoring/alerts' },
-  ])('converts $query', ({ url, query }) => {
-    expect(new AlertDomain().queryToLink(Query.parse(query))).toEqual(new URIRef(url));
+  ])('converts $query', ({ url, query, idToName }) => {
+    expect(new AlertDomain(idToName).queryToLink(Query.parse(query))).toEqual(new URIRef(url));
   });
 
   it('Query => URL => Query', () => {
+    const domain = new AlertDomain(new Map([['42', 'KubePodCrashLooping']]));
     const query =
       'alert:alert:{"alertname":"KubePodCrashLooping","container":"bad-deployment","namespace":"default","pod":"bad-pod"}';
-    const got =
-      'monitoring/alerts?alerts=alertname%3DKubePodCrashLooping%2Ccontainer%3Dbad-deployment%2Cnamespace%3Ddefault%2Cpod%3Dbad-pod';
-    const want = new AlertDomain().queryToLink(Query.parse(query));
-    expect(want).toEqual(new URIRef(got));
-    expect(new AlertDomain().linkToQuery(want)).toEqual(Query.parse(query));
+    const url =
+      'monitoring/alerts/42?alertname=KubePodCrashLooping&container=bad-deployment&namespace=default&pod=bad-pod';
+    const want = domain.queryToLink(Query.parse(query));
+    expect(want).toEqual(new URIRef(url));
+    expect(domain.linkToQuery(want)).toEqual(Query.parse(query));
   });
 });
