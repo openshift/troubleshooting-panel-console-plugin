@@ -1,10 +1,13 @@
-import { Class, Domain, Query, URIRef, keyValueList, parseKeyValueList } from './types';
+import { Class, Domain, Query, URIRef } from './types';
 
 export class AlertDomain extends Domain {
+  private nameToID: Map<string, string>;
+
   // Constructor takes an optional map of alert rule ID to name mappings.
   // Numeric IDs are used to refer to alerting rules with no alert parameters.
-  constructor(private idToName?: Map<string, string>) {
+  constructor(private idToName: Map<string, string> = new Map()) {
     super('alert');
+    this.nameToID = new Map(Array.from(idToName, ([key, value]) => [value, key]));
   }
 
   class(name: string): Class {
@@ -16,27 +19,18 @@ export class AlertDomain extends Domain {
   linkToQuery(link: URIRef): Query {
     const m = link.pathname.match(/monitoring\/(?:alerts|alertrules)(?:\/([^/]*))?/);
     if (!m) throw this.badLink(link);
-    const ruleID = m?.[1];
-    let selector: { [key: string]: string };
-    if (ruleID) {
-      // Search for alerts belonging to a specific alerting rule.
-      selector = Object.fromEntries(link.searchParams);
-      selector['alertname'] ||= this?.idToName?.get(ruleID); // Look up name from ID if missing
-      // Must have an alertname for a specific rule search.
-      if (!selector['alertname']) throw this.badLink(link, 'cannot find alertname');
-      nonLabelParams.forEach((key: string) => delete selector[key]);
-    } else {
-      // Generic alert search across rules. Empty selector is allowed - means "all alerts"
-      selector = parseKeyValueList(link.searchParams.get('alerts'));
-    }
+    const selector = Object.fromEntries(link.searchParams);
+    nonLabelParams.forEach((key: string) => delete selector[key]);
+    // Set name from ID if not already set. Name can be undefined to search all alerts.
+    selector['alertname'] ||= this.idToName.get(m?.[1]) || undefined;
     return new Query(this.class('alert'), JSON.stringify(selector));
   }
 
   queryToLink(query: Query): URIRef {
-    // Use "alerts" parameter to search for alerts of possibly mixed alertnames.
     try {
-      const selectors = keyValueList(JSON.parse(query.selector));
-      return new URIRef(`monitoring/alerts`, { alerts: selectors || undefined });
+      const selector = JSON.parse(query.selector);
+      const id = this.nameToID.get(selector['alertname']);
+      return new URIRef(`monitoring/alerts${id ? `/${id}` : ''}`, selector);
     } catch (e) {
       throw this.badQuery(query, e.toString());
     }
