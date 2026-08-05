@@ -97,14 +97,14 @@ describe('fromAPISearch', () => {
     expect(fromAPISearch(apiSearch)).toBeUndefined();
   });
 
-  it('defaults depth to 3 when not provided', () => {
+  it('defaults depth to 2 when not provided', () => {
     const apiSearch: api.Search = {
       neighbors: { start: { queries: ['k8s:Pod:{}'] }, depth: 0 },
     };
     expect(fromAPISearch(apiSearch)).toEqual({
       queryStr: 'k8s:Pod:{}',
       searchType: SearchType.Depth,
-      depth: 3,
+      depth: 2,
     });
   });
 });

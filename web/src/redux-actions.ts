@@ -27,11 +27,11 @@ export type Search = {
   limit?: number;
 };
 
-// Default search parameters do a neighbourhood search of depth 3.
+// Default search parameters do a neighbourhood search of depth 2.
 export const defaultSearch: Search = {
   queryStr: '',
   searchType: SearchType.Depth,
-  depth: 3,
+  depth: 2,
   period: new Duration(1, HOUR),
   limit: 100,
 };
