@@ -157,7 +157,7 @@ func filesHandler(root http.FileSystem) http.Handler {
 		filePath := r.URL.Path
 
 		// disable caching for plugin entry point
-		if strings.HasPrefix(filePath, "/plugin-entry.js") {
+		if strings.HasSuffix(filePath, ".js") {
 			w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 			w.Header().Set("Expires", "0")
 		}
