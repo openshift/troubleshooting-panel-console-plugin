@@ -19,10 +19,11 @@ export class AlertDomain extends Domain {
   linkToQuery(link: URIRef): Query {
     const m = link.pathname.match(/monitoring\/(?:alerts|alertrules)(?:\/([^/]*))?/);
     if (!m) throw this.badLink(link);
-    const selector = Object.fromEntries(link.searchParams);
+    let selector = Object.fromEntries(link.searchParams);
     nonLabelParams.forEach((key: string) => delete selector[key]);
     // Set name from ID if not already set. Name can be undefined to search all alerts.
     selector['alertname'] ||= this.idToName.get(m?.[1]) || undefined;
+    if (!selector['alertname']) selector = {}; // search all takes no other parameters
     return new Query(this.class('alert'), JSON.stringify(selector));
   }
 
@@ -43,5 +44,8 @@ const nonLabelParams = new Set<string>([
   'rowFilter-alert-state',
   'rowFilter-alert-source',
   'rowFilter-alerting-rule-source',
+  'alert-state',
+  'alert-source',
+  'alerting-rule-source',
   'managed_cluster',
 ]);
