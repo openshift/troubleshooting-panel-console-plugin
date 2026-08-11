@@ -1,5 +1,5 @@
 import { useOverlay } from '@openshift-console/dynamic-plugin-sdk';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import Popover from '../components/Popover';
 import { State } from '../redux-reducers';
@@ -7,13 +7,18 @@ import useAgentNavigation from './useAgentNavigation';
 
 const usePopover = () => {
   const isOpen = useSelector((state: State) => state.plugins?.tp?.get('isOpen'));
+  const overlayActiveRef = useRef(false);
 
   const launchModal = useOverlay();
   useAgentNavigation();
 
   useEffect(() => {
-    if (launchModal && isOpen) {
-      launchModal?.(Popover, { title: 'Troubleshooting panel console plugin modal' });
+    if (launchModal && isOpen && !overlayActiveRef.current) {
+      overlayActiveRef.current = true;
+      launchModal(Popover, { title: 'Troubleshooting panel console plugin modal' });
+    }
+    if (!isOpen) {
+      overlayActiveRef.current = false;
     }
   }, [launchModal, isOpen]);
 
