@@ -194,6 +194,7 @@ const Korrel8rEdge: FC<{ element: Edge<EdgeModel, { rules: korrel8r.Rule[] }> }>
 const NODE_SHAPE = NodeShape.ellipse;
 const NODE_DIAMETER = 75;
 const PADDING = 30;
+const ANCHOR_ID = '__anchor__';
 
 export const Korrel8rTopology: FC<{
   graph: korrel8r.Graph;
@@ -219,46 +220,71 @@ export const Korrel8rTopology: FC<{
     setSelectedIds(graph.node(id) ? [id] : []);
   }, [graph, locationQuery]);
 
-  const nodes: NodeModel[] = useMemo(
-    (): NodeModel[] =>
-      graph.nodes.map((node: korrel8r.Node) => {
-        const label = node.class ? domains.classLabel(node.class) : `[${node.id}]`;
-        const data: TopologyNodeData = { ...node, isStart: node.id === startNode, label };
-        if (data.disabled) {
-          // eslint-disable-next-line no-console
-          console.warn(`korrel8r node: ${data.disabled}`);
-          data.disabled = t('Unable to find Console Link');
-        } else if (data.class.domain === 'log' && !loggingAvailable) {
-          data.disabled = t('Logging Plugin Disabled');
-        } else if (data.class.domain === 'netflow' && !netobserveAvailable) {
-          data.disabled = t('Netflow Plugin Disabled');
-        }
-        return {
-          id: data.id,
-          type: 'node',
-          width: NODE_DIAMETER,
-          height: NODE_DIAMETER,
+  const nodes: NodeModel[] = useMemo((): NodeModel[] => {
+    const result: NodeModel[] = graph.nodes.map((node: korrel8r.Node) => {
+      const label = node.class ? domains.classLabel(node.class) : `[${node.id}]`;
+      const data: TopologyNodeData = { ...node, isStart: node.id === startNode, label };
+      if (data.disabled) {
+        // eslint-disable-next-line no-console
+        console.warn(`korrel8r node: ${data.disabled}`);
+        data.disabled = t('Unable to find Console Link');
+      } else if (data.class.domain === 'log' && !loggingAvailable) {
+        data.disabled = t('Logging Plugin Disabled');
+      } else if (data.class.domain === 'netflow' && !netobserveAvailable) {
+        data.disabled = t('Netflow Plugin Disabled');
+      }
+      return {
+        id: data.id,
+        type: 'node',
+        width: NODE_DIAMETER,
+        height: NODE_DIAMETER,
+        shape: NODE_SHAPE,
+        data,
+      };
+    });
+    // Anchor and start nodes must be first so dagre's DFS cycle-breaker visits them before other
+    // nodes, ensuring back-edges TO the start node are reversed (not edges FROM it).
+    if (startNode && result.some((n) => n.id === startNode)) {
+      const startIdx = result.findIndex((n) => n.id === startNode);
+      const [start] = result.splice(startIdx, 1);
+      result.unshift(
+        {
+          id: ANCHOR_ID,
+          type: 'anchor',
+          width: 1,
+          height: 1,
           shape: NODE_SHAPE,
-          data,
-        };
-      }),
-    [graph, startNode, loggingAvailable, netobserveAvailable, t, domains],
-  );
+          data: {},
+        },
+        start,
+      );
+    }
+    return result;
+  }, [graph, startNode, loggingAvailable, netobserveAvailable, t, domains]);
 
-  const edges = useMemo(
-    () =>
-      graph.edges.map((edge: korrel8r.Edge) => {
-        return {
-          id: `edge:${edge.start.id} -${edge.goal.id} `,
-          type: 'edge',
-          source: edge.start.id,
-          target: edge.goal.id,
-          edgeStyle: EdgeStyle.default,
-          data: { rules: edge.rules },
-        };
-      }),
-    [graph],
-  );
+  const edges = useMemo(() => {
+    const result = graph.edges.map((edge: korrel8r.Edge) => {
+      return {
+        id: `edge:${edge.start.id} -${edge.goal.id} `,
+        type: 'edge',
+        source: edge.start.id,
+        target: edge.goal.id,
+        edgeStyle: EdgeStyle.default,
+        data: { rules: edge.rules },
+      };
+    });
+    if (startNode && nodes.some((n) => n.id === ANCHOR_ID)) {
+      result.push({
+        id: `edge:${ANCHOR_ID}-${startNode}`,
+        type: 'anchor',
+        source: ANCHOR_ID,
+        target: startNode,
+        edgeStyle: EdgeStyle.default,
+        data: { rules: [] },
+      });
+    }
+    return result;
+  }, [graph, startNode, nodes]);
 
   const selectionAction = useCallback(
     (selected: Array<string>) => {
@@ -317,6 +343,7 @@ export const Korrel8rTopology: FC<{
   const componentFactory: ComponentFactory = useCallback(
     (kind: ModelKind, type: string) => {
       if (type === 'group') return DefaultGroup;
+      if (type === 'anchor') return () => null;
       switch (kind) {
         case ModelKind.graph:
           return withPanZoom()(GraphComponent);

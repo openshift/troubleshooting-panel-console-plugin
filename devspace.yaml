@@ -20,11 +20,10 @@ dev:
     devImage: quay.io/openshift-observability-ui/troubleshooting-panel-console-plugin:devspace
 
     # Uncomment the following temporarily to force the cluster to pull the image.
-    #
-    # patches:
-    #   - op: replace
-    #     path: spec.containers[0].imagePullPolicy
-    #     value: Always
+    patches:
+      - op: replace
+        path: spec.containers[0].imagePullPolicy
+        value: Always
 
     # Sync files between the local filesystem and the development container
     sync:
