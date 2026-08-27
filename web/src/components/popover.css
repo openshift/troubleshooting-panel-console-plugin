@@ -5,7 +5,7 @@
   z-index: 1050;
   bottom: 0;
   overflow: hidden;
-  background-color: var(--pf-t--global--background--color--primary--default);
+  background-color: var(--pf-t--global--background--color--floating--default);
   height: 100%;
   width: 35%;
 }
@@ -21,7 +21,8 @@
 
 .tp-plugin__popover-title-bar {
   padding: var(--pf-t--global--spacer--sm) var(--pf-t--global--spacer--md);
-  border-bottom: var(--pf-t--global--border--width--regular) var(--pf-t--global--border--color--default) solid;
+  border-bottom: var(--pf-t--global--border--width--regular)
+    var(--pf-t--global--border--color--default) solid;
 }
 
 .tp-plugin__popover-content {
