@@ -43,18 +43,8 @@ export default function Korrel8rPanel() {
 
   const search: Search = useSelector((state: State) => state.plugins?.tp?.get('search'));
 
-  // Compute constraint from search period and max results.
-  const constraint = useMemo(() => {
-    if (!search.period && !search.limit) {
-      return undefined;
-    }
-    const [start, end] = search.period?.startEnd() ?? [undefined, undefined];
-    return new korrel8r.Constraint({ start, end, limit: search.limit });
-  }, [search.period, search.limit]);
-
   const { data, isError, error, isFetching, isPending, fetchStatus, refetch } = useKorrel8rGraph({
     search,
-    constraint,
   });
   const isCancelled = !!search?.queryStr && isPending && fetchStatus === 'idle';
   const queryClient = useQueryClient();
@@ -211,7 +201,7 @@ export default function Korrel8rPanel() {
             isLoading={isFetching}
             result={data}
             startNode={startNodeId}
-            constraint={constraint}
+            constraint={data?.constraint}
             error={error}
             isCancelled={isCancelled}
           />

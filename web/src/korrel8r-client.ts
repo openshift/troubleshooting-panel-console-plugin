@@ -48,6 +48,7 @@ import { Search, SearchType } from './redux-actions';
 // Result displayed in troubleshooting panel, graph or message.
 export type GraphResult = {
   graph?: korrel8r.Graph; // Successful result
+  constraint?: korrel8r.Constraint; // Window actually sent with this request
   title?: string; // Title when there is no graph.
   message?: string; // Message when there is no graph.
 };
@@ -109,30 +110,34 @@ export const getConsoleUpdates = (
 
 export const useKorrel8rGraph = ({
   search,
-  constraint,
 }: {
   search: Search;
-  constraint: korrel8r.Constraint;
 }): UseQueryResult<GraphResult, Error> => {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
 
   const queryStr = search?.queryStr;
-  const start: Start = {
-    queries: [queryStr],
-    constraint: constraint?.toAPI(),
-  };
 
   return useQuery({
-    queryKey: ['korrel8r', 'graph', search, start],
+    queryKey: ['korrel8r', 'graph', search],
     queryFn: async ({ signal }) => {
+      const [startTime, endTime] = search.period?.startEnd() ?? [undefined, undefined];
+      const constraint = new korrel8r.Constraint({
+        start: startTime,
+        end: endTime,
+        limit: search.limit,
+      });
+      const start: Start = {
+        queries: [queryStr],
+        constraint: constraint.toAPI(),
+      };
       const fetch =
         search.searchType === SearchType.Goal
           ? getGoalsGraph({ start, goals: [search.goal] }, signal)
           : getNeighborsGraph({ start, depth: search.depth }, signal);
       return fetch.then(({ data }: { data: Graph }) => {
         return Array.isArray(data?.nodes) && data.nodes.length > 0
-          ? { graph: new korrel8r.Graph(data) }
-          : { title: t('No correlated signals found') };
+          ? { graph: new korrel8r.Graph(data), constraint }
+          : { title: t('No correlated signals found'), constraint };
       });
     },
     enabled: validRequest(search),
