@@ -76,6 +76,20 @@ deploy:	test-frontend		## Build and push image, reinstall on cluster using helm.
 	PUSH=1 scripts/build-image.sh
 	helm install troubleshooting-panel-console-plugin charts/openshift-console-plugin -n troubleshooting-panel-console-plugin --create-namespace --set plugin.image=${IMAGE}
 
+HASH_CMD       := $(shell command -v sha256sum >/dev/null 2>&1 && echo sha256sum || echo "shasum -a 256")
+DEVSPACE_TAG   ?= devspace-$(shell find Dockerfile.devspace Makefile go.mod go.sum cmd/ pkg/ web/package.json web/package-lock.json -type f -exec $(HASH_CMD) {} + 2>/dev/null | sort | $(HASH_CMD) | cut -c1-12)
+DEVSPACE_IMAGE ?= quay.io/${ORG}/troubleshooting-panel-console-plugin:$(DEVSPACE_TAG)
+.PHONY: build-devspace-image
+build-devspace-image:
+	podman build -f Dockerfile.devspace -t $(DEVSPACE_IMAGE) .
+	podman push $(DEVSPACE_IMAGE)
+	@mkdir -p .devspace
+	@echo $(DEVSPACE_IMAGE) > .devspace/devimage
+
+.PHONY: watch-frontend
+watch-frontend:
+	cd web && npx ts-node -O '{"module":"commonjs"}' node_modules/.bin/webpack --watch
+
 .PHONY: start-devspace-backend
 start-devspace-backend:
 	/opt/app-root/plugin-backend -port=9443 -cert=/var/serving-cert/tls.crt -key=/var/serving-cert/tls.key -plugin-config-path=/etc/plugin/config.yaml -static-path=/opt/app-root/web/dist -config-path=/opt/app-root/web/dist $(if $(FEATURES),-features=$(FEATURES))
