@@ -1,16 +1,8 @@
-FROM registry.redhat.io/ubi9/go-toolset:latest AS go-builder
+FROM registry.access.redhat.com/ubi10/go-toolset AS go-builder
 
 WORKDIR /opt/app-root
 
 USER 0
-RUN chgrp -R 0 /opt/app-root
-RUN chmod -R g+rw /opt/app-root
-
-RUN mkdir /.devspace
-RUN chgrp -R 0 /.devspace
-RUN chmod -R g+rw /.devspace
-
-ENV HUSKY=0
 
 COPY Makefile Makefile
 COPY go.mod go.mod
@@ -23,4 +15,21 @@ COPY pkg/ pkg/
 
 RUN make build-backend
 
-ENTRYPOINT ["make", "start-devspace-backend"]
+FROM registry.access.redhat.com/ubi9/nodejs-22:latest
+
+WORKDIR /opt/app-root
+
+USER 0
+RUN chgrp -R 0 /opt/app-root && chmod -R g+rw /opt/app-root
+RUN mkdir /.devspace && chgrp -R 0 /.devspace && chmod -R g+rw /.devspace
+
+ENV HUSKY=0
+
+COPY --from=go-builder /opt/app-root/plugin-backend /opt/app-root/plugin-backend
+
+COPY Makefile Makefile
+COPY web/package*.json web/
+RUN make install-frontend
+RUN chgrp -R 0 /opt/app-root/web && chmod -R g+rw /opt/app-root/web
+
+CMD ["echo", "This image is for use with devspace. Run: devspace dev"]

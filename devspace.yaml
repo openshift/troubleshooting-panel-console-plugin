@@ -1,38 +1,44 @@
 version: v2beta1
 name: troubleshooting-panel-console-plugin
 
-# This is a list of `pipelines` that DevSpace can execute (you can define your own)
+vars:
+  DEVSPACE_IMAGE:
+    command: bash -c "cat .devspace/devimage 2>/dev/null || echo quay.io/openshift-observability-ui/troubleshooting-panel-console-plugin:devspace"
+
 pipelines:
-  # This is the pipeline for the main command: `devspace dev` (or `devspace run-pipeline dev`)
   dev:
-    run: start_dev app # 5. Start dev mode "app" (see "dev" section)
+    run: start_dev app
   purge:
     run: stop_dev --all
 
-# This is a list of `dev` containers that are based on the containers created by your deployments
 dev:
   app:
-    # Search for the container that runs this image
     labelSelector:
-      # Use the instance selector that COO adds
       app.kubernetes.io/instance: troubleshooting-panel
-    # Replace the container image with this dev-optimized image (skip image building)
-    devImage: quay.io/openshift-observability-ui/troubleshooting-panel-console-plugin:devspace
+    devImage: ${DEVSPACE_IMAGE}
 
-    # Uncomment the following temporarily to force the cluster to pull the image.
-    patches:
-      - op: replace
-        path: spec.containers[0].imagePullPolicy
-        value: Always
-
-    # Sync files between the local filesystem and the development container
     sync:
-      - path: ./web/dist:/opt/app-root/web/dist
+      - path: ./web:/opt/app-root/web
+        excludePaths:
+          - node_modules/
+          - dist/
+          - package.json
+          - package-lock.json
         startContainer: true
         printLogs: true
         waitInitialSync: true
-    command: ["make"]
-    args: ["start-devspace-backend", "FEATURES=agent-navigation"]
 
+    logs:
+      enabled: true
+
+    command: ["sh", "-c"]
+    args:
+      - |
+        cd /opt/app-root
+        make watch-frontend &
+        echo "Waiting for initial frontend build..."
+        while [ ! -f web/dist/plugin-manifest.json ]; do sleep 1; done
+        echo "Frontend build complete, starting backend..."
+        make start-devspace-backend FEATURES=agent-navigation
     ssh:
       enabled: true
