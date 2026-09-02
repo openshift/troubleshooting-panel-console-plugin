@@ -31,6 +31,10 @@ export class AlertDomain extends Domain {
     try {
       const selector = JSON.parse(query.selector);
       const id = this.nameToID.get(selector['alertname']);
+      if (id && Object.keys(selector).length === 1) {
+        // Selector only has [alertname], use the alert rule URL format.
+        return new URIRef(`monitoring/alertrules/${id}`);
+      }
       return new URIRef(`monitoring/alerts${id ? `/${id}` : ''}`, selector);
     } catch (e) {
       throw this.badQuery(query, e.toString());
