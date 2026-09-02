@@ -154,7 +154,7 @@ const Korrel8rTopologyNode: FC<
             show={!!node.isStart && !node.disabled}
             quadrant={TopologyQuadrant.lowerRight}
             element={element}
-            tooltipContent={t('Search start')}
+            tooltipContent={t('Search started here')}
             icon={
               <g className="tp-plugin__topology_start_decorator">
                 <CrosshairsIcon />

@@ -141,6 +141,7 @@ export const useKorrel8rGraph = ({
       });
     },
     enabled: validRequest(search),
+    staleTime: 10 * 60 * 1000,
   });
 };
 
