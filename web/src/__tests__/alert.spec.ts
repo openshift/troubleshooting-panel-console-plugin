@@ -51,16 +51,30 @@ describe('AlertDomain.fromQuery', () => {
       idToName: new Map([['42', 'KubePodCrashLooping']]),
     },
     { query: 'alert:alert:{}', url: 'monitoring/alerts' },
+    {
+      query: 'alert:alert:{"alertname":"FooAlert"}',
+      url: 'monitoring/alertrules/12345',
+      idToName: new Map([['12345', 'FooAlert']]),
+    },
   ])('converts $query', ({ url, query, idToName }) => {
     expect(new AlertDomain(idToName).queryToLink(Query.parse(query))).toEqual(new URIRef(url));
   });
 
-  it('Query => URL => Query', () => {
+  it('Query => URL => Query for alerts with labels', () => {
     const domain = new AlertDomain(new Map([['42', 'KubePodCrashLooping']]));
     const query =
       'alert:alert:{"alertname":"KubePodCrashLooping","container":"bad-deployment","namespace":"default","pod":"bad-pod"}';
     const url =
       'monitoring/alerts/42?alertname=KubePodCrashLooping&container=bad-deployment&namespace=default&pod=bad-pod';
+    const want = domain.queryToLink(Query.parse(query));
+    expect(want).toEqual(new URIRef(url));
+    expect(domain.linkToQuery(want)).toEqual(Query.parse(query));
+  });
+
+  it('Query => URL => Query for alertrules with only alertname', () => {
+    const domain = new AlertDomain(new Map([['12345', 'FooAlert']]));
+    const query = 'alert:alert:{"alertname":"FooAlert"}';
+    const url = 'monitoring/alertrules/12345';
     const want = domain.queryToLink(Query.parse(query));
     expect(want).toEqual(new URIRef(url));
     expect(domain.linkToQuery(want)).toEqual(Query.parse(query));
