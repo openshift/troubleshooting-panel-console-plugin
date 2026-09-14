@@ -1,4 +1,5 @@
-import { capitalize, Class, Constraint, Domain, Query, unixMilliseconds, URIRef } from './types';
+import { Duration, Period, Unit, parseRange } from '../time';
+import { capitalize, Class, Constraint, Domain, Query, URIRef } from './types';
 
 enum LogClass {
   application = 'application',
@@ -34,13 +35,33 @@ export class LogDomain extends Domain {
   queryToLink(query: Query, constraint?: Constraint): URIRef {
     const logClass = LogClass[query.class.name as keyof typeof LogClass];
     if (!logClass) throw this.badQuery(query, 'unknown class');
+    const period = constraint?.period;
+    const timeParams = period
+      ? Duration.isDuration(period)
+        ? { start: `now-${period.toString()}`, end: 'now' }
+        : {
+            start: String(period.startEnd()[0].getTime()),
+            end: String(period.startEnd()[1].getTime()),
+          }
+      : { start: undefined, end: undefined };
     return new URIRef('monitoring/logs', {
       // Try to translate as a direct pod selector, otherwise use as logQL query
       q: addJSONFilter(directToLogQL(query.selector) || query.selector),
       tenant: logClass,
-      start: unixMilliseconds(constraint?.start),
-      end: unixMilliseconds(constraint?.end),
+      ...timeParams,
     });
+  }
+
+  linkToPeriod(link: URIRef): Period | undefined {
+    let startParam = link.searchParams.get('start');
+    if (!startParam) return new Duration(1, Unit.HOUR); // Default
+    if (startParam.startsWith('now-')) {
+      startParam = startParam.slice(4);
+    }
+    const duration = Duration.parse(startParam);
+    if (duration) return duration;
+
+    return parseRange(startParam, link.searchParams.get('end') || undefined);
   }
 }
 

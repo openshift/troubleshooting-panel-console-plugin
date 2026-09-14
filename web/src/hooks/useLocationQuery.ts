@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Query, URIRef } from '../korrel8r/types';
+import { Period } from '../time';
 import { useDomains } from './useDomains';
 
 /** Get a snapshot of the current browser location */
@@ -39,15 +40,22 @@ const useBrowserLocation = () => {
   return location;
 };
 
-/** Returns the Korrel8r query for the current browser location or undefined. */
-export const useLocationQuery = (): Query | undefined => {
+/**
+ * Returns the Korrel8r query and time period for the current browser location.
+ * The period is resolved using the domain of the query, so each domain only
+ * has to understand its own URL parameters.
+ */
+export const useLocationQuery = (): { query?: Query; period?: Period } => {
   const domains = useDomains();
   const location = useBrowserLocation();
   const lastLoggedError = useRef('');
 
-  const { query, error } = useMemo(() => {
+  const { query, period, error } = useMemo(() => {
     try {
-      return { query: domains.linkToQuery(new URIRef(location.pathname + location.search)) };
+      const link = new URIRef(location.pathname + location.search);
+      const query = domains.linkToQuery(link);
+      const period = domains.get(query.class.domain).linkToPeriod(link);
+      return { query, period };
     } catch (err) {
       return { error: String(err) };
     }
@@ -61,5 +69,5 @@ export const useLocationQuery = (): Query | undefined => {
     lastLoggedError.current = error ?? '';
   }, [error]);
 
-  return query;
+  return { query, period };
 };

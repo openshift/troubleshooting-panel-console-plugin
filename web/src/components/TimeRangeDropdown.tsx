@@ -24,6 +24,7 @@ import { TimeUnitPicker } from './TimeUnitPicker';
 
 const CUSTOM_RANGE_KEY = 'CUSTOM_RANGE';
 const CUSTOM_DURATION_KEY = 'CUSTOM_DURATION';
+const PAGE_TIME_RANGE_KEY = 'PAGE_TIME_RANGE';
 
 const timeRangeOptions = [
   { key: '5m', period: new time.Duration(5, time.MINUTE) },
@@ -151,9 +152,15 @@ interface TimeRangeDropdownProps {
   period: time.Period;
   onChange: (period: time.Period) => void;
   className?: string;
+  locationPeriod?: time.Period;
 }
 
-export const TimeRangeDropdown: FC<TimeRangeDropdownProps> = ({ period, onChange, className }) => {
+export const TimeRangeDropdown: FC<TimeRangeDropdownProps> = ({
+  period,
+  onChange,
+  className,
+  locationPeriod,
+}) => {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
   const [isOpen, setIsOpen] = useState(false);
   const [rangeModalOpen, setRangeModalOpen] = useState(false);
@@ -237,6 +244,15 @@ export const TimeRangeDropdown: FC<TimeRangeDropdownProps> = ({ period, onChange
           >
             {t('Custom time range')}
           </DropdownItem>
+          {locationPeriod && (
+            <DropdownItem
+              key={PAGE_TIME_RANGE_KEY}
+              isSelected={selectedKey === PAGE_TIME_RANGE_KEY}
+              onClick={() => onChange(locationPeriod)}
+            >
+              {t('Time from main view')}
+            </DropdownItem>
+          )}
         </DropdownList>
       </Dropdown>
       {rangeModalOpen && (

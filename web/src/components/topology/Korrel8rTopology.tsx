@@ -206,19 +206,19 @@ export const Korrel8rTopology: FC<{
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
   const domains = useDomains();
   const navigateToQuery = useNavigateToQuery();
-  const locationQuery = useLocationQuery();
+  const { query } = useLocationQuery();
   const dispatch = useDispatch();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const rankdir: string = useSelector((s: State) => s.plugins?.tp?.get('rankdir')) ?? LEFT_TO_RIGHT;
 
   useEffect(() => {
-    if (!locationQuery) {
+    if (!query) {
       setSelectedIds([]);
       return;
     }
-    const id = locationQuery.class.toString();
+    const id = query.class.toString();
     setSelectedIds(graph.node(id) ? [id] : []);
-  }, [graph, locationQuery]);
+  }, [graph, query]);
 
   const nodes: NodeModel[] = useMemo((): NodeModel[] => {
     const result: NodeModel[] = graph.nodes.map((node: korrel8r.Node) => {

@@ -1,3 +1,4 @@
+import { Duration, Unit } from '../time';
 import { LogDomain } from '../korrel8r/log';
 import { Constraint, Query, URIRef } from '../korrel8r/types';
 
@@ -174,5 +175,91 @@ describe('expected errors', () => {
     },
   ])('error from query: $query', ({ query, expected }) => {
     expect(() => new LogDomain().queryToLink(Query.parse(query))).toThrow(expected);
+  });
+});
+
+describe('LogDomain.queryToLink with duration constraint', () => {
+  it('uses now-Xm format when end is close to now', () => {
+    jest.spyOn(Date, 'now').mockReturnValue(new Date('2024-01-01T12:00:00Z').getTime());
+    const domain = new LogDomain();
+    const query = Query.parse('log:infrastructure:{kubernetes_namespace_name="default"}');
+    const constraint = Constraint.fromAPI({
+      start: '2024-01-01T11:45:00.000Z',
+      end: new Date(Date.now()).toISOString(),
+    });
+    const link = domain.queryToLink(query, constraint);
+    expect(link.searchParams.get('start')).toEqual('now-15m');
+    expect(link.searchParams.get('end')).toEqual('now');
+    jest.restoreAllMocks();
+  });
+
+  it('uses timestamps when end is not close to now', () => {
+    const domain = new LogDomain();
+    const query = Query.parse('log:infrastructure:{kubernetes_namespace_name="default"}');
+    const constraint = Constraint.fromAPI({
+      start: '2024-01-01T00:00:00.000Z',
+      end: '2024-01-02T00:00:00.000Z',
+    });
+    const link = domain.queryToLink(query, constraint);
+    expect(link.searchParams.get('start')).toEqual(
+      String(new Date('2024-01-01T00:00:00Z').getTime()),
+    );
+    expect(link.searchParams.get('end')).toEqual(
+      String(new Date('2024-01-02T00:00:00Z').getTime()),
+    );
+  });
+});
+
+describe('LogDomain.linkToPeriod', () => {
+  it('parses now-Xm format to Duration', () => {
+    const domain = new LogDomain();
+    const link = new URIRef('monitoring/logs?start=now-15m&end=now');
+    const period = domain.linkToPeriod(link);
+    expect(period).toBeDefined();
+    expect(Duration.isDuration(period!)).toBe(true);
+    expect((period as Duration).count).toEqual(15);
+    expect((period as Duration).unit).toEqual(Unit.MINUTE);
+  });
+
+  it('parses timestamps to Range', () => {
+    const domain = new LogDomain();
+    const start = new Date('2024-01-01T00:00:00Z');
+    const end = new Date('2024-01-02T00:00:00Z');
+    const link = new URIRef(`monitoring/logs?start=${start.getTime()}&end=${end.getTime()}`);
+    const period = domain.linkToPeriod(link);
+    expect(period).toBeDefined();
+    expect(Duration.isDuration(period!)).toBe(false);
+    const [pStart, pEnd] = period!.startEnd();
+    expect(pStart).toEqual(start);
+    expect(pEnd).toEqual(end);
+  });
+
+  it('returns default when no start param', () => {
+    const domain = new LogDomain();
+    const link = new URIRef('monitoring/logs?end=now');
+    expect(domain.linkToPeriod(link)).toEqual(new Duration(1, Unit.HOUR));
+  });
+
+  it('defaults end to now when end param is missing', () => {
+    const domain = new LogDomain();
+    const start = new Date('2024-01-01T00:00:00Z');
+    const link = new URIRef(`monitoring/logs?start=${start.getTime()}`);
+    const period = domain.linkToPeriod(link);
+    expect(Duration.isDuration(period!)).toBe(false);
+    const [pStart] = period!.startEnd();
+    expect(pStart).toEqual(start);
+  });
+
+  it('returns undefined for an unparseable start param', () => {
+    const domain = new LogDomain();
+    const link = new URIRef('monitoring/logs?start=not-a-date');
+    expect(domain.linkToPeriod(link)).toBeUndefined();
+  });
+
+  it('returns undefined for an unparseable end param', () => {
+    const domain = new LogDomain();
+    const start = new Date('2024-01-01T00:00:00Z');
+    const link = new URIRef(`monitoring/logs?start=${start.getTime()}&end=not-a-date`);
+    expect(domain.linkToPeriod(link)).toBeUndefined();
   });
 });

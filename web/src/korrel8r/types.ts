@@ -1,4 +1,5 @@
 /** Type-safe versions of the Korrel8r API types. */
+import { periodFrom, Period } from '../time';
 import * as api from './client';
 
 export const capitalize = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : '');
@@ -56,27 +57,28 @@ const parseDate = (s: string): Date | undefined => {
 };
 
 export class Constraint {
-  public start?: Date;
-  public end?: Date;
+  public period?: Period;
   public limit?: number;
 
-  constructor(args: Partial<Constraint> = {}) {
+  constructor(args: { period?: Period; limit?: number } = {}) {
     Object.assign(this, args);
   }
 
   static fromAPI(constraint: api.Constraint): Constraint | undefined {
     if (!constraint) return undefined;
+    const start = parseDate(constraint.start);
+    const end = parseDate(constraint.end);
     return new Constraint({
-      start: parseDate(constraint.start),
-      end: parseDate(constraint.end),
+      period: periodFrom(start, end),
       limit: constraint?.limit,
     });
   }
 
   toAPI(): api.Constraint {
+    const [start, end] = this.period?.startEnd() ?? [];
     return {
-      start: this?.start?.toISOString(),
-      end: this?.end?.toISOString(),
+      start: start?.toISOString(),
+      end: end?.toISOString(),
       limit: this?.limit,
     };
   }
@@ -102,6 +104,12 @@ export abstract class Domain {
   // Convert a Query to a relative URI reference.
   // @throws {TypeError} if the conversion fails.
   abstract queryToLink(query: Query, constraint?: Constraint): URIRef;
+
+  // Convert a URI reference to a Period.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  linkToPeriod(_link: URIRef): Period | undefined {
+    return undefined;
+  }
 
   protected badClass(name: string): TypeError {
     return new TypeError(`class not found: ${this.name}:${name}`);
@@ -254,12 +262,13 @@ export class Domains {
 
 /** Integer unix millisecond timestamp. */
 export const unixMilliseconds = (d: Date | undefined): number | undefined => {
-  return d?.getTime() || undefined;
+  return d ? d.getTime() : undefined;
 };
 
 /** Integer unix seconds timestamp. */
 export const unixSeconds = (d: Date | undefined): number | undefined => {
-  return Math.floor(unixMilliseconds(d) / 1000) || undefined;
+  const ms = unixMilliseconds(d);
+  return ms === undefined ? undefined : Math.floor(ms / 1000);
 };
 
 export type StatusCount = api.StatusCount;

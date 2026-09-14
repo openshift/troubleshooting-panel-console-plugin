@@ -26,7 +26,7 @@ const useAgentNavigation = ({
   maxDelay = 10000,
 }: { minDelay?: number; maxDelay?: number } = {}) => {
   const agentEnabled: boolean = useSelector((s: State) => s.plugins?.tp?.get('agentEnabled'));
-  const view = useLocationQuery()?.toString();
+  const view = useLocationQuery().query?.toString();
   const search: Search = useSelector((s: State) => s.plugins?.tp?.get('search'), shallowEqual);
   const isOpen: boolean = useSelector((s: State) => s.plugins?.tp?.get('isOpen'));
   const dispatch = useDispatch();

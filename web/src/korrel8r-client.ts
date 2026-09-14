@@ -120,10 +120,8 @@ export const useKorrel8rGraph = ({
   return useQuery({
     queryKey: ['korrel8r', 'graph', search],
     queryFn: async ({ signal }) => {
-      const [startTime, endTime] = search.period?.startEnd() ?? [undefined, undefined];
       const constraint = new korrel8r.Constraint({
-        start: startTime,
-        end: endTime,
+        period: search.period,
         limit: search.limit,
       });
       const start: Start = {
