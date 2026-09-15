@@ -52,12 +52,17 @@ describe('LogDomain.linkToQuery', () => {
         `kubernetes_pod_name="foo",log_type="infrastructure"}`,
     },
     {
-      url: `/k8s/ns/foo/pods/bar/aggregated-logs`,
+      url: `monitoring/logs?q=${encodeURIComponent(
+        '{kubernetes_namespace_name="foo",kubernetes_pod_name="bar"}',
+      )}&tenant=application`,
       query: `log:application:{kubernetes_namespace_name="foo",kubernetes_pod_name="bar"}`,
     },
     {
-      url: `/k8s/ns/kube/pods/bar/aggregated-logs`,
-      query: `log:infrastructure:{kubernetes_namespace_name="kube",kubernetes_pod_name="bar"}`,
+      url: `monitoring/logs?q=${encodeURIComponent(
+        '{kubernetes_namespace_name="kube",kubernetes_pod_name="bar",log_type="infrastructure"}',
+      )}`,
+      query:
+        'log:infrastructure:{kubernetes_namespace_name="kube",kubernetes_pod_name="bar",log_type="infrastructure"}',
     },
     {
       url: '/monitoring/logs?q=%7Bkubernetes_namespace_name%3D%22openshift-image-registry%22%7D%7Cjson%7Ckubernetes_labels_docker_registry%3D%22default%22&tenant=infrastructure',

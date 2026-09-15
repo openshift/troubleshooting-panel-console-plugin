@@ -22,21 +22,7 @@ export class LogDomain extends Domain {
     return new Class(this.name, name);
   }
 
-  // There are 2 types of URL: pod logs, and logQL searches.
   linkToQuery(link: URIRef): Query {
-    // First check for aggregated pod logs URL
-    const [, namespace, name] =
-      link.pathname.match(/k8s\/ns\/([^/]+)\/pods\/([^/]+)\/aggregated-logs/) || [];
-    if (namespace && name) {
-      const logClass = namespace.match(/^kube|^openshift-/)
-        ? LogClass.infrastructure
-        : LogClass.application;
-      return new Query(
-        this.class(logClass),
-        `{kubernetes_namespace_name="${namespace}",kubernetes_pod_name="${name}"}`,
-      );
-    }
-    // Assume this is a search URL
     const logQL = link.searchParams.get('q');
     const logClassStr =
       link.searchParams.get('tenant') || logQL?.match(/{[^}]*log_type(?:=~?)"([^"]+)"/)?.at(1);
