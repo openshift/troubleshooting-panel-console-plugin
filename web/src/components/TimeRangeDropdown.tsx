@@ -9,13 +9,10 @@ import {
   FlexItem,
   MenuToggle,
   MenuToggleElement,
-  Modal,
-  ModalBody,
-  ModalFooter,
-  ModalHeader,
   NumberInput,
+  Popover,
 } from '@patternfly/react-core';
-import { FC, Ref, useCallback, useMemo, useState } from 'react';
+import { FC, MutableRefObject, Ref, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTimeUnitLabel } from '../hooks/useTimeUnitLabel';
 import * as time from '../time';
@@ -50,49 +47,44 @@ interface TimeRangeModalProps {
   onClose: () => void;
 }
 
-const TimeRangeModal: FC<TimeRangeModalProps> = ({ initialRange, onSave, onClose }) => {
+const TimeRangeForm: FC<TimeRangeModalProps> = ({ initialRange, onSave, onClose }) => {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
   const [start, setStart] = useState(initialRange.start);
   const [end, setEnd] = useState(initialRange.end);
   const isValid = start < end;
 
   return (
-    <Modal isOpen onClose={onClose}>
-      <ModalHeader title={t('Custom time range')} />
-      <ModalBody>
-        <Flex direction={{ default: 'column' }}>
+    <Flex direction={{ default: 'column' }}>
+      <FlexItem>
+        <label>{t('From')}</label>
+        <DateTimePicker date={start} onChange={setStart} />
+      </FlexItem>
+      <FlexItem>
+        <label>{t('To')}</label>
+        <DateTimePicker date={end} onChange={setEnd} />
+      </FlexItem>
+      {!isValid && (
+        <Alert variant="danger" isInline isPlain title={t('End time must be after start time')} />
+      )}
+      <FlexItem>
+        <Flex spaceItems={{ default: 'spaceItemsSm' }}>
           <FlexItem>
-            <label>{t('From')}</label>
-            <DateTimePicker date={start} onChange={setStart} />
+            <Button
+              variant="primary"
+              onClick={() => onSave(new time.Range(start, end))}
+              isDisabled={!isValid}
+            >
+              {t('Save')}
+            </Button>
           </FlexItem>
           <FlexItem>
-            <label>{t('To')}</label>
-            <DateTimePicker date={end} onChange={setEnd} />
+            <Button variant="link" onClick={onClose}>
+              {t('Cancel')}
+            </Button>
           </FlexItem>
-          {!isValid && (
-            <Alert
-              variant="danger"
-              isInline
-              isPlain
-              title={t('End time must be after start time')}
-            />
-          )}
         </Flex>
-      </ModalBody>
-      <ModalFooter>
-        <Button
-          key="save"
-          variant="primary"
-          onClick={() => onSave(new time.Range(start, end))}
-          isDisabled={!isValid}
-        >
-          {t('Save')}
-        </Button>
-        <Button key="cancel" variant="link" onClick={onClose}>
-          {t('Cancel')}
-        </Button>
-      </ModalFooter>
-    </Modal>
+      </FlexItem>
+    </Flex>
   );
 };
 
@@ -102,7 +94,7 @@ interface DurationModalProps {
   onClose: () => void;
 }
 
-const DurationModal: FC<DurationModalProps> = ({ initialDuration, onSave, onClose }) => {
+const DurationForm: FC<DurationModalProps> = ({ initialDuration, onSave, onClose }) => {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
   const [count, setCount] = useState(initialDuration.count);
   const [unit, setUnit] = useState(initialDuration.unit);
@@ -110,9 +102,8 @@ const DurationModal: FC<DurationModalProps> = ({ initialDuration, onSave, onClos
   const onChangeCount = (n: number) => setCount(Math.max(1, n || 1));
 
   return (
-    <Modal isOpen onClose={onClose}>
-      <ModalHeader title={t('Custom duration')} />
-      <ModalBody>
+    <Flex direction={{ default: 'column' }}>
+      <FlexItem>
         <Flex alignItems={{ default: 'alignItemsCenter' }} spaceItems={{ default: 'spaceItemsSm' }}>
           <FlexItem>{t('Last')}</FlexItem>
           <FlexItem>
@@ -129,21 +120,26 @@ const DurationModal: FC<DurationModalProps> = ({ initialDuration, onSave, onClos
             <TimeUnitPicker unit={unit} onChange={setUnit} />
           </FlexItem>
         </Flex>
-      </ModalBody>
-      <ModalFooter>
-        <Button
-          key="save"
-          variant="primary"
-          onClick={() => onSave(new time.Duration(count, unit))}
-          isDisabled={count < 1}
-        >
-          {t('Save')}
-        </Button>
-        <Button key="cancel" variant="link" onClick={onClose}>
-          {t('Cancel')}
-        </Button>
-      </ModalFooter>
-    </Modal>
+      </FlexItem>
+      <FlexItem>
+        <Flex spaceItems={{ default: 'spaceItemsSm' }}>
+          <FlexItem>
+            <Button
+              variant="primary"
+              onClick={() => onSave(new time.Duration(count, unit))}
+              isDisabled={count < 1}
+            >
+              {t('Save')}
+            </Button>
+          </FlexItem>
+          <FlexItem>
+            <Button variant="link" onClick={onClose}>
+              {t('Cancel')}
+            </Button>
+          </FlexItem>
+        </Flex>
+      </FlexItem>
+    </Flex>
   );
 };
 
@@ -158,6 +154,7 @@ export const TimeRangeDropdown: FC<TimeRangeDropdownProps> = ({ period, onChange
   const [isOpen, setIsOpen] = useState(false);
   const [rangeModalOpen, setRangeModalOpen] = useState(false);
   const [durationModalOpen, setDurationModalOpen] = useState(false);
+  const toggleElementRef = useRef<MenuToggleElement>(null);
 
   const selectedKey = keyFromPeriod(period);
 
@@ -203,7 +200,12 @@ export const TimeRangeDropdown: FC<TimeRangeDropdownProps> = ({ period, onChange
         onOpenChange={setIsOpen}
         toggle={(toggleRef: Ref<MenuToggleElement>) => (
           <MenuToggle
-            ref={toggleRef}
+            ref={(element) => {
+              toggleElementRef.current = element;
+              if (typeof toggleRef === 'function') toggleRef(element);
+              else if (toggleRef)
+                (toggleRef as MutableRefObject<MenuToggleElement | null>).current = element;
+            }}
             onClick={() => setIsOpen(!isOpen)}
             isExpanded={isOpen}
             className={className}
@@ -239,26 +241,42 @@ export const TimeRangeDropdown: FC<TimeRangeDropdownProps> = ({ period, onChange
           </DropdownItem>
         </DropdownList>
       </Dropdown>
-      {rangeModalOpen && (
-        <TimeRangeModal
-          initialRange={initialRange}
-          onSave={(range) => {
-            setRangeModalOpen(false);
-            onChange(range);
-          }}
-          onClose={() => setRangeModalOpen(false)}
-        />
-      )}
-      {durationModalOpen && (
-        <DurationModal
-          initialDuration={initialDuration}
-          onSave={(duration) => {
-            setDurationModalOpen(false);
-            onChange(duration);
-          }}
-          onClose={() => setDurationModalOpen(false)}
-        />
-      )}
+      <Popover
+        headerContent={t('Custom time range')}
+        bodyContent={
+          <TimeRangeForm
+            initialRange={initialRange}
+            onSave={(range) => {
+              setRangeModalOpen(false);
+              onChange(range);
+            }}
+            onClose={() => setRangeModalOpen(false)}
+          />
+        }
+        triggerRef={toggleElementRef}
+        isVisible={rangeModalOpen}
+        showClose={false}
+        position="bottom-end"
+        maxWidth="32rem"
+      />
+      <Popover
+        headerContent={t('Custom duration')}
+        bodyContent={
+          <DurationForm
+            initialDuration={initialDuration}
+            onSave={(duration) => {
+              setDurationModalOpen(false);
+              onChange(duration);
+            }}
+            onClose={() => setDurationModalOpen(false)}
+          />
+        }
+        triggerRef={toggleElementRef}
+        isVisible={durationModalOpen}
+        showClose={false}
+        position="bottom-end"
+        maxWidth="24rem"
+      />
     </>
   );
 };
