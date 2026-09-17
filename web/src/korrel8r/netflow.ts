@@ -1,3 +1,4 @@
+import { Duration, Period, Unit, parseRange } from '../time';
 import { Class, Constraint, Domain, Query, unixSeconds, URIRef } from './types';
 
 // https://docs.openshift.com/container-platform/4.15/observability/network_observability/json-flows-format-reference.html
@@ -92,12 +93,36 @@ export class NetflowDomain extends Domain {
       .join(';');
 
     // Construct the base URL with required parameters
+    let timeParams: { timeRange?: string; startTime?: string; endTime?: string };
+    const period = constraint?.period;
+    if (period) {
+      const [start, end] = period.startEnd();
+      if (Duration.isDuration(period)) {
+        timeParams = {
+          timeRange: String(Math.round(period.duration() / 1000)),
+        };
+      } else {
+        timeParams = {
+          startTime: String(unixSeconds(start)),
+          endTime: String(unixSeconds(end)),
+        };
+      }
+    }
     return new URIRef('netflow-traffic', {
       tenant: query.class.name,
       filters: filters ? filters : undefined,
-      startTime: unixSeconds(constraint?.start),
-      endTime: unixSeconds(constraint?.end),
+      ...timeParams,
       limit: constraint?.limit,
     });
+  }
+
+  linkToPeriod(link: URIRef): Period | undefined {
+    const timeRange = link.searchParams.get('timeRange');
+    if (timeRange) {
+      const seconds = Number(timeRange);
+      return isNaN(seconds) ? undefined : new Duration(seconds, Unit.SECOND);
+    }
+    const startTime = link.searchParams.get('startTime');
+    return parseRange(startTime, link.searchParams.get('endTime') || undefined, 1000);
   }
 }

@@ -1,3 +1,4 @@
+import { Duration, Unit } from '../time';
 import { NetflowDomain } from '../korrel8r/netflow';
 import { Constraint, Query, URIRef } from '../korrel8r/types';
 
@@ -115,5 +116,103 @@ describe('', () => {
     },
   ])('expect error fromQuery($query)', ({ query, expected }) => {
     expect(() => new NetflowDomain().queryToLink(Query.parse(query))).toThrow(expected);
+  });
+});
+
+describe('NetflowDomain.queryToLink with duration constraint', () => {
+  it('uses timeRange when end is close to now', () => {
+    jest.spyOn(Date, 'now').mockReturnValue(new Date('2024-01-01T12:00:00Z').getTime());
+    const domain = new NetflowDomain();
+    const query = Query.parse('netflow:network:{SrcK8S_Namespace="default"}');
+    const constraint = Constraint.fromAPI({
+      start: '2024-01-01T11:45:00.000Z',
+      end: new Date(Date.now()).toISOString(),
+    });
+    const link = domain.queryToLink(query, constraint);
+    expect(link.searchParams.get('timeRange')).toEqual('900');
+    expect(link.searchParams.get('startTime')).toBeFalsy();
+    expect(link.searchParams.get('endTime')).toBeFalsy();
+    jest.restoreAllMocks();
+  });
+
+  it('uses startTime/endTime when end is not close to now', () => {
+    const domain = new NetflowDomain();
+    const query = Query.parse('netflow:network:{SrcK8S_Namespace="default"}');
+    const constraint = Constraint.fromAPI({
+      start: '2024-01-01T00:00:00.000Z',
+      end: '2024-01-02T00:00:00.000Z',
+    });
+    const link = domain.queryToLink(query, constraint);
+    expect(link.searchParams.get('timeRange')).toBeFalsy();
+    expect(link.searchParams.get('startTime')).toEqual(
+      String(Math.floor(new Date('2024-01-01T00:00:00Z').getTime() / 1000)),
+    );
+    expect(link.searchParams.get('endTime')).toEqual(
+      String(Math.floor(new Date('2024-01-02T00:00:00Z').getTime() / 1000)),
+    );
+  });
+});
+
+describe('NetflowDomain.linkToPeriod', () => {
+  it('parses timeRange to Duration', () => {
+    const domain = new NetflowDomain();
+    const link = new URIRef('netflow-traffic?timeRange=900');
+    const period = domain.linkToPeriod(link);
+    expect(period).toBeDefined();
+    expect(Duration.isDuration(period!)).toBe(true);
+    expect((period as Duration).count).toEqual(900);
+    expect((period as Duration).unit).toEqual(Unit.SECOND);
+  });
+
+  it('parses startTime/endTime to Range', () => {
+    const domain = new NetflowDomain();
+    const start = new Date('2024-01-01T00:00:00Z');
+    const end = new Date('2024-01-02T00:00:00Z');
+    const startTime = Math.floor(start.getTime() / 1000);
+    const endTime = Math.floor(end.getTime() / 1000);
+    const link = new URIRef(`netflow-traffic?startTime=${startTime}&endTime=${endTime}`);
+    const period = domain.linkToPeriod(link);
+    expect(period).toBeDefined();
+    expect(Duration.isDuration(period!)).toBe(false);
+    const [pStart, pEnd] = period!.startEnd();
+    expect(pStart).toEqual(start);
+    expect(pEnd).toEqual(end);
+  });
+
+  it('returns undefined when no time params', () => {
+    const domain = new NetflowDomain();
+    const link = new URIRef('netflow-traffic?tenant=network');
+    expect(domain.linkToPeriod(link)).toBeUndefined();
+  });
+
+  it('defaults endTime to now when missing', () => {
+    const domain = new NetflowDomain();
+    const start = new Date('2024-01-01T00:00:00Z');
+    const startTime = Math.floor(start.getTime() / 1000);
+    const link = new URIRef(`netflow-traffic?startTime=${startTime}`);
+    const period = domain.linkToPeriod(link);
+    expect(Duration.isDuration(period!)).toBe(false);
+    const [pStart] = period!.startEnd();
+    expect(pStart).toEqual(start);
+  });
+
+  it('returns undefined for an unparseable timeRange', () => {
+    const domain = new NetflowDomain();
+    const link = new URIRef('netflow-traffic?timeRange=not-a-number');
+    expect(domain.linkToPeriod(link)).toBeUndefined();
+  });
+
+  it('returns undefined for an unparseable startTime', () => {
+    const domain = new NetflowDomain();
+    const link = new URIRef('netflow-traffic?startTime=not-a-number');
+    expect(domain.linkToPeriod(link)).toBeUndefined();
+  });
+
+  it('returns undefined for an unparseable endTime', () => {
+    const domain = new NetflowDomain();
+    const start = new Date('2024-01-01T00:00:00Z');
+    const startTime = Math.floor(start.getTime() / 1000);
+    const link = new URIRef(`netflow-traffic?startTime=${startTime}&endTime=not-a-number`);
+    expect(domain.linkToPeriod(link)).toBeUndefined();
   });
 });

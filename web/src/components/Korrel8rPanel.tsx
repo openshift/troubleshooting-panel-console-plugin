@@ -38,7 +38,7 @@ import { Korrel8rTopology } from './topology/Korrel8rTopology';
 export default function Korrel8rPanel() {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
   const dispatch = useDispatch();
-  const locationQuery = useLocationQuery();
+  const { query: locationQuery, period: locationPeriod } = useLocationQuery();
   const featureEnabled = useFeature('agent-navigation');
 
   const search: Search = useSelector((state: State) => state.plugins?.tp?.get('search'));
@@ -132,6 +132,7 @@ export default function Korrel8rPanel() {
                   <TimeRangeDropdown
                     period={search.period ?? defaultSearch.period}
                     onChange={(period: time.Period) => dispatchSearch({ ...search, period })}
+                    locationPeriod={locationPeriod}
                   />
                 </Tooltip>
               </ToolbarItem>
