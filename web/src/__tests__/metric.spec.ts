@@ -1,5 +1,6 @@
 import { MetricDomain } from '../korrel8r/metric';
-import { Query, URIRef } from '../korrel8r/types';
+import { Constraint, Query, URIRef } from '../korrel8r/types';
+import { Range } from '../time';
 
 /**
  * Bad deployment is the suggested deployment from korrel8r to show its functionality within the
@@ -56,6 +57,51 @@ describe('metric', () => {
       },
     ])('$query', ({ query, error }) => {
       expect(() => metric.queryToLink(Query.parse(query))).toThrow(error);
+    });
+  });
+
+  describe('queryToLink with time', () => {
+    const q = Query.parse('metric:metric:{namespace="test"}');
+
+    it('includes start and end for a Range constraint', () => {
+      const start = new Date('2026-09-15T10:00:00Z');
+      const end = new Date('2026-09-15T11:00:00Z');
+      const constraint = new Constraint({ period: new Range(start, end) });
+      const link = metric.queryToLink(q, constraint);
+      expect(link.searchParams.get('start')).toBe(String(start.getTime()));
+      expect(link.searchParams.get('end')).toBe(String(end.getTime()));
+      expect(link.searchParams.get('query0')).toBe('{namespace="test"}');
+    });
+
+    it('omits start and end without constraint', () => {
+      const link = metric.queryToLink(q);
+      expect(link.searchParams.get('start')).toBeNull();
+      expect(link.searchParams.get('end')).toBeNull();
+    });
+  });
+
+  describe('linkToPeriod', () => {
+    it('parses timestamps to Range', () => {
+      const start = new Date('2026-09-15T10:00:00Z');
+      const end = new Date('2026-09-15T11:00:00Z');
+      const link = new URIRef(
+        `monitoring/query-browser?query0=up&start=${start.getTime()}&end=${end.getTime()}`,
+      );
+      const period = metric.linkToPeriod(link);
+      expect(period).toBeInstanceOf(Range);
+      const [s, e] = period.startEnd();
+      expect(s.getTime()).toBe(start.getTime());
+      expect(e.getTime()).toBe(end.getTime());
+    });
+
+    it('returns undefined when no start param', () => {
+      const link = new URIRef('monitoring/query-browser?query0=up');
+      expect(metric.linkToPeriod(link)).toBeUndefined();
+    });
+
+    it('returns undefined for an unparseable start param', () => {
+      const link = new URIRef('monitoring/query-browser?query0=up&start=invalid');
+      expect(metric.linkToPeriod(link)).toBeUndefined();
     });
   });
 });
