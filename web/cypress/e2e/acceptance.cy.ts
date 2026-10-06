@@ -1,4 +1,5 @@
 import * as dt from '../fixtures/data-test'
+import { DataTestIDs } from '../fixtures/data-test';
 
 describe('TroubleShoot Test', { tags: ['@admin'] }, () => {
   before( function() {
@@ -12,7 +13,7 @@ describe('TroubleShoot Test', { tags: ['@admin'] }, () => {
     cy.uiLogoutClusterAdminForUser("first");
   });
   
-  it('Essential elements validation when focus on Alerting',{tags:['@smoke']}, () => {
+  it('Essential elements validation when focus on Alerting',{tags:['@troubleshooting-panel']}, () => {
     cy.clickNavLink(['Observe', 'Alerting']);
     cy.openTroubleshootPanel();
 
@@ -92,5 +93,73 @@ describe('TroubleShoot Test', { tags: ['@admin'] }, () => {
       .find('text')
       .contains('Metric')
       .should('exist')
+
+    //Close the troubleshoot panel
+    cy.closeTroubleshootPanel();
   });
-})
+
+  it('Troubleshooting Panel link on Alert Details page',{tags:['@troubleshooting-panel']}, () => {
+    cy.clickNavLink(['Observe', 'Alerting']);
+    cy.changeNamespace('All Projects');
+    cy.log('listPage.filter.byName');
+      try {
+        cy.log('listPage.filter.selectAttribute');
+        cy.byOUIAID('DataViewFilters').scrollIntoView();
+        cy.byOUIAID('DataViewFilters')
+        .find('.pf-v6-c-menu-toggle')
+        .first()
+        .then(($toggle) => {
+          if (!$toggle.text().includes('Name')) {
+            cy.wrap($toggle).click();
+            cy.get('.pf-v6-c-menu__item').contains('Name').click();
+          }
+        });
+        cy.byOUIAID('AlertNameFilter-input')
+          .find('input')
+          .scrollIntoView()
+          .as('input')
+          .should('be.visible');
+        cy.get('@input', { timeout: 10000 })
+          .scrollIntoView()
+          .type('Watchdog' + '{enter}');
+        cy.get('@input', { timeout: 10000 }).scrollIntoView().should('have.attr', 'value', 'Watchdog');
+        cy.wait(2000);
+      } catch (error: any) {
+        cy.log(`${error.message}`);
+        throw error;
+      }
+    cy.log('listPage.ARRows.expandRow');
+      try {
+        cy.get('body').then(($provider) => {
+          if ($provider.find(dt.Classes.ExpandedRow).length > 0) {
+            cy.log('Already expanded');
+          } else {
+            cy.byTestID(dt.DataTestIDs.AlertingRuleArrow).first().find('button').click();
+          }
+        });
+      } catch (error: any) {
+        cy.log(`${error.message}`);
+        throw error;
+      }
+    cy.log('listPage.ARRows.clickAlert');
+      try {
+        cy.byTestID(dt.DataTestIDs.AlertResourceLink).should('be.visible').click();
+      } catch (error: any) {
+        cy.log(`${error.message}`);
+        throw error;
+      }
+    cy.log('assert troubleshooting panel link on Alert Details page');
+    cy.byButtonText('Troubleshooting Panel').should('exist');
+    cy.byButtonText('Troubleshooting Panel').click();
+    // Scope to the visible popover: a previously-closed panel instance can
+    // leave a hidden/stale node behind that still matches this selector.
+    cy.get(dt.Classes.TroubleShootPanelPopoverTitleBar + ':visible')
+      .should('exist')
+      .within(() => {
+        cy.contains('h1', 'Troubleshooting');
+        cy.get('h1').find('button').should('exist')
+        cy.get('button[aria-label="Close"]').should('exist');
+      })
+    
+  });
+});
