@@ -16,7 +16,16 @@ declare global {
     }
   }
 
-// Custom waitUntil with timeout message
+/**
+ * Custom waitUntil command with configurable timeout message.
+ * Waits for a condition to be true with custom error messaging on timeout.
+ * @param {Function} fn - The condition function to check repeatedly
+ * @param {Object} options - Configuration options
+ * @param {number} options.interval - Check interval in milliseconds
+ * @param {number} options.timeout - Maximum wait time in milliseconds
+ * @param {string} options.timeoutMessage - Custom error message on timeout
+ * @returns {Cypress.Chainable<any>} Chainable Cypress command
+ */
 Cypress.Commands.add('waitUntilWithCustomTimeout', (
     fn: () => any,
     options: { interval: number; timeout: number; timeoutMessage: string }
@@ -41,6 +50,11 @@ Cypress.Commands.add('waitUntilWithCustomTimeout', (
   });
 
 
+/**
+ * Clicks a navigation link in the sidebar by path.
+ * Expands parent navigation items if needed.
+ * @param {string[]} path - Array of navigation labels (max 2 levels: [parent] or [parent, child])
+ */
 Cypress.Commands.add('clickNavLink', (path: string[]) => {
   cy.get('#page-sidebar')
     .contains(path[0])
@@ -56,6 +70,12 @@ Cypress.Commands.add('clickNavLink', (path: string[]) => {
   }
 });
 
+/**
+ * Changes the active namespace/project in the OpenShift Console.
+ * Handles both legacy and current namespace dropdown implementations.
+ * Automatically enables "Show system namespaces" if needed.
+ * @param {string} namespace - The namespace name to switch to
+ */
 Cypress.Commands.add('changeNamespace', (namespace: string) => {
   cy.log('Changing Namespace to: ' + namespace);
   cy.wait(2000);
@@ -86,6 +106,10 @@ Cypress.Commands.add('changeNamespace', (namespace: string) => {
   cy.log('Namespace changed to: ' + namespace);
 });
 
+/**
+ * Opens the About modal to retrieve and log the OpenShift version.
+ * Only works when logged in as kubeadmin user.
+ */
 Cypress.Commands.add('aboutModal', () => {
   cy.log('Getting OCP version');
   if (Cypress.env('LOGIN_USERNAME') === 'kubeadmin') {
@@ -99,6 +123,13 @@ Cypress.Commands.add('aboutModal', () => {
   }
 });
 
+/**
+ * Overrides the default cy.log behavior to also log to terminal in headless mode with DEBUG enabled.
+ * In headed mode, uses the standard cy.log behavior.
+ * @param {Function} log - The original cy.log function
+ * @param {...any} args - Arguments to log
+ * @returns {Cypress.Chainable} Chainable result
+ */
 Cypress.Commands.overwrite('log', (log, ...args) => {
   if (Cypress.browser.isHeadless && Cypress.env('DEBUG')) {
     // Log to the terminal using the custom task
@@ -113,6 +144,12 @@ Cypress.Commands.overwrite('log', (log, ...args) => {
   }
 });
 
+/**
+ * Retrieves and logs the container image used by a specific pod.
+ * Navigates to the Pods page, filters by pod name, and extracts the image information.
+ * @param {string} pod - The pod name to look up
+ * @param {string} namespace - The namespace containing the pod
+ */
 Cypress.Commands.add('podImage', (pod: string, namespace: string) => {
   cy.log('Get pod image');
   cy.switchPerspective('Core platform', 'Administrator');
@@ -141,6 +178,12 @@ Cypress.Commands.add('podImage', (pod: string, namespace: string) => {
   });
 
 
+/**
+ * Asserts whether a namespace exists in the namespace dropdown.
+ * Opens the namespace dropdown, searches for the namespace, and verifies its presence or absence.
+ * @param {string} namespace - The namespace name to check
+ * @param {boolean} exists - Whether the namespace should exist (true) or not exist (false)
+ */
 Cypress.Commands.add('assertNamespace', (namespace: string, exists: boolean) => {
   cy.log('Asserting Namespace: ' + namespace + ' exists: ' + exists);
   cy.wait(2000);
