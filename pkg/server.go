@@ -36,7 +36,7 @@ type Config struct {
 }
 
 type PluginConfig struct {
-	Timeout         time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	Timeout               time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	EnableAgentNavigation bool          `json:"enableAgentNavigation,omitempty" yaml:"enableAgentNavigation,omitempty"`
 }
 
@@ -163,7 +163,7 @@ func filesHandler(root http.FileSystem) http.Handler {
 		filePath := r.URL.Path
 
 		// disable caching for plugin entry point
-		if strings.HasPrefix(filePath, "/plugin-entry.js") {
+		if strings.HasSuffix(filePath, ".js") {
 			w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 			w.Header().Set("Expires", "0")
 		}

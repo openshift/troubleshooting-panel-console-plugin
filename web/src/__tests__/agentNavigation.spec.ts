@@ -26,6 +26,18 @@ describe('toAPISearch', () => {
       neighbors: { start: { queries: ['k8s:Pod:{}'] }, depth: 3 },
     });
   });
+
+  it('includes limit in start constraint', () => {
+    const search: Search = {
+      queryStr: 'k8s:Pod:{}',
+      searchType: SearchType.Depth,
+      depth: 3,
+      limit: 50,
+    };
+    expect(toAPISearch(search)).toEqual({
+      neighbors: { start: { queries: ['k8s:Pod:{}'], constraint: { limit: 50 } }, depth: 3 },
+    });
+  });
 });
 
 describe('fromAPISearch', () => {
@@ -51,6 +63,21 @@ describe('fromAPISearch', () => {
     });
   });
 
+  it('extracts limit from start constraint', () => {
+    const apiSearch: api.Search = {
+      neighbors: {
+        start: { queries: ['k8s:Pod:{}'], constraint: { limit: 50 } },
+        depth: 5,
+      },
+    };
+    expect(fromAPISearch(apiSearch)).toEqual({
+      queryStr: 'k8s:Pod:{}',
+      searchType: SearchType.Depth,
+      depth: 5,
+      limit: 50,
+    });
+  });
+
   it('returns undefined when both goals and neighbors are set', () => {
     const apiSearch: api.Search = {
       goals: { start: { queries: ['k8s:Pod:{}'] }, goals: ['log:application'] },
@@ -70,14 +97,14 @@ describe('fromAPISearch', () => {
     expect(fromAPISearch(apiSearch)).toBeUndefined();
   });
 
-  it('defaults depth to 3 when not provided', () => {
+  it('defaults depth to 2 when not provided', () => {
     const apiSearch: api.Search = {
       neighbors: { start: { queries: ['k8s:Pod:{}'] }, depth: 0 },
     };
     expect(fromAPISearch(apiSearch)).toEqual({
       queryStr: 'k8s:Pod:{}',
       searchType: SearchType.Depth,
-      depth: 3,
+      depth: 2,
     });
   });
 });

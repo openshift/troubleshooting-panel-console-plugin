@@ -43,22 +43,25 @@ export const AdvancedSearchForm: FC<AdvancedSearchFormProps> = ({ search, onSear
   const [searchType, setSearchType] = useState(search.searchType);
   const [depth, setDepth] = useState(search.depth ?? defaultSearch.depth);
   const [goal, setGoal] = useState(search.goal ?? '');
+  const [limit, setLimit] = useState(search.limit ?? defaultSearch.limit);
 
   // Track whether fields have been edited by the user.
   const [queryTouched, setQueryTouched] = useState(false);
   const [goalTouched, setGoalTouched] = useState(false);
   const onDepthChange = (depth: number) =>
     setDepth(Math.max(1, Math.min(10, depth ?? defaultSearch.depth)));
+  const onLimitChange = (limit: number) => setLimit(Math.max(1, limit || defaultSearch.limit));
 
-  // Update state if search changes (e.g. Focus button pressed externally).
+  // Update state if search changes (e.g. Correlate button pressed externally).
   useEffect(() => {
     setQueryStr(search.queryStr);
     setSearchType(search.searchType);
     onDepthChange(search.depth);
     setGoal(search.goal ?? '');
+    setLimit(search.limit ?? defaultSearch.limit);
     setQueryTouched(false);
     setGoalTouched(false);
-  }, [search.queryStr, search.searchType, search.depth, search.goal]);
+  }, [search.queryStr, search.searchType, search.depth, search.goal, search.limit]);
 
   const queryError = useMemo((): Error | null => {
     try {
@@ -91,22 +94,25 @@ export const AdvancedSearchForm: FC<AdvancedSearchFormProps> = ({ search, onSear
       search.searchType !== searchType ||
       search.queryStr !== queryStr ||
       search.depth !== depth ||
-      search.goal !== goal,
+      search.goal !== goal ||
+      search.limit !== limit,
     [
       search.searchType,
       search.queryStr,
       search.depth,
       search.goal,
+      search.limit,
       searchType,
       queryStr,
       depth,
       goal,
+      limit,
     ],
   );
 
   const [searchTypeSelectOpen, setSearchTypeSelectOpen] = useState(false);
   const handleSubmit = () => {
-    if (isValid && hasChanged) onSearch({ ...search, queryStr, searchType, depth, goal });
+    if (isValid && hasChanged) onSearch({ ...search, queryStr, searchType, depth, goal, limit });
   };
   const handleEnter = (e: { key: string; shiftKey: boolean; preventDefault: () => void }) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -132,7 +138,7 @@ export const AdvancedSearchForm: FC<AdvancedSearchFormProps> = ({ search, onSear
             <Trans t={t}>
               <p>Query to select the starting data for the search.</p>
               <p>
-                The <code>[Focus]</code> button fills in a query for the data shown in the main
+                The <code>[Correlate]</code> button fills in a query for the data shown in the main
                 view. You can enter your own query.
               </p>
             </Trans>
@@ -259,6 +265,29 @@ export const AdvancedSearchForm: FC<AdvancedSearchFormProps> = ({ search, onSear
         </Flex>
       </FormGroup>
 
+      <FormGroup
+        label={t('Max Results')}
+        labelInfo={t('Per query limit')}
+        hasNoPaddingTop={true}
+        labelHelp={
+          <HelpPopover>
+            <Trans t={t}>
+              <p>Maximum number of results to return from each query in the correlation search.</p>
+            </Trans>
+          </HelpPopover>
+        }
+      >
+        <NumberInput
+          id="max-results"
+          value={limit}
+          min={1}
+          onPlus={() => onLimitChange(limit + 1)}
+          onMinus={() => onLimitChange(limit - 1)}
+          onChange={(e) => onLimitChange(Number((e.target as HTMLInputElement).value))}
+          widthChars={4}
+        />
+      </FormGroup>
+
       <ActionGroup>
         <ActionList>
           <ActionListItem>
@@ -271,19 +300,14 @@ export const AdvancedSearchForm: FC<AdvancedSearchFormProps> = ({ search, onSear
                     : t('Correlation graph already matches search')
               }
             >
-              <Button
-                type="submit"
-                variant="primary"
-                isAriaDisabled={!hasChanged || !isValid}
-                size="sm"
-              >
+              <Button type="submit" variant="primary" isAriaDisabled={!hasChanged || !isValid}>
                 {t('Search')}
               </Button>
             </Tooltip>
           </ActionListItem>
           <ActionListItem>
-            <Button type="button" variant="secondary" size="sm" onClick={onClose}>
-              {t('Cancel')}
+            <Button type="button" variant="secondary" onClick={onClose}>
+              {t('Close')}
             </Button>
           </ActionListItem>
         </ActionList>

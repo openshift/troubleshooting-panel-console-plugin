@@ -20,7 +20,7 @@ const queryClient = new QueryClient({
   },
 });
 
-export default function Popover() {
+export default function Popover({ closeOverlay }: { closeOverlay: () => void }) {
   const dispatch = useDispatch();
   const [activePerspective] = useActivePerspective();
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
@@ -29,7 +29,8 @@ export default function Popover() {
 
   const close = useCallback(() => {
     dispatch(closeTP());
-  }, [dispatch]);
+    closeOverlay();
+  }, [dispatch, closeOverlay]);
 
   useEffect(() => {
     if (activePerspective !== 'admin' && isOpen) {

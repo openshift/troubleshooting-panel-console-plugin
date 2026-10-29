@@ -1,5 +1,5 @@
 import { getCachedResources } from '../getResources';
-import { Class, Domain, Query, URIRef, keyValueList } from './types';
+import { capitalize, Class, Domain, Query, URIRef, keyValueList } from './types';
 
 // k8s model type stored in browser cache.
 type Model = {
@@ -30,6 +30,10 @@ const classRE = new RegExp(`^(?<kind>[^./]+)(\\.${versionRE.source})?(.(?<group>
 export class K8sDomain extends Domain {
   constructor() {
     super('k8s');
+  }
+
+  classLabel(name: string): string {
+    return capitalize(name.replace(/\..*$/, ''));
   }
 
   class(name: string): Class {
@@ -76,7 +80,7 @@ export class K8sDomain extends Domain {
       const data = {
         namespace: g.namespace,
         name,
-        labels: K8sDomain.parseSelector(link.searchParams.get('labels')) || undefined,
+        labels: K8sDomain.parseSelector(link.searchParams.get('label')) || undefined,
       };
       return this.modelClass(model).query(JSON.stringify(data));
     }
@@ -116,10 +120,10 @@ export class K8sDomain extends Domain {
     const nsPath = namespace ? `ns/${namespace}` : 'all-namespaces';
     const kind = `${model.apiGroup || 'core'}~${model.apiVersion}~${model.kind}`;
     const params = {
-      labels: keyValueList(selector.labels) || undefined,
+      label: keyValueList(selector.labels) || undefined,
       fields: (!events && keyValueList(selector.fields)) || undefined,
     };
-    if (!name && !namespace && (params.labels || params.fields)) {
+    if (!name && !namespace && (params.label || params.fields)) {
       // Search URL
       return new URIRef(`search/${nsPath}`, { ...params, kind });
     } else {

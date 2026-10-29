@@ -1,6 +1,6 @@
 import { Map as ImmutableMap } from 'immutable';
 
-import { ActionType, TPAction, defaultSearch } from './redux-actions';
+import { ActionType, LEFT_TO_RIGHT, TPAction, defaultSearch } from './redux-actions';
 
 export type TPState = ImmutableMap<string, any>;
 
@@ -18,8 +18,11 @@ const reducer = (state: TPState, action: TPAction): TPState => {
     return ImmutableMap({
       isOpen: false,
       search: defaultSearch,
+      agentConnected: false,
       agentEnabled: false,
       agentError: '',
+      agentToast: '',
+      rankdir: LEFT_TO_RIGHT,
     });
   }
 
@@ -33,11 +36,20 @@ const reducer = (state: TPState, action: TPAction): TPState => {
     case ActionType.SetSearch:
       return state.set('search', action.payload);
 
+    case ActionType.SetAgentConnected:
+      return state.set('agentConnected', action.payload);
+
     case ActionType.SetAgentError:
       return state.set('agentError', action.payload);
 
     case ActionType.SetAgentEnabled:
       return state.set('agentEnabled', action.payload);
+
+    case ActionType.SetAgentToast:
+      return state.set('agentToast', action.payload);
+
+    case ActionType.SetRankdir:
+      return state.set('rankdir', action.payload);
 
     default:
       break;

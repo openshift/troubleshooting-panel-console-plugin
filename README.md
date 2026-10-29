@@ -194,17 +194,14 @@ break console styles!
 
 Install the [devspace](https://www.devspace.sh/docs/getting-started/installation) cli.
 
-1. Install the frontend dependencies running `make install-frontend`.
-2. Start the frontend `make start-frontend`.
-3. Deploy the troubleshooting panel using COO/ObO.
-4. Select the namespace you want to deploy in using `devspace use namespace {NAMESPACE}`, make sure to set the namespace where the plugin has been deployed.
-5. In a different terminal start the devspace sync `devspace dev`.
+1. Build the devspace image: `make build-devspace-image`
+2. Deploy the troubleshooting panel using COO/ObO.
+3. Select the namespace where the plugin has been deployed: `devspace use namespace {NAMESPACE}`
+4. Start devspace: `devspace dev`
 
-When running the `devspace dev` command, the pipeline will run the `scale_down_coo` function to prevent COO from fighting over control of the pod. After COO has been scaled down, devspace will "take over" the troubleshooting-panel-console-plugin pod, grabbing all of the certificates and backend binary and configuration to run in the devspace pod.
+Devspace syncs your local `./web/src` into the container, where webpack runs in watch mode and rebuilds automatically. Edit source files locally, then reload the console to see your changes.
 
-After the pod has been "taken over" Devspace begins a sync process which will mirror changes from you local `./web/dist` folder into the `/opt/app-root/web/dist` folder in the devspace pod. You can then make changes to your frontend files locally which will trigger the locally running webpack dev server to rebuild the `./web/dist` folder, which will trigger Devspace to re-synced. You can then reload your console webpage to see your local changes running in the cluster.
-
-After development you can run `devspace purge` to cleanup and then call the `scale_up_coo` pipeline.
+After development, run `devspace purge` to cleanup.
 
 ### Local Development Troubleshooting
 1. Disable cache. Select 'disable cache' in your browser's DevTools > Network > 'disable cache'. Or use private/incognito mode in your browser.

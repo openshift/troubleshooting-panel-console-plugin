@@ -51,6 +51,7 @@ export const classIcons: IconMap = {
   'k8s:DaemonSet.v1': fa(faServer),
   'k8s:StatefulSet.v1': fa(faServer),
   'k8s:Endpoints.v1': fa(faHexagonNodes),
+  'k8s:EndpointSlice.v1.discovery.k8s.io': fa(faHexagonNodes),
   'k8s:Event.v1': fa(faListCheck),
   'k8s:Event.v1.events.k8s.io': fa(faListCheck),
   'k8s:Namespace.v1': fa(faFolder),
