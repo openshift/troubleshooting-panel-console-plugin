@@ -23,6 +23,12 @@
   --pf-topology__node--m-info--label__icon__background--Stroke: var(--pf-t--global--color--status--info--default);
 }
 
+.tp-plugin__topology_start_decorator {
+  --pf-topology__node_decorator--Color: var(--pf-t--global--icon--color--brand--default);
+
+  color: var(--pf-topology__node_decorator--Color);
+}
+
 .tp-plugin__topology_node--disabled {
   opacity: 0.5;
   filter: grayscale(100%);

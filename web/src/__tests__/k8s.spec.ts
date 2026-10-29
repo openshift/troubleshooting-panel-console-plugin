@@ -140,7 +140,7 @@ describe('K8sDomain.queryToLink', () => {
     },
     {
       query: `k8s:Pod:{"namespace":"x","name":"y","labels":{"a":"b","c":"d"},"fields": {"x":"y"}}`,
-      url: `k8s/ns/x/core~v1~Pod/y?labels=${encodeURIComponent(
+      url: `k8s/ns/x/core~v1~Pod/y?label=${encodeURIComponent(
         'a=b,c=d',
       )}&fields=${encodeURIComponent('x=y')}`,
     },
@@ -156,21 +156,21 @@ describe('K8sDomain.queryToLink', () => {
     },
     {
       query: `k8s:Pod:{ "namespace":"x", "name":"y", "labels":{ "a":"b" } }`,
-      url: `k8s/ns/x/core~v1~Pod/y?labels=${encodeURIComponent('a=b')}`,
+      url: `k8s/ns/x/core~v1~Pod/y?label=${encodeURIComponent('a=b')}`,
     },
     {
       query: `k8s:Pod:{ "namespace":"x", "labels":{ "a":"b" } }`,
-      url: `k8s/ns/x/core~v1~Pod?labels=${encodeURIComponent('a=b')}`,
+      url: `k8s/ns/x/core~v1~Pod?label=${encodeURIComponent('a=b')}`,
     },
     { query: `k8s:Pod.v1:{ "namespace":"x", "name":"y" }`, url: `k8s/ns/x/core~v1~Pod/y` },
     { query: `k8s:Pod.v1:{ "namespace":"x" }`, url: `k8s/ns/x/core~v1~Pod` },
     {
       query: `k8s:Pod.v1:{ "labels":{ "a":"b" } }`,
-      url: `search/all-namespaces?labels=${encodeURIComponent('a=b')}&kind=core~v1~Pod`,
+      url: `search/all-namespaces?label=${encodeURIComponent('a=b')}&kind=core~v1~Pod`,
     },
     {
       query: `k8s:Pod.v1:{"namespace":"x","labels":{"a":"b"}}`,
-      url: `k8s/ns/x/core~v1~Pod?labels=${encodeURIComponent('a=b')}`,
+      url: `k8s/ns/x/core~v1~Pod?label=${encodeURIComponent('a=b')}`,
     },
 
     // Variations on korrel8r class spec.

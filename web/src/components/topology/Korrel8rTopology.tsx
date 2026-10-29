@@ -1,4 +1,6 @@
-import { Badge, Label, LabelGroup, Title, Tooltip, TooltipPosition } from '@patternfly/react-core';
+import { Badge, Label, LabelGroup, Title, Tooltip } from '@patternfly/react-core';
+import RetweetIcon from '@patternfly/react-icons/dist/dynamic/icons/retweet-icon';
+import CrosshairsIcon from '@patternfly/react-icons/dist/dynamic/icons/crosshairs-icon';
 import InfoCircleIcon from '@patternfly/react-icons/dist/dynamic/icons/info-circle-icon';
 import {
   action,
@@ -12,6 +14,8 @@ import {
   DefaultEdge,
   DefaultGroup,
   DefaultNode,
+  Edge,
+  EdgeModel,
   EdgeStyle,
   ElementModel,
   getDefaultShapeDecoratorCenter,
@@ -25,7 +29,6 @@ import {
   NodeShape,
   NodeStatus,
   SELECTION_EVENT,
-  TOP_TO_BOTTOM,
   TopologyControlBar,
   TopologyQuadrant,
   TopologyView,
@@ -41,35 +44,19 @@ import {
   WithSelectionProps,
 } from '@patternfly/react-topology';
 import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
+import { useDomains } from '../../hooks/useDomains';
 import { useLocationQuery } from '../../hooks/useLocationQuery';
 import { useNavigateToQuery } from '../../hooks/useNavigateToQuery';
 import * as korrel8r from '../../korrel8r/types';
+import { LEFT_TO_RIGHT, TOP_TO_BOTTOM, setRankdir } from '../../redux-actions';
+import { State } from '../../redux-reducers';
 import { getIcon } from '../icons';
 import './korrel8rtopology.css';
 import { mergeStatusCounts, statusForNode, statusName, toStatus } from './status';
 
-// DagreLayout with straight edges (no angular bendpoints).
-class StraightEdgeDagreLayout extends DagreLayout {
-  protected updateEdgeBendpoints(): void {
-    // no-op: skip bendpoints for straight edges between nodes.
-  }
-}
-
-const capitalize = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : '');
-
-const nodeLabel = (node: korrel8r.Node): string => {
-  const c = node.class;
-  if (!c) return `[${node.id}]`; // Original un-parsed class name.
-  switch (c.domain) {
-    case 'k8s':
-      return capitalize(c.name.replace(/\..*$/, '')); // Strip group/version
-    case 'log':
-      return capitalize(c.name) + ' Log';
-    default:
-      return capitalize(c.name);
-  }
-};
+type TopologyNodeData = korrel8r.Node & { isStart?: boolean; label: string };
 
 const nodeBadge = (node: korrel8r.Node): string => {
   if (node.queries?.length > 1) {
@@ -92,40 +79,44 @@ const statusTooltip = (statusCounts: korrel8r.StatusCount[]): React.ReactNode =>
 };
 
 interface Korrel8rTopologyNodeProps {
-  element: Node<NodeModel, korrel8r.Node>;
+  element: Node<NodeModel, TopologyNodeData>;
 }
+
+const NodeDecorator: FC<{
+  show: boolean;
+  quadrant: TopologyQuadrant;
+  element: Node<NodeModel, TopologyNodeData>;
+  tooltipContent: React.ReactNode;
+  icon: React.ReactNode;
+  onClick?: (e: React.MouseEvent) => void;
+}> = ({ show, quadrant, element, tooltipContent, icon, onClick }) => {
+  const ref = useRef<SVGGElement>(null);
+  if (!show) return null;
+  const { x, y } = getDefaultShapeDecoratorCenter(quadrant, element);
+  return (
+    <Tooltip triggerRef={ref} content={tooltipContent}>
+      <Decorator
+        x={x}
+        y={y}
+        radius={DEFAULT_DECORATOR_RADIUS}
+        showBackground
+        onClick={onClick}
+        icon={icon}
+        innerRef={ref}
+      />
+    </Tooltip>
+  );
+};
 
 const Korrel8rTopologyNode: FC<
   Korrel8rTopologyNodeProps & WithContextMenuProps & WithSelectionProps & WithDragNodeProps
 > = ({ element, onSelect, selected, onContextMenu, contextMenuOpen, dragNodeRef }) => {
-  const node: korrel8r.Node = element.getData();
-  const decoratorRef = useRef<SVGGElement>(null);
+  const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
+  const node = element.getData();
   const [statusCounts, status] = mergeStatusCounts(node);
   const nodeStatus = node.disabled ? undefined : statusForNode(status);
   const tooltip = node.disabled ? undefined : statusTooltip(statusCounts);
   const isInfo = nodeStatus === NodeStatus.info;
-
-  const infoDecorator = (() => {
-    if (!isInfo || !tooltip) return undefined;
-    const { x, y } = getDefaultShapeDecoratorCenter(TopologyQuadrant.upperLeft, element);
-    return (
-      <Tooltip triggerRef={decoratorRef} content={tooltip} position={TooltipPosition.left}>
-        <Decorator
-          x={x}
-          y={y}
-          radius={DEFAULT_DECORATOR_RADIUS}
-          showBackground
-          onClick={(e) => onSelect(e)}
-          icon={
-            <g className="pf-topology__node__decorator__status">
-              <InfoCircleIcon className="pf-m-info" />
-            </g>
-          }
-          innerRef={decoratorRef}
-        />
-      </Tooltip>
-    );
-  })();
 
   const topologyNode = (
     <DefaultNode
@@ -137,7 +128,7 @@ const Korrel8rTopologyNode: FC<
       dragNodeRef={dragNodeRef}
       hover={false}
       className={node.disabled ? 'tp-plugin__topology_node--disabled' : undefined}
-      label={nodeLabel(node)}
+      label={node.label}
       badge={nodeBadge(node)}
       badgeClassName="tp-plugin__topology_node_badge"
       hideContextMenuKebab={!!node?.disabled || node?.queries?.length === 1}
@@ -145,7 +136,33 @@ const Korrel8rTopologyNode: FC<
       nodeStatus={nodeStatus}
       showStatusDecorator={node.disabled ? true : !isInfo && !!nodeStatus}
       statusDecoratorTooltip={node.disabled ? node.disabled : !isInfo ? tooltip : undefined}
-      attachments={infoDecorator}
+      attachments={
+        <>
+          <NodeDecorator
+            show={isInfo && !!tooltip}
+            quadrant={TopologyQuadrant.upperLeft}
+            element={element}
+            tooltipContent={tooltip}
+            icon={
+              <g className="pf-topology__node__decorator__status">
+                <InfoCircleIcon className="pf-m-info" />
+              </g>
+            }
+            onClick={(e) => onSelect(e)}
+          />
+          <NodeDecorator
+            show={!!node.isStart && !node.disabled}
+            quadrant={TopologyQuadrant.lowerRight}
+            element={element}
+            tooltipContent={t('Search started here')}
+            icon={
+              <g className="tp-plugin__topology_start_decorator">
+                <CrosshairsIcon />
+              </g>
+            }
+          />
+        </>
+      }
     >
       <g transform={`translate(25, 25)`}>{getIcon(node?.class)}</g>
     </DefaultNode>
@@ -161,68 +178,113 @@ const Korrel8rTopologyNode: FC<
   return topologyNode;
 };
 
+const Korrel8rEdge: FC<{ element: Edge<EdgeModel, { rules: korrel8r.Rule[] }> }> = ({
+  element,
+  ...rest
+}) => {
+  const rules = element.getData()?.rules ?? [];
+  const ruleNames = rules.map((r) => r.name).join('\n');
+  return (
+    <DefaultEdge element={element} {...rest}>
+      {ruleNames && <title>{ruleNames}</title>}
+    </DefaultEdge>
+  );
+};
+
 const NODE_SHAPE = NodeShape.ellipse;
 const NODE_DIAMETER = 75;
 const PADDING = 30;
+const ANCHOR_ID = '__anchor__';
 
 export const Korrel8rTopology: FC<{
   graph: korrel8r.Graph;
+  startNode?: string;
   loggingAvailable: boolean;
   netobserveAvailable: boolean;
   constraint: korrel8r.Constraint;
-}> = ({ graph, loggingAvailable, netobserveAvailable, constraint }) => {
+}> = ({ graph, startNode, loggingAvailable, netobserveAvailable, constraint }) => {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
+  const domains = useDomains();
   const navigateToQuery = useNavigateToQuery();
-  const locationQuery = useLocationQuery();
+  const { query } = useLocationQuery();
+  const dispatch = useDispatch();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const rankdir: string = useSelector((s: State) => s.plugins?.tp?.get('rankdir')) ?? LEFT_TO_RIGHT;
 
   useEffect(() => {
-    if (!locationQuery) {
+    if (!query) {
       setSelectedIds([]);
       return;
     }
-    const id = locationQuery.class.toString();
+    const id = query.class.toString();
     setSelectedIds(graph.node(id) ? [id] : []);
-  }, [graph, locationQuery]);
+  }, [graph, query]);
 
-  const nodes: NodeModel[] = useMemo(
-    (): NodeModel[] =>
-      graph.nodes.map((node: korrel8r.Node) => {
-        const data = { ...node };
-        if (data.disabled) {
-          // eslint-disable-next-line no-console
-          console.warn(`korrel8r node: ${data.disabled}`);
-          data.disabled = t('Unable to find Console Link');
-        } else if (data.class.domain === 'log' && !loggingAvailable) {
-          data.disabled = t('Logging Plugin Disabled');
-        } else if (data.class.domain === 'netflow' && !netobserveAvailable) {
-          data.disabled = t('Netflow Plugin Disabled');
-        }
-        return {
-          id: data.id,
-          type: 'node',
-          width: NODE_DIAMETER,
-          height: NODE_DIAMETER,
+  const nodes: NodeModel[] = useMemo((): NodeModel[] => {
+    const result: NodeModel[] = graph.nodes.map((node: korrel8r.Node) => {
+      const label = node.class ? domains.classLabel(node.class) : `[${node.id}]`;
+      const data: TopologyNodeData = { ...node, isStart: node.id === startNode, label };
+      if (data.disabled) {
+        // eslint-disable-next-line no-console
+        console.warn(`korrel8r node: ${data.disabled}`);
+        data.disabled = t('Unable to find Console Link');
+      } else if (data.class.domain === 'log' && !loggingAvailable) {
+        data.disabled = t('Logging Plugin Disabled');
+      } else if (data.class.domain === 'netflow' && !netobserveAvailable) {
+        data.disabled = t('Netflow Plugin Disabled');
+      }
+      return {
+        id: data.id,
+        type: 'node',
+        width: NODE_DIAMETER,
+        height: NODE_DIAMETER,
+        shape: NODE_SHAPE,
+        data,
+      };
+    });
+    // Anchor and start nodes must be first so dagre's DFS cycle-breaker visits them before other
+    // nodes, ensuring back-edges TO the start node are reversed (not edges FROM it).
+    if (startNode && result.some((n) => n.id === startNode)) {
+      const startIdx = result.findIndex((n) => n.id === startNode);
+      const [start] = result.splice(startIdx, 1);
+      result.unshift(
+        {
+          id: ANCHOR_ID,
+          type: 'anchor',
+          width: 1,
+          height: 1,
           shape: NODE_SHAPE,
-          data,
-        };
-      }),
-    [graph, loggingAvailable, netobserveAvailable, t],
-  );
+          data: {},
+        },
+        start,
+      );
+    }
+    return result;
+  }, [graph, startNode, loggingAvailable, netobserveAvailable, t, domains]);
 
-  const edges = useMemo(
-    () =>
-      graph.edges.map((edge: korrel8r.Edge) => {
-        return {
-          id: `edge:${edge.start.id} -${edge.goal.id} `,
-          type: 'edge',
-          source: edge.start.id,
-          target: edge.goal.id,
-          edgeStyle: EdgeStyle.default,
-        };
-      }),
-    [graph],
-  );
+  const edges = useMemo(() => {
+    const result = graph.edges.map((edge: korrel8r.Edge) => {
+      return {
+        id: `edge:${edge.start.id} -${edge.goal.id} `,
+        type: 'edge',
+        source: edge.start.id,
+        target: edge.goal.id,
+        edgeStyle: EdgeStyle.default,
+        data: { rules: edge.rules },
+      };
+    });
+    if (startNode && nodes.some((n) => n.id === ANCHOR_ID)) {
+      result.push({
+        id: `edge:${ANCHOR_ID}-${startNode}`,
+        type: 'anchor',
+        source: ANCHOR_ID,
+        target: startNode,
+        edgeStyle: EdgeStyle.default,
+        data: { rules: [] },
+      });
+    }
+    return result;
+  }, [graph, startNode, nodes]);
 
   const selectionAction = useCallback(
     (selected: Array<string>) => {
@@ -281,13 +343,14 @@ export const Korrel8rTopology: FC<{
   const componentFactory: ComponentFactory = useCallback(
     (kind: ModelKind, type: string) => {
       if (type === 'group') return DefaultGroup;
+      if (type === 'anchor') return () => null;
       switch (kind) {
         case ModelKind.graph:
           return withPanZoom()(GraphComponent);
         case ModelKind.node:
           return withDragNode()(withContextMenu(nodeMenu)(withSelection()(Korrel8rTopologyNode)));
         case ModelKind.edge:
-          return DefaultEdge;
+          return Korrel8rEdge;
         default:
           return undefined;
       }
@@ -309,15 +372,17 @@ export const Korrel8rTopology: FC<{
     const controller = new Visualization();
     controller.registerLayoutFactory(
       (_, graph: Graph) =>
-        new StraightEdgeDagreLayout(graph, {
-          rankdir: TOP_TO_BOTTOM,
+        new DagreLayout(graph, {
+          rankdir,
           ranksep: 10,
           nodeDistance: 15,
+          edgesep: 5,
+          ranker: 'network-simplex',
         }),
     );
     controller.fromModel(model, false);
     return controller;
-  }, [nodes, edges]);
+  }, [nodes, edges, rankdir]);
 
   // NOTE: For some reason, the controller function above cannot depend on memoized functions
   // like selectionAction or componentfactory. Using a separate memo works. Strange.
@@ -370,6 +435,16 @@ export const Korrel8rTopology: FC<{
                 controller.getGraph().layout();
               }),
               legend: false,
+              customButtons: [
+                {
+                  id: 'layout-direction',
+                  icon: <RetweetIcon />,
+                  tooltip: t('Toggle layout direction'),
+                  ariaLabel: t('Toggle layout direction'),
+                  callback: () =>
+                    dispatch(setRankdir(rankdir === LEFT_TO_RIGHT ? TOP_TO_BOTTOM : LEFT_TO_RIGHT)),
+                },
+              ],
             })}
           />
         }

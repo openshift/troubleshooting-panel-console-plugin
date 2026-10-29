@@ -1,4 +1,5 @@
 import * as api from '../korrel8r/client';
+import { Period, Range } from '../time';
 
 import {
   Class,
@@ -11,6 +12,8 @@ import {
   Query,
   URIRef,
   joinPath,
+  unixMilliseconds,
+  unixSeconds,
 } from '../korrel8r/types';
 
 describe('Query', () => {
@@ -46,14 +49,17 @@ class FakeDomain extends Domain {
 }
 
 const start = new Date(1969, 2, 21);
-const end = new Date();
+const end = new Date(1969, 2, 22);
 
 describe('Constraint', () => {
   it.each([
     { clientC: {}, typesC: {} },
-    { clientC: { start: start.toISOString(), end: end.toISOString() }, typesC: { start, end } },
+    {
+      clientC: { start: start.toISOString(), end: end.toISOString() },
+      typesC: { period: new Range(start, end) },
+    },
     { clientC: { limit: 50 }, typesC: { limit: 50 } },
-  ] as Array<{ clientC: api.Constraint; typesC: Partial<Constraint> }>)(
+  ] as Array<{ clientC: api.Constraint; typesC: { period?: Period; limit?: number } }>)(
     'from/toAPI %s',
     ({ clientC, typesC }) => {
       const c = new Constraint(typesC);
@@ -75,6 +81,9 @@ describe('Domain', () => {
     expect(d.linkToQuery(new URIRef('a/b?c=d'))).toEqual(abc);
     expect(d.linkToQuery(new URIRef('/a/b?c=d'))).toEqual(abc);
     expect(d.linkToQuery(new URIRef('http://blah/a/b?c=d'))).toEqual(abc);
+  });
+  it('linkToPeriod defaults to undefined when not overridden', () => {
+    expect(d.linkToPeriod(new URIRef('a/b?start=15m'))).toBeUndefined();
   });
 });
 
@@ -186,6 +195,23 @@ describe('Graph', () => {
   g.nodes.forEach((n) => expect(g.node(n.id)).toEqual(n)); // Lookup nodes
   expect(g.nodes).toEqual(a.nodes.map((n) => new Node(n)));
   expect(g.edges).toEqual(a.edges.map((e) => new Edge(g.node(e.start), g.node(e.goal))));
+});
+
+describe('unixMilliseconds/unixSeconds', () => {
+  it('returns 0 for the unix epoch rather than undefined', () => {
+    const epoch = new Date(0);
+    expect(unixMilliseconds(epoch)).toEqual(0);
+    expect(unixSeconds(epoch)).toEqual(0);
+  });
+
+  it('returns undefined for an undefined date', () => {
+    expect(unixMilliseconds(undefined)).toBeUndefined();
+    expect(unixSeconds(undefined)).toBeUndefined();
+  });
+
+  it('converts milliseconds to seconds, rounding down', () => {
+    expect(unixSeconds(new Date(1500))).toEqual(1);
+  });
 });
 
 describe('joinPath', () => {

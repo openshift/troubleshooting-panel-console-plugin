@@ -1,6 +1,6 @@
 {
   "name": "troubleshooting-panel-console-plugin",
-  "version": "0.4.0",
+  "version": "1.1.0",
   "private": true,
   "repository": "git@github.com:openshift/troubleshooting-panel-console-plugin",
   "license": "Apache-2.0",
@@ -22,7 +22,6 @@
     "generate-client": "openapi-ts"
   },
   "devDependencies": {
-    "@cypress/code-coverage": "^3.14.7",
     "@cypress/grep": "^3.1.5",
     "@cypress/webpack-preprocessor": "^7.0.1",
     "@eslint/compat": "^2.0.5",
@@ -78,11 +77,12 @@
     "webpack-dev-server": "^5.2.5"
   },
   "overrides": {
-    "fast-uri": "3.1.7"
+    "fast-uri": "3.1.9",
+    "qs": "6.16.2"
   },
   "consolePlugin": {
     "name": "troubleshooting-panel-console-plugin",
-    "version": "0.0.1",
+    "version": "1.1.0",
     "displayName": "OpenShift Console Troubleshooting Panel Plugin",
     "description": "Troubleshooting Panel Plugin for OpenShift console. Used to display Korrel8r information",
     "exposedModules": {

@@ -6,25 +6,21 @@ import {
   EmptyStateVariant,
   ExpandableSection,
   ExpandableSectionToggle,
-  Flex,
   Spinner,
   Stack,
   StackItem,
+  Toolbar,
+  ToolbarContent,
+  ToolbarGroup,
+  ToolbarItem,
   Tooltip,
 } from '@patternfly/react-core';
-import {
-  BanIcon,
-  CubesIcon,
-  ExclamationCircleIcon,
-  LinkIcon,
-  SlidersHIcon,
-  SyncIcon,
-  UnlinkIcon,
-} from '@patternfly/react-icons';
-import { useQueryClient } from '@tanstack/react-query';
-import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
+import { CubesIcon, ExclamationCircleIcon, SlidersHIcon, RedoIcon } from '@patternfly/react-icons';
+import { FC, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
+import { useQueryClient } from '@tanstack/react-query';
 import { useFeature } from '../hooks/useFeatures';
 import { useLocationQuery } from '../hooks/useLocationQuery';
 import { usePluginAvailable } from '../hooks/usePluginAvailable';
@@ -42,55 +38,50 @@ import { Korrel8rTopology } from './topology/Korrel8rTopology';
 export default function Korrel8rPanel() {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
   const dispatch = useDispatch();
-  const locationQuery = useLocationQuery();
+  const { query: locationQuery, period: locationPeriod } = useLocationQuery();
   const featureEnabled = useFeature('agent-navigation');
 
   const search: Search = useSelector((state: State) => state.plugins?.tp?.get('search'));
 
-  // Compute constraint from search period.
-  const constraint = useMemo(() => {
-    if (!search.period) {
-      return undefined;
-    }
-    const [start, end] = search.period.startEnd();
-    return new korrel8r.Constraint({ start, end });
-  }, [search.period]);
-
   const { data, isError, error, isFetching, isPending, fetchStatus, refetch } = useKorrel8rGraph({
     search,
-    constraint,
   });
   const isCancelled = !!search?.queryStr && isPending && fetchStatus === 'idle';
   const queryClient = useQueryClient();
 
-  // Disable focus button if the panel is already focused on the current location,
-  // or the current result is an error.
-  const isFocused = useMemo(
-    () => locationQuery?.toString() === search.queryStr && !isError,
-    [locationQuery, search.queryStr, isError],
-  );
+  const startNodeId = useMemo(() => {
+    try {
+      return search?.queryStr ? korrel8r.Query.parse(search?.queryStr).class.toString() : undefined;
+    } catch {
+      return undefined;
+    }
+  }, [search?.queryStr]);
+
+  // Compute the state {disabled, tooltip} of the correlate button
+  const correlateState = useMemo((): { disabled: boolean; tooltip: string } => {
+    if (!locationQuery?.toString())
+      return { disabled: true, tooltip: t("Can't correlate from this view") };
+    if (locationQuery.toString() === search?.queryStr && !isError && !isCancelled)
+      return {
+        disabled: true,
+        tooltip: isFetching ? t('Correlation in progress') : t('Already correlated with this view'),
+      };
+    return { disabled: false, tooltip: t('Correlate from this view') };
+  }, [locationQuery, search?.queryStr, isCancelled, isError, isFetching, t]);
 
   // Showing advanced query
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  // Dispatch a new search value, making a new reference (reducer clears result automatically).
   const dispatchSearch = useCallback(
     (search: Search) => dispatch(setSearch({ ...search })),
     [dispatch],
   );
 
-  // Create the initial result on startup.
-  // Use the current location or an explicit "Empty" result.
-  const initialized = useRef(false);
+  // Auto-correlate if queryStr is empty, which is always true on first open.
   useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
-    if (!search?.queryStr && !data) {
-      if (locationQuery?.toString()) {
-        dispatchSearch({ ...defaultSearch, queryStr: locationQuery.toString() });
-      }
-    }
-  }, [locationQuery, dispatchSearch, search?.queryStr, data, t]);
+    if (!search?.queryStr && locationQuery?.toString())
+      dispatchSearch({ ...defaultSearch, queryStr: locationQuery.toString() });
+  }, [search?.queryStr, locationQuery, dispatchSearch]);
 
   const advancedToggleID = 'query-toggle';
   const advancedContentID = 'query-content';
@@ -98,90 +89,87 @@ export default function Korrel8rPanel() {
   return (
     <>
       <Stack>
-        <Flex
-          className="tp-plugin__panel-toolbar"
-          direction={{ default: 'row' }}
-          flexWrap={{ default: 'wrap' }}
-          alignItems={{ default: 'alignItemsCenter' }}
-          spaceItems={{ default: 'spaceItemsXs' }}
-        >
-          <Tooltip
-            position="bottom-start"
-            content={
-              locationQuery
-                ? isFocused
-                  ? t('Correlation graph is focused on the current view.')
-                  : t('Focus the correlation on the current view.')
-                : t('Current view does not provide a starting point for correlation')
-            }
-          >
-            <Button
-              className="tp-plugin__compact-control"
-              isAriaDisabled={!locationQuery || isFocused}
-              size="sm"
-              onClick={() => {
-                dispatchSearch({
-                  ...defaultSearch,
-                  queryStr: locationQuery?.toString(),
-                  period: search?.period,
-                });
-              }}
-              icon={isFocused ? <LinkIcon /> : <UnlinkIcon />}
-            >
-              {t('Focus')}
-            </Button>
-          </Tooltip>
+        <Toolbar className="tp-plugin__panel-toolbar">
+          <ToolbarContent>
+            <ToolbarItem>
+              <Tooltip content={correlateState.tooltip} position="bottom">
+                <Button
+                  variant="primary"
+                  isAriaDisabled={correlateState.disabled}
+                  onClick={() => {
+                    if (
+                      locationQuery?.toString() === search?.queryStr &&
+                      (isError || isCancelled)
+                    ) {
+                      refetch();
+                    } else {
+                      dispatchSearch({ ...search, queryStr: locationQuery?.toString() });
+                    }
+                  }}
+                >
+                  {t('Correlate')}
+                </Button>
+              </Tooltip>
+            </ToolbarItem>
 
-          {/* Time range drop-down */}
-          <Flex align={{ default: 'alignRight' }} spaceItems={{ default: 'spaceItemsNone' }}>
-            <TimeRangeDropdown
-              className="tp-plugin__compact-control"
-              period={search.period ?? defaultSearch.period}
-              onChange={(period: time.Period) => dispatchSearch({ ...search, period })}
-            />
-          </Flex>
+            <ToolbarItem>
+              <Tooltip content={t('Advanced search')} position="bottom">
+                <ExpandableSectionToggle
+                  contentId={advancedContentID}
+                  toggleId={advancedToggleID}
+                  isExpanded={showAdvanced}
+                  onToggle={(on: boolean) => setShowAdvanced(on)}
+                  aria-label={t('Advanced search')}
+                >
+                  <SlidersHIcon />
+                </ExpandableSectionToggle>
+              </Tooltip>
+            </ToolbarItem>
 
-          {/* Right aligned buttons */}
-          <Flex align={{ default: 'alignRight' }} spaceItems={{ default: 'spaceItemsNone' }}>
-            {/* AI Agent menu */}
-            {featureEnabled && <AgentMenu />}
-            {/* Advanced search toggle */}
-            <Tooltip content={t('Advanced search parameters')} position="bottom-end">
-              <ExpandableSectionToggle
-                contentId={advancedContentID}
-                toggleId={advancedToggleID}
-                isExpanded={showAdvanced}
-                onToggle={(on: boolean) => setShowAdvanced(on)}
-                aria-label={t('Advanced search parameters')}
-              >
-                <SlidersHIcon />
-              </ExpandableSectionToggle>
-            </Tooltip>
+            <ToolbarGroup align={{ default: 'alignCenter' }}>
+              <ToolbarItem>
+                <Tooltip content={t('Limit search to this time range')} position="bottom">
+                  <TimeRangeDropdown
+                    period={search.period ?? defaultSearch.period}
+                    onChange={(period: time.Period) => dispatchSearch({ ...search, period })}
+                    locationPeriod={locationPeriod}
+                  />
+                </Tooltip>
+              </ToolbarItem>
+            </ToolbarGroup>
 
-            {/* Refresh / Cancel button */}
-            {isFetching ? (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => queryClient.cancelQueries({ queryKey: ['korrel8r', 'graph'] })}
-                aria-label={t('Cancel')}
-              >
-                <BanIcon />
-              </Button>
-            ) : (
-              <Button
-                variant="link"
-                size="sm"
-                isAriaDisabled={!search?.queryStr}
-                onClick={() => refetch()}
-                aria-label={t('Refresh')}
-              >
-                <SyncIcon />
-              </Button>
-            )}
-          </Flex>
-        </Flex>
-
+            <ToolbarGroup align={{ default: 'alignEnd' }}>
+              {featureEnabled && (
+                <ToolbarItem>
+                  <Tooltip content={t('AI agent navigation')} position="bottom-end">
+                    <AgentMenu />
+                  </Tooltip>
+                </ToolbarItem>
+              )}
+              <ToolbarItem>
+                {isFetching ? (
+                  <Button
+                    variant="secondary"
+                    onClick={() => queryClient.cancelQueries({ queryKey: ['korrel8r', 'graph'] })}
+                  >
+                    {t('Cancel')}
+                  </Button>
+                ) : (
+                  <Tooltip content={t('Refresh')} position="bottom-end">
+                    <Button
+                      variant="plain"
+                      isAriaDisabled={!search?.queryStr}
+                      onClick={() => refetch()}
+                      aria-label={t('Refresh')}
+                    >
+                      <RedoIcon />
+                    </Button>
+                  </Tooltip>
+                )}
+              </ToolbarItem>
+            </ToolbarGroup>
+          </ToolbarContent>
+        </Toolbar>
         <ExpandableSection
           className="tp-plugin__panel-query-container"
           contentId={advancedContentID}
@@ -202,7 +190,8 @@ export default function Korrel8rPanel() {
           <Topology
             isLoading={isFetching}
             result={data}
-            constraint={constraint}
+            startNode={startNodeId}
+            constraint={data?.constraint}
             error={error}
             isCancelled={isCancelled}
           />
@@ -216,11 +205,19 @@ interface TopologyProps {
   isLoading?: boolean;
   isCancelled?: boolean;
   result?: GraphResult;
+  startNode?: string;
   error?: Error;
   constraint?: korrel8r.Constraint;
 }
 
-const Topology: FC<TopologyProps> = ({ isLoading, result, constraint, error, isCancelled }) => {
+const Topology: FC<TopologyProps> = ({
+  isLoading,
+  result,
+  startNode,
+  constraint,
+  error,
+  isCancelled,
+}) => {
   const { t } = useTranslation('plugin__troubleshooting-panel-console-plugin');
   const [loggingAvailable, loggingAvailableLoading] = usePluginAvailable('logging-view-plugin');
   const [netobserveAvailable, netobserveAvailableLoading] = usePluginAvailable('netobserv-plugin');
@@ -241,6 +238,7 @@ const Topology: FC<TopologyProps> = ({ isLoading, result, constraint, error, isC
     return (
       <Korrel8rTopology
         graph={result.graph}
+        startNode={startNode}
         loggingAvailable={loggingAvailable}
         netobserveAvailable={netobserveAvailable}
         constraint={constraint}
@@ -249,14 +247,11 @@ const Topology: FC<TopologyProps> = ({ isLoading, result, constraint, error, isC
   }
 
   if (error) {
-    const titleText = error?.message ? t('Search Error') : t('Search Failed');
-    const text = String(error?.message || error?.name || t('Unknown Error'));
-
+    const detail = String(error?.message || error?.name || t('Unknown error'));
     return (
       <TopologyInfoState
-        titleText={titleText}
-        // Only display first 400 characters of error to prevent repeating errors
-        text={text.slice(0, 400)}
+        titleText={t('Could not reach the correlation service')}
+        text={detail.slice(0, 400)}
         isError
       />
     );
@@ -264,9 +259,8 @@ const Topology: FC<TopologyProps> = ({ isLoading, result, constraint, error, isC
 
   return (
     <TopologyInfoState
-      titleText={result?.title || t('No Correlated Signals Found')}
-      // Only display first 400 characters of error to prevent repeating errors
-      text={result?.message ? result?.message.slice(0, 400) : t('No results.')}
+      titleText={result?.title || t('No correlated signals found')}
+      text={result?.message?.slice(0, 400) || t('Try a different starting point')}
     />
   );
 };
