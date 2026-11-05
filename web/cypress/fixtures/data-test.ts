@@ -170,6 +170,8 @@ export const LegacyTestIDs = {
   PersesDashboardSection: 'dashboard',
   NamespaceBarDropdown: 'namespace-bar-dropdown',
   ApplicationLauncher: 'application-launcher',
+  NameLabelDropdown: 'dropdown-button',
+  NameLabelDropdownOptions: 'dropdown-menu',  
 };
 
 export const IDs = {
