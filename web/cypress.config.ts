@@ -3,7 +3,6 @@ import path from 'path';
 import fs from 'fs';
 
 // Plugins
-import registerCodeCoverage from '@cypress/code-coverage/task';
 import cypressGrepPlugin from '@cypress/grep/src/plugin';
 
 const reportDir = process.env.ARTIFACT_DIR || '/tmp';
@@ -70,7 +69,6 @@ export default defineConfig({
 
     setupNodeEvents(on, config) {
       // --- Register Plugins ---
-      registerCodeCoverage(on, config);
       cypressGrepPlugin(config);
 
       // --- Browser Launch ---
@@ -83,10 +81,20 @@ export default defineConfig({
 
       // --- Custom Tasks ---
       on('task', {
-        log: (msg) => { console.log(msg); return null; },
-        logError: (msg) => { console.error(msg); return null; },
-        logTable: (data) => { console.table(data); return null; },
-        readFileIfExists: (filename) => fs.existsSync(filename) ? fs.readFileSync(filename, 'utf8') : null,
+        log: (msg) => {
+          console.log(msg);
+          return null;
+        },
+        logError: (msg) => {
+          console.error(msg);
+          return null;
+        },
+        logTable: (data) => {
+          console.table(data);
+          return null;
+        },
+        readFileIfExists: (filename) =>
+          fs.existsSync(filename) ? fs.readFileSync(filename, 'utf8') : null,
       });
 
       // --- Screenshot Rename Logic ---
@@ -102,7 +110,7 @@ export default defineConfig({
       on('after:spec', (spec, results) => {
         if (results?.video) {
           const hasFailures = results.tests?.some((test) =>
-            test.attempts.some((attempt) => attempt.state === 'failed')
+            test.attempts.some((attempt) => attempt.state === 'failed'),
           );
           if (!hasFailures && fs.existsSync(results.video)) {
             fs.unlinkSync(results.video);
