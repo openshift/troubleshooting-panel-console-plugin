@@ -204,8 +204,9 @@ func prepareServerAssets(t *testing.T) string {
 	dummyfile := filepath.Join(distpath, "dummy")
 	_, err = os.Create(dummyfile)
 	require.NoError(t, err)
-	err = os.Chdir(tmpDir)
-	require.NoError(t, err)
+	// t.Chdir restores the working directory when the test ends, so tests
+	// that rely on relative paths (e.g. testdata) are not affected.
+	t.Chdir(tmpDir)
 	return tmpDir
 }
 
@@ -371,4 +372,101 @@ func TestFilesHandler(t *testing.T) {
 	if res.Header.Get("Expires") != "0" {
 		t.Errorf("Expected Expires header %q, but got %q", "0", res.Header.Get("Expires"))
 	}
+}
+
+// startSecureTestServer starts Start(conf) over TLS in the background, filling
+// in conf's Port and cert files, and returns its URL once /health answers.
+// Like TestSecureServerRunning, the server keeps running until the test
+// binary exits, since Start never returns.
+func startSecureTestServer(t *testing.T, conf *Config) string {
+	t.Helper()
+
+	testPort, err := getFreePort(testHostname)
+	require.NoError(t, err)
+
+	tmpDir := t.TempDir()
+	conf.Port = testPort
+	conf.CertFile = filepath.Join(tmpDir, "server.cert")
+	conf.PrivateKeyFile = filepath.Join(tmpDir, "server.key")
+	require.NoError(t, generateCertificate(t, conf.CertFile, conf.PrivateKeyFile, testHostname))
+
+	tmpDirAssets := prepareServerAssets(t)
+	t.Cleanup(func() {
+		if err := os.RemoveAll(tmpDirAssets); err != nil {
+			t.Errorf("failed to remove test assets %q: %v", tmpDirAssets, err)
+		}
+	})
+
+	go Start(conf)
+
+	serverURL := fmt.Sprintf("https://%s:%d", testHostname, testPort)
+	readyClient := newInsecureTestClient(t, &tls.Config{})
+	require.Eventually(t, func() bool {
+		_, err := getRequestResults(t, readyClient, serverURL+"/health")
+		return err == nil
+	}, 10*time.Second, 50*time.Millisecond, "test https server did not become ready")
+	t.Logf("Started test https server: %v", serverURL)
+
+	return serverURL
+}
+
+// newInsecureTestClient returns a client using a copy of tlsConfig with
+// InsecureSkipVerify.
+func newInsecureTestClient(t *testing.T, tlsConfig *tls.Config) *http.Client {
+	t.Helper()
+
+	tlsConfig = tlsConfig.Clone()
+	tlsConfig.InsecureSkipVerify = true
+	httpClient, err := (&httpClientConfig{TLSConfig: tlsConfig}).buildHTTPClient()
+	require.NoError(t, err)
+
+	return httpClient
+}
+
+func TestTLSConfigWithCurvePreferences(t *testing.T) {
+	serverURL := startSecureTestServer(t, &Config{
+		TLSCurvePreferences: []tls.CurveID{tls.CurveP384},
+	})
+	healthURL := serverURL + "/health"
+
+	for _, version := range []uint16{tls.VersionTLS12, tls.VersionTLS13} {
+		t.Run(tls.VersionName(version), func(t *testing.T) {
+			httpClientP384 := newInsecureTestClient(t, &tls.Config{
+				MinVersion:       version,
+				MaxVersion:       version,
+				CurvePreferences: []tls.CurveID{tls.CurveP384},
+			})
+			_, err := getRequestResults(t, httpClientP384, healthURL)
+			require.NoError(t, err, "could not connect with allowed curve CurveP384")
+
+			httpClientX25519 := newInsecureTestClient(t, &tls.Config{
+				MinVersion:       version,
+				MaxVersion:       version,
+				CurvePreferences: []tls.CurveID{tls.X25519},
+			})
+			// Must be a handshake rejection, not an unrelated failure.
+			_, err = getRequestResults(t, httpClientX25519, healthURL)
+			require.ErrorContains(t, err, "tls: handshake failure")
+		})
+	}
+}
+
+func TestTLSConfigWithMaxVersion(t *testing.T) {
+	serverURL := startSecureTestServer(t, &Config{
+		TLSMaxVersion: tls.VersionTLS12,
+	})
+	healthURL := serverURL + "/health"
+
+	httpClientTLS12 := newInsecureTestClient(t, &tls.Config{
+		MinVersion: tls.VersionTLS12,
+		MaxVersion: tls.VersionTLS12,
+	})
+	_, err := getRequestResults(t, httpClientTLS12, healthURL)
+	require.NoError(t, err, "could not connect with TLS 1.2")
+
+	httpClientTLS13 := newInsecureTestClient(t, &tls.Config{
+		MinVersion: tls.VersionTLS13,
+	})
+	_, err = getRequestResults(t, httpClientTLS13, healthURL)
+	require.ErrorContains(t, err, "protocol version not supported")
 }

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParseTLSVersion(t *testing.T) {
@@ -65,66 +66,36 @@ func TestParseTLSVersion(t *testing.T) {
 	}
 }
 
-func TestParseCipherSuites(t *testing.T) {
-	tests := []struct {
-		name        string
-		input       string
-		expected    []uint16
-		expectError bool
-	}{
-		{
-			name:        "Empty string returns nil",
-			input:       "",
-			expected:    nil,
-			expectError: false,
-		},
-		{
-			name:        "Single valid cipher suite",
-			input:       "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
-			expected:    []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
-			expectError: false,
-		},
-		{
-			name:  "Multiple valid cipher suites",
-			input: "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
-			expected: []uint16{
-				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-				tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-			},
-			expectError: false,
-		},
-		{
-			name:  "Valid cipher suites with spaces",
-			input: "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, TLS_AES_128_GCM_SHA256",
-			expected: []uint16{
-				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-				tls.TLS_AES_128_GCM_SHA256,
-			},
-			expectError: false,
-		},
-		{
-			name:        "Invalid cipher suite",
-			input:       "INVALID_CIPHER",
-			expected:    nil,
-			expectError: true,
-		},
-		{
-			name:        "Mixed valid and invalid",
-			input:       "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,INVALID_CIPHER",
-			expected:    nil,
-			expectError: true,
-		},
-	}
+func TestParseTLSMaxVersion(t *testing.T) {
+	version, err := parseTLSMaxVersion("")
+	require.NoError(t, err)
+	require.Zero(t, version, "empty max version keeps the Go default")
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := parseCipherSuites(tt.input)
-			if tt.expectError {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.expected, result)
-			}
+	version, err = parseTLSMaxVersion("VersionTLS12")
+	require.NoError(t, err)
+	require.Equal(t, uint16(tls.VersionTLS12), version)
+
+	version, err = parseTLSMaxVersion("VersionTLS13")
+	require.NoError(t, err)
+	require.Equal(t, uint16(tls.VersionTLS13), version)
+
+	for _, input := range []string{"NotAVersion", "VersionTLS11"} {
+		t.Run(input, func(t *testing.T) {
+			_, err := parseTLSMaxVersion(input)
+			require.EqualError(t, err, "invalid TLS maximum version, valid values: VersionTLS12, VersionTLS13")
+			require.NotContains(t, err.Error(), input)
 		})
 	}
+}
+
+func TestMergeEnvValueInt(t *testing.T) {
+	t.Setenv("TEST_MERGE_PORT", "8443")
+	require.Equal(t, 8443, mergeEnvValueInt("TEST_MERGE_PORT", 0, 9443), "env value is used when the flag is unset")
+	require.Equal(t, 7443, mergeEnvValueInt("TEST_MERGE_PORT", 7443, 9443), "flag value wins over env")
+
+	t.Setenv("TEST_MERGE_PORT", "")
+	require.Equal(t, 9443, mergeEnvValueInt("TEST_MERGE_PORT", 0, 9443), "default is used when env is unset")
+
+	t.Setenv("TEST_MERGE_PORT", "not-a-number")
+	require.Equal(t, 9443, mergeEnvValueInt("TEST_MERGE_PORT", 0, 9443), "default is used when env is invalid")
 }

@@ -24,15 +24,17 @@ import (
 var log = logrus.WithField("module", "server")
 
 type Config struct {
-	Port             int
-	CertFile         string
-	PrivateKeyFile   string
-	TLSMinVersion    uint16
-	TLSCipherSuites  []uint16
-	Features         map[string]bool
-	StaticPath       string
-	ConfigPath       string
-	PluginConfigPath string
+	Port                int
+	CertFile            string
+	PrivateKeyFile      string
+	TLSMinVersion       uint16
+	TLSMaxVersion       uint16
+	TLSCipherSuites     []uint16
+	TLSCurvePreferences []tls.CurveID
+	Features            map[string]bool
+	StaticPath          string
+	ConfigPath          string
+	PluginConfigPath    string
 }
 
 type PluginConfig struct {
@@ -55,19 +57,19 @@ func Start(cfg *Config) {
 	router, pluginConfig := setupRoutes(cfg)
 	router.Use(corsHeaderMiddleware())
 
-	tlsConfig := oscrypto.SecureTLSConfig(&tls.Config{})
-
-	if cfg.TLSMinVersion != 0 {
-		tlsConfig.MinVersion = cfg.TLSMinVersion
+	// newBaseTLSConfig validates the configured versions, cipher suites and
+	// curves; SecureTLSConfig then fills in library-go's default cipher suites
+	// when none are configured.
+	baseTLSConfig, err := newBaseTLSConfig(cfg)
+	if err != nil {
+		log.WithError(err).Fatal("invalid TLS configuration")
 	}
+	tlsConfig := oscrypto.SecureTLSConfig(baseTLSConfig)
+
 	// Note: CipherSuites only applies to TLS 1.0-1.2. TLS 1.3 cipher suites are
 	// non-configurable in Go's crypto/tls package and will use secure defaults.
-	if len(cfg.TLSCipherSuites) > 0 {
-		tlsConfig.CipherSuites = cfg.TLSCipherSuites
-		// Warn if cipher suites are configured with TLS 1.3 minimum, as they won't apply
-		if cfg.TLSMinVersion >= tls.VersionTLS13 {
-			log.Warn("TLS cipher suites are configured but will be ignored with TLS 1.3; TLS 1.3 uses non-configurable cipher suites")
-		}
+	if len(cfg.TLSCipherSuites) > 0 && cfg.TLSMinVersion >= tls.VersionTLS13 {
+		log.Warn("TLS cipher suites are configured but will be ignored with TLS 1.3; TLS 1.3 uses non-configurable cipher suites")
 	}
 
 	timeout := 30 * time.Second

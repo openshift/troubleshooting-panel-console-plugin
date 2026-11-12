@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/tls"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -18,7 +19,9 @@ var (
 	certArg            = flag.String("cert", "", "cert file path to enable TLS (disabled by default)")
 	keyArg             = flag.String("key", "", "private key file path to enable TLS (disabled by default)")
 	tlsMinVersionArg   = flag.String("tls-min-version", "", "minimum TLS version (e.g., VersionTLS12, VersionTLS13)")
+	tlsMaxVersionArg   = flag.String("tls-max-version", "", "maximum TLS version\noptions: ['VersionTLS12', 'VersionTLS13']\n(default is the highest supported by Go)")
 	tlsCipherSuitesArg = flag.String("tls-cipher-suites", "", "comma-separated list of cipher suites for TLS 1.0-1.2 (ignored for TLS 1.3)")
+	tlsCurvesArg       = flag.String("tls-curves", "", "comma-separated list of TLS curves for the server\nvalues are tls.CurveID names (https://pkg.go.dev/crypto/tls#CurveID) or OpenShift TLS group names")
 	featuresArg        = flag.String("features", "", "enabled features, comma separated")
 	staticPathArg      = flag.String("static-path", "", "static files path to serve frontend (default: './web/dist')")
 	configPathArg      = flag.String("config-path", "", "config files path (default: './config')")
@@ -34,7 +37,9 @@ func main() {
 	cert := mergeEnvValue("CERT_FILE_PATH", *certArg, "")
 	key := mergeEnvValue("PRIVATE_KEY_FILE_PATH", *keyArg, "")
 	tlsMinVersion := mergeEnvValue("TLS_MIN_VERSION", *tlsMinVersionArg, "")
+	tlsMaxVersion := mergeEnvValue("TLS_MAX_VERSION", *tlsMaxVersionArg, "")
 	tlsCipherSuites := mergeEnvValue("TLS_CIPHER_SUITES", *tlsCipherSuitesArg, "")
+	tlsCurves := mergeEnvValue("TLS_CURVES", *tlsCurvesArg, "")
 	features := mergeEnvValue("TROUBLESHOOTING_PANEL_CONSOLE_PLUGIN_FEATURES", *featuresArg, "")
 	staticPath := mergeEnvValue("TROUBLESHOOTING_PANEL_CONSOLE_PLUGIN_STATIC_PATH", *staticPathArg, "opt/app-root/web/dist")
 	configPath := mergeEnvValue("TROUBLESHOOTING_PANEL_CONSOLE_PLUGIN_MANIFEST_CONFIG_PATH", *configPathArg, "opt/app-root/web/dist")
@@ -61,21 +66,42 @@ func main() {
 		log.WithError(err).Fatal("Invalid TLS minimum version")
 	}
 
-	tlsCipherSuitesList, err := parseCipherSuites(tlsCipherSuites)
+	tlsMaxVer, err := parseTLSMaxVersion(tlsMaxVersion)
+	if err != nil {
+		log.WithError(err).Fatal("Invalid TLS maximum version")
+	}
+	if tlsMaxVer != 0 {
+		log.Infof("Max TLS version: %q", tls.VersionName(tlsMaxVer))
+	}
+
+	tlsCipherSuitesList, err := server.ParseCipherSuites(tlsCipherSuites)
 	if err != nil {
 		log.WithError(err).Fatal("Invalid TLS cipher suites")
 	}
+	if len(tlsCipherSuitesList) > 0 {
+		log.Infof("TLS ciphers: %q", server.CipherSuiteNames(tlsCipherSuitesList))
+	}
+
+	tlsCurvePrefs, err := server.ParseCurves(tlsCurves)
+	if err != nil {
+		log.WithError(err).Fatal("Invalid TLS curves")
+	}
+	if len(tlsCurvePrefs) > 0 {
+		log.Infof("TLS curves: %q", tlsCurvePrefs)
+	}
 
 	server.Start(&server.Config{
-		Port:            port,
-		CertFile:        cert,
-		PrivateKeyFile:  key,
-		TLSMinVersion:   tlsMinVer,
-		TLSCipherSuites: tlsCipherSuitesList,
-		Features:        featuresSet,
-		StaticPath:      staticPath,
-		ConfigPath:      configPath,
-		PluginConfigPath: pluginConfigPath,
+		Port:                port,
+		CertFile:            cert,
+		PrivateKeyFile:      key,
+		TLSMinVersion:       tlsMinVer,
+		TLSMaxVersion:       tlsMaxVer,
+		TLSCipherSuites:     tlsCipherSuitesList,
+		TLSCurvePreferences: tlsCurvePrefs,
+		Features:            featuresSet,
+		StaticPath:          staticPath,
+		ConfigPath:          configPath,
+		PluginConfigPath:    pluginConfigPath,
 	})
 }
 
@@ -101,7 +127,7 @@ func mergeEnvValueInt(key string, arg int, defaultValue int) int {
 	envValue := os.Getenv(key)
 
 	num, err := strconv.Atoi(envValue)
-	if err != nil && num != 0 {
+	if err == nil && num != 0 {
 		return num
 	}
 
@@ -123,21 +149,12 @@ func parseTLSVersion(version string) (uint16, error) {
 	return tlsVersion, nil
 }
 
-func parseCipherSuites(cipherSuitesStr string) ([]uint16, error) {
-	if cipherSuitesStr == "" {
-		return nil, nil
+// parseTLSMaxVersion parses the max version with the same rules as the min
+// version. Its error lists the valid values instead of echoing the input.
+func parseTLSMaxVersion(version string) (uint16, error) {
+	tlsVersion, err := parseTLSVersion(version)
+	if err != nil {
+		return 0, errors.New("invalid TLS maximum version, valid values: VersionTLS12, VersionTLS13")
 	}
-
-	cipherSuiteNames := strings.Split(cipherSuitesStr, ",")
-	// Trim whitespace from each cipher suite name
-	trimmed := make([]string, 0, len(cipherSuiteNames))
-	for _, name := range cipherSuiteNames {
-		if t := strings.TrimSpace(name); t != "" {
-			trimmed = append(trimmed, t)
-		}
-	}
-	if len(trimmed) == 0 {
-		return nil, nil
-	}
-	return k8sapiflag.TLSCipherSuites(trimmed)
+	return tlsVersion, nil
 }
