@@ -1,4 +1,8 @@
 export const guidedTour = {
+    /**
+     * Closes any active guided tour or welcome modal.
+     * Detects and handles Core platform, Kubevirt, and ACM onboarding modals.
+     */
     close: () => {
       const modalSelector = 'button[data-ouia-component-id="clustersOnboardingModal-ModalBoxCloseButton"]'
       cy.log('close guided tour');
@@ -30,6 +34,9 @@ export const guidedTour = {
       });
     },
 
+    /**
+     * Specifically closes the Kubevirt welcome modal if present.
+     */
     closeKubevirtTour: () => {
       cy.log('close Kubevirt tour');
       cy.get('body').then(($body) => {
