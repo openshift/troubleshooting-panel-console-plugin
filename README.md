@@ -194,14 +194,24 @@ break console styles!
 
 Install the [devspace](https://www.devspace.sh/docs/getting-started/installation) cli.
 
-1. Build the devspace image: `make build-devspace-image`
-2. Deploy the troubleshooting panel using COO/ObO.
-3. Select the namespace where the plugin has been deployed: `devspace use namespace {NAMESPACE}`
-4. Start devspace: `devspace dev`
+1. Build and push the devspace image: `make build-devspace-image` (set `ORG` to a registry organization you can push to if needed).
+2. Deploy the troubleshooting panel. If using COO/ObO, find its operator deployment and the panel namespace with `oc get deployments -A | grep -E 'observability-operator|troubleshooting-panel'`. **Scale down the COO operator deployment** before starting DevSpace, or COO will recreate the panel deployment while DevSpace tries to replace it:
+   ```sh
+   oc scale deployment/observability-operator -n {OPERATOR_NAMESPACE} --replicas=0
+   ```
+   This pauses reconciliation of *all* COO-managed resources, so use a development cluster.
+3. Select the namespace containing the troubleshooting panel: `devspace use namespace {PANEL_NAMESPACE}`.
+4. Start DevSpace: `devspace dev`. Wait for the initial sync and webpack build to finish, and for the backend to start (the logs print `Frontend build complete, starting backend...`) before testing changes. Subsequent edits to `web/` are synced and rebuilt automatically.
+5. Scaling down COO can disable COO-managed console plugins. In the OpenShift console, go to **Administration → Cluster Settings → Configuration → Console** and re-enable the plugins you need, including the Troubleshooting Panel. Check that the panel and Korrel8r are running before testing.
+6. After edits have synced and rebuilt, refresh the console with **Ctrl+F5** (or your browser's equivalent hard reload). It may take a while for changes to appear.
 
-Devspace syncs your local `./web/src` into the container, where webpack runs in watch mode and rebuilds automatically. Edit source files locally, then reload the console to see your changes.
+When finished, run `devspace purge` **before** restoring COO, then scale the operator deployment back up:
 
-After development, run `devspace purge` to cleanup.
+```sh
+oc scale deployment/observability-operator -n {OPERATOR_NAMESPACE} --replicas=1
+```
+
+Check that COO reconciles the workloads and console plugins after it restarts.
 
 ### Local Development Troubleshooting
 1. Disable cache. Select 'disable cache' in your browser's DevTools > Network > 'disable cache'. Or use private/incognito mode in your browser.
