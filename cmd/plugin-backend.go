@@ -1,9 +1,7 @@
 package main
 
 import (
-	"crypto/tls"
 	"flag"
-	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -56,7 +54,7 @@ func main() {
 
 	log.Infof("enabled features: %+q\n", featuresList)
 
-	tlsMinVer, err := parseTLSVersion(tlsMinVersion)
+	tlsMinVer, err := k8sapiflag.TLSVersion(tlsMinVersion)
 	if err != nil {
 		log.WithError(err).Fatal("Invalid TLS minimum version")
 	}
@@ -67,14 +65,14 @@ func main() {
 	}
 
 	server.Start(&server.Config{
-		Port:            port,
-		CertFile:        cert,
-		PrivateKeyFile:  key,
-		TLSMinVersion:   tlsMinVer,
-		TLSCipherSuites: tlsCipherSuitesList,
-		Features:        featuresSet,
-		StaticPath:      staticPath,
-		ConfigPath:      configPath,
+		Port:             port,
+		CertFile:         cert,
+		PrivateKeyFile:   key,
+		TLSMinVersion:    tlsMinVer,
+		TLSCipherSuites:  tlsCipherSuitesList,
+		Features:         featuresSet,
+		StaticPath:       staticPath,
+		ConfigPath:       configPath,
 		PluginConfigPath: pluginConfigPath,
 	})
 }
@@ -106,21 +104,6 @@ func mergeEnvValueInt(key string, arg int, defaultValue int) int {
 	}
 
 	return defaultValue
-}
-
-func parseTLSVersion(version string) (uint16, error) {
-	if version == "" {
-		return 0, nil
-	}
-	tlsVersion, err := k8sapiflag.TLSVersion(version)
-	if err != nil {
-		return 0, err
-	}
-	// Reject TLS 1.0 and 1.1 as they are deprecated per RFC 8996
-	if tlsVersion != 0 && tlsVersion < tls.VersionTLS12 {
-		return 0, fmt.Errorf("TLS versions below 1.2 are not supported (got %s); minimum allowed is VersionTLS12", version)
-	}
-	return tlsVersion, nil
 }
 
 func parseCipherSuites(cipherSuitesStr string) ([]uint16, error) {
